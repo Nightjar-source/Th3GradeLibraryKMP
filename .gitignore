@@ -1,0 +1,43 @@
+# --- مخلفات البناء والكاش ---
+*.iml
+.gradle
+.gradle_home
+/build
+/*/build
+.idea
+.DS_Store
+local.properties
+.kotlin
+
+# --- خدمات Google و Firebase ---
+google-services.json
+GoogleService-Info.plist
+firebase.json
+.firebaserc
+*.key
+*.pem
+
+# --- توقيع Android ---
+*.jks
+*.keystore
+*.p12
+*.bks
+signing.properties
+keystore.properties
+
+# --- شهادات وتوقيع iOS / Apple / macOS ---
+*.mobileprovision
+*.provisionprofile
+*.cer
+*.cert
+*.p12
+xcuserdata/
+*.xcscmblueprint
+
+# --- المفاتيح والبيئات الحساسة (Environment & Secrets) ---
+.env
+.env.*
+secrets.properties
+credentials.json
+
+*.pdf

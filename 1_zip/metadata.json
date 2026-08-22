@@ -1,0 +1,6 @@
+{
+  "name": "مكتبة الثالث متوسط",
+  "description": "تطبيق تعليمي يوفر الملازم والكتب مع اخر اخبار التعليم",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
