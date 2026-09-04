@@ -2,6 +2,7 @@ package com.Nightjar.gradeiraqi3library.theme
 
 import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -10,6 +11,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Typography
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.compositionLocalOf
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.blur
 import androidx.compose.ui.composed
@@ -17,6 +19,13 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.draw.drawWithCache
+import kotlinx.coroutines.launch
+import androidx.compose.ui.geometry.CornerRadius
+import androidx.compose.ui.geometry.RoundRect
+import androidx.compose.ui.geometry.toRect
+import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
@@ -45,25 +54,45 @@ fun parseHexColor(hex: String): Color {
     }
 }
 
-// Glassmorphism modifier
+val LocalIsLowEndDevice = compositionLocalOf { false }
+
+// Glassmorphism modifier optimized with drawWithCache
 fun Modifier.liquidGlass(
     isDark: Boolean,
     borderRadius: Dp = 24.dp,
     alpha: Float = 0.95f // Increased to hide content underneath
 ): Modifier = composed {
+    val isLowEnd = LocalIsLowEndDevice.current
     val bg = if (isDark) {
-        Color(0xFF1E293B).copy(alpha = alpha) // Slate 800
+        Color(0xFF1E293B).copy(alpha = if (isLowEnd) 1.0f else alpha) // Slate 800 (Solid for low end)
     } else {
-        MaterialTheme.colorScheme.surfaceVariant.copy(alpha = alpha)
+        MaterialTheme.colorScheme.surfaceVariant.copy(alpha = if (isLowEnd) 1.0f else alpha)
+    }
+    
+    if (isLowEnd) {
+        return@composed this.background(bg, RoundedCornerShape(borderRadius))
     }
     val border = if (isDark) {
         Color(0xFFFFFFFF).copy(alpha = 0.15f)
     } else {
         MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.15f)
     }
-    this
-        .background(color = bg, shape = RoundedCornerShape(borderRadius))
-        .border(width = 1.dp, color = border, shape = RoundedCornerShape(borderRadius))
+    this.drawWithCache {
+        val roundedRect = RoundRect(
+            rect = size.toRect(),
+            cornerRadius = CornerRadius(borderRadius.toPx())
+        )
+        val path = Path().apply { addRoundRect(roundedRect) }
+        
+        onDrawBehind {
+            drawPath(path, color = bg)
+            drawPath(
+                path, 
+                color = border, 
+                style = Stroke(width = 1.dp.toPx())
+            )
+        }
+    }
 }
 
 @Composable
@@ -89,6 +118,31 @@ fun Modifier.bounceClick(
             indication = androidx.compose.foundation.LocalIndication.current,
             onClick = onClick
         )
+}
+
+/**
+ * Staggered pop-in animation on initial screen load (from caliq5).
+ */
+fun Modifier.popInOnInitialLoad(index: Int = 0): Modifier = composed {
+    var isLoaded by androidx.compose.runtime.saveable.rememberSaveable { androidx.compose.runtime.mutableStateOf(false) }
+    androidx.compose.runtime.LaunchedEffect(Unit) {
+        isLoaded = true
+    }
+    val animProgress by androidx.compose.animation.core.animateFloatAsState(
+        targetValue = if (isLoaded) 1f else 0f,
+        animationSpec = androidx.compose.animation.core.tween(
+            durationMillis = 400,
+            delayMillis = (index.coerceAtMost(8) * 40),
+            easing = androidx.compose.animation.core.CubicBezierEasing(0.2f, 0f, 0f, 1f)
+        ),
+        label = "popIn_$index"
+    )
+    this.graphicsLayer {
+        this.alpha = animProgress
+        this.translationY = (1f - animProgress) * 30f // dp is not available directly without LocalDensity, but float is fine for translationY (pixels)
+        this.scaleX = 0.95f + 0.05f * animProgress
+        this.scaleY = 0.95f + 0.05f * animProgress
+    }
 }
 
 val KufiReemFontFamily: FontFamily

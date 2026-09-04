@@ -20,4 +20,6 @@ interface PlatformActionHandler {
     fun requestNotificationPermission() {}
     fun isAutoRevokeWhitelisted(): Boolean { return true }
     fun requestAutoRevokeExemption() {}
+    /** Graceful degradation: checks if device is low RAM (<3GB) or running old OS (<= Android 9 API 28) */
+    fun isLowEndDevice(): Boolean { return false }
 }

@@ -90,7 +90,8 @@ fun App(
         dynamicColorScheme = if (appSettings.useMaterialYou) dynamicColorScheme else null
     ) {
         CompositionLocalProvider(
-            LocalLayoutDirection provides LayoutDirection.Rtl
+            LocalLayoutDirection provides LayoutDirection.Rtl,
+            com.Nightjar.gradeiraqi3library.theme.LocalIsLowEndDevice provides (platformActionHandler?.isLowEndDevice() ?: false)
         ) {
             Surface(
                 modifier = Modifier.fillMaxSize(),
@@ -138,6 +139,8 @@ fun AppContent(
     val libraryBooksLazyGridState = androidx.compose.foundation.lazy.grid.rememberLazyGridState()
     val libraryNotesLazyGridState = androidx.compose.foundation.lazy.grid.rememberLazyGridState()
     val bookmarksLazyGridState = androidx.compose.foundation.lazy.grid.rememberLazyGridState()
+    val shortcutsLazyGridState = androidx.compose.foundation.lazy.grid.rememberLazyGridState()
+    val aboutScrollState = androidx.compose.foundation.rememberScrollState()
 
     val pageHistory = androidx.compose.runtime.saveable.rememberSaveable { 
         mutableStateOf(
@@ -199,7 +202,10 @@ fun AppContent(
             }
         }
     }
+    var isNavigatingBack by remember { mutableStateOf(false) }
+
     fun popPage(): Boolean {
+        isNavigatingBack = true
         val current = pageHistory.value
         if (current.size > 1) {
             val updated = current.dropLast(1)
@@ -234,6 +240,7 @@ fun AppContent(
     var showClearCacheDialog by remember { mutableStateOf(false) }
 
     fun navigateTo(newPage: String) {
+        isNavigatingBack = false
         isAppSettingsOpen = false
         isNewsSettingsOpen = false
         if (newPage == "home") {
@@ -258,22 +265,26 @@ fun AppContent(
 
     // Platform Back Handlers
     val isSettingsOpen = isAppSettingsOpen || isNewsSettingsOpen
-    val backEnabled = isDrawerOpen || isSettingsOpen || page != "home" || selectedItem != null || pageHistory.value.size > 1
+    val backEnabled = showClearCacheDialog || isDrawerOpen || isSettingsOpen || page != "home" || selectedItem != null || pageHistory.value.size > 1
     PlatformBackHandler(enabled = backEnabled) {
-        if (isDrawerOpen) {
+        if (showClearCacheDialog) {
+            showClearCacheDialog = false
+        } else if (isDrawerOpen) {
             isDrawerOpen = false
         } else if (isNewsSettingsOpen) {
             isNewsSettingsOpen = false
         } else if (isAppSettingsOpen) {
             isAppSettingsOpen = false
         } else if (selectedItem != null) {
-            selectedItem = null
-            pdfInitialPage = null
             popPage()
+            scope.launch {
+                kotlinx.coroutines.delay(350)
+                selectedItem = null
+                pdfInitialPage = null
+            }
         } else {
             when (page) {
                 "list" -> {
-                    SyncEngine.saveSelectedCategory(null)
                     if (!popPage()) {
                         navigateTo("home")
                     }
@@ -367,7 +378,8 @@ fun AppContent(
                 .padding(end = if (isWide && page in listOf("home", "list", "news", "bookmarks", "shortcuts", "about")) 90.dp else 0.dp) // reduced from 108.dp for smaller rail
         ) {
                 // Background Orbs (Premium Liquid M3 Aesthetics)
-                Box(modifier = Modifier.fillMaxSize()) {
+                if (platformActionHandler?.isLowEndDevice() != true) {
+                    Box(modifier = Modifier.fillMaxSize()) {
                     val orbSize = if (isWide) 200.dp else 300.dp
                     Box(
                         modifier = Modifier
@@ -398,6 +410,7 @@ fun AppContent(
                             )
                     )
                 }
+                }
 
                 // Page Content (Always matches full content area)
                 val horizontalInsets = if (page != "pdf") WindowInsets.safeDrawing.only(WindowInsetsSides.Horizontal) else WindowInsets(0,0,0,0)
@@ -421,24 +434,35 @@ fun AppContent(
                                 val targetIndex = pageOrder.indexOf(targetState).takeIf { it >= 0 } ?: 0
                                 
                                 if (targetState == "pdf") {
-                                    // Shared Element takes over movement, just fade
-                                    fadeIn(tween(400)).togetherWith(fadeOut(tween(400)))
+                                    fadeIn(tween(260, easing = androidx.compose.animation.core.CubicBezierEasing(0.2f, 0f, 0f, 1f))).togetherWith(
+                                        fadeOut(tween(180))
+                                    )
                                 } else if (initialState == "pdf") {
-                                    // Exit smoothly, keeping incoming screen strictly behind
-                                    fadeIn(tween(400)).togetherWith(fadeOut(tween(400))).apply {
-                                        targetContentZIndex = -1f
-                                    }
+                                    fadeIn(tween(200, easing = androidx.compose.animation.core.LinearOutSlowInEasing)).togetherWith(
+                                        fadeOut(tween(280, easing = androidx.compose.animation.core.CubicBezierEasing(0.4f, 0f, 1f, 1f)))
+                                    )
                                 } else {
-                                    // RTL transitions:
-                                    // Forward: new screen enters from left (-it), old exits to right (it)
-                                    // Backward: new screen enters from right (it), old exits to left (-it)
-                                    if (targetIndex > initialIndex) {
-                                        (slideInHorizontally(animationSpec = tween(300, easing = FastOutSlowInEasing)) { -it } + fadeIn(tween(150))) togetherWith
-                                        (slideOutHorizontally(animationSpec = tween(300, easing = FastOutSlowInEasing)) { it } + fadeOut(tween(150)))
-                                    } else {
-                                        (slideInHorizontally(animationSpec = tween(300, easing = FastOutSlowInEasing)) { it } + fadeIn(tween(150))) togetherWith
-                                        (slideOutHorizontally(animationSpec = tween(300, easing = FastOutSlowInEasing)) { -it } + fadeOut(tween(150)))
-                                    }
+                                    // RTL partial-slide transitions matching caliq5 exactly
+                                    val fluidEasing = androidx.compose.animation.core.CubicBezierEasing(0.2f, 0f, 0f, 1f)
+                                    val slideSpec = androidx.compose.animation.core.tween<androidx.compose.ui.unit.IntOffset>(
+                                        durationMillis = 280,
+                                        easing = fluidEasing
+                                    )
+                                    val fadeSpec = androidx.compose.animation.core.tween<Float>(
+                                        durationMillis = 220,
+                                        easing = androidx.compose.animation.core.LinearOutSlowInEasing
+                                    )
+                                    val direction = if (isNavigatingBack || targetIndex < initialIndex) 1 else -1 // RTL: Forward is -1 (from left), Backward is 1 (from right)
+
+                                    (slideInHorizontally(
+                                        initialOffsetX = { fullWidth -> (fullWidth * 0.38f * direction).toInt() },
+                                        animationSpec = slideSpec
+                                    ) + fadeIn(animationSpec = fadeSpec)).togetherWith(
+                                        slideOutHorizontally(
+                                            targetOffsetX = { fullWidth -> (-fullWidth * 0.22f * direction).toInt() },
+                                            animationSpec = slideSpec
+                                        ) + fadeOut(animationSpec = fadeSpec)
+                                    )
                                 }
                             }
                         ) { targetPage ->
@@ -470,7 +494,7 @@ fun AppContent(
                                         scrollState = libraryHomeScrollState
                                     )
                                     "list" -> LibraryScreen(
-                                        category = selectedCategory,
+                                        category = selectedCategory ?: "books",
                                         isGridView = isGridView,
                                         searchQuery = searchQuery,
                                         onSearchQueryChange = { searchQuery = it },
@@ -520,27 +544,24 @@ fun AppContent(
                                     "shortcuts" -> ShortcutsScreen(
                                         platformActionHandler = platformActionHandler,
                                         isDark = isDark,
-                                        bottomPadding = listBottomPadding
+                                        bottomPadding = listBottomPadding,
+                                        onScrollableStateChanged = { canCurrentPageScroll = it },
+                                        lazyGridState = shortcutsLazyGridState
                                     )
                                     "about" -> AboutScreen(
                                         onOpenUrl = { url ->
                                             platformActionHandler.showToast("تحويل إلى تليغرام...")
                                             platformActionHandler.openUrl(url)
                                         },
-                                        isDark = isDark
+                                        isDark = isDark,
+                                        bottomPadding = listBottomPadding,
+                                        onScrollableStateChanged = { canCurrentPageScroll = it },
+                                        scrollState = aboutScrollState
                                     )
                                     "pdf" -> {
                                         if (selectedItem != null) {
-                                            Box(
-                                                modifier = Modifier
-                                                    .fillMaxSize()
-                                                    .sharedBounds(
-                                                        sharedContentState = rememberSharedContentState(key = "book-${selectedItem!!.id}"),
-                                                        animatedVisibilityScope = this@AnimatedContent
-                                                    )
-                                            ) {
-                                                PdfViewerScreen(
-                                                    item = selectedItem!!,
+                                            PdfViewerScreen(
+                                                item = selectedItem!!,
                                                 isSaved = { pageIdx -> "${selectedItem!!.id}:$pageIdx" in savedItemIds },
                                                 onToggleSave = { pageIdx ->
                                                     val key = "${selectedItem!!.id}:$pageIdx"
@@ -554,14 +575,13 @@ fun AppContent(
                                                 onClose = {
                                                     popPage()
                                                     scope.launch {
-                                                        kotlinx.coroutines.delay(400) // Wait for transition to finish
+                                                        kotlinx.coroutines.delay(350) // Wait for transition to finish
                                                         selectedItem = null
                                                         pdfInitialPage = null
                                                     }
                                                 },
                                                 initialPage = pdfInitialPage
                                             )
-                                            }
                                         }
                                     }
                                 }
@@ -576,7 +596,7 @@ fun AppContent(
                     visible = page != "pdf" && page != "web",
                     enter = slideInVertically(animationSpec = tween(400, easing = FastOutSlowInEasing)) { -it } + fadeIn(tween(400)),
                     exit = slideOutVertically(animationSpec = tween(400, easing = FastOutSlowInEasing)) { -it } + fadeOut(tween(400)),
-                    modifier = Modifier.align(Alignment.TopCenter).fillMaxWidth()
+                    modifier = Modifier.align(Alignment.TopCenter).fillMaxWidth().zIndex(50f)
                 ) {
                     Box(
                         modifier = Modifier
@@ -606,7 +626,9 @@ fun AppContent(
                                                 SyncEngine.saveSelectedCategory(null)
                                                 navigateTo("home")
                                             } else {
-                                                navigateTo("home")
+                                                if (!popPage()) {
+                                                    navigateTo("home")
+                                                }
                                             }
                                         }
                                     ) {
@@ -832,7 +854,7 @@ fun AppContent(
             visible = page in mainTabs && !isWide,
             enter = slideInVertically(animationSpec = tween(300, easing = FastOutSlowInEasing)) { it } + fadeIn(tween(300)),
             exit = slideOutVertically(animationSpec = tween(300, easing = FastOutSlowInEasing)) { it } + fadeOut(tween(300)),
-            modifier = Modifier.align(Alignment.BottomCenter).fillMaxWidth().zIndex(5f)
+            modifier = Modifier.align(Alignment.BottomCenter).fillMaxWidth().zIndex(50f)
         ) {
             Box(
                 modifier = Modifier
@@ -967,7 +989,7 @@ fun AppContent(
             visible = page in mainTabs && isWide,
             enter = slideInHorizontally(animationSpec = tween(400, easing = FastOutSlowInEasing)) { -it } + fadeIn(tween(400)),
             exit = slideOutHorizontally(animationSpec = tween(400, easing = FastOutSlowInEasing)) { -it } + fadeOut(tween(400)),
-            modifier = Modifier.align(Alignment.CenterEnd).fillMaxHeight().zIndex(5f)
+            modifier = Modifier.align(Alignment.CenterEnd).fillMaxHeight().zIndex(50f)
         ) {
             Box(
                 modifier = Modifier
@@ -1010,9 +1032,12 @@ fun AppContent(
                 ) {
                     val contentHeight = maxHeight
                     val itemHeight = contentHeight / navItems.size
+                    var dragOffsetY by remember { mutableStateOf<Float?>(null) }
+                    val itemHeightPx = with(androidx.compose.ui.platform.LocalDensity.current) { itemHeight.toPx() }
+
                     val indicatorOffset by animateDpAsState(
-                        targetValue = itemHeight * selectedIndex,
-                        animationSpec = spring(dampingRatio = 0.7f, stiffness = Spring.StiffnessLow)
+                        targetValue = if (dragOffsetY != null) with(androidx.compose.ui.platform.LocalDensity.current) { (dragOffsetY!! - (itemHeightPx / 2)).toDp() } else itemHeight * selectedIndex,
+                        animationSpec = spring(dampingRatio = 0.6f, stiffness = Spring.StiffnessLow)
                     )
 
                     Box(
@@ -1032,7 +1057,31 @@ fun AppContent(
                             )
                     )
 
-                    Column(modifier = Modifier.fillMaxSize()) {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .pointerInput(Unit) {
+                                awaitPointerEventScope {
+                                    while (true) {
+                                        val event = awaitPointerEvent()
+                                        val change = event.changes.firstOrNull()
+                                        if (change != null) {
+                                            if (change.pressed) {
+                                                val rawY = change.position.y
+                                                dragOffsetY = rawY.coerceIn(0f, size.height.toFloat())
+                                            } else {
+                                                // When finger lifted, trigger tab action if dragged
+                                                if (dragOffsetY != null) {
+                                                    val idx = (dragOffsetY!! / itemHeightPx).toInt().coerceIn(0, navItems.lastIndex)
+                                                    navItems[idx].third()
+                                                    dragOffsetY = null
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                    ) {
                         navItems.forEachIndexed { index, item ->
                             val isActive = isNavActive[index]
                             val tint by animateColorAsState(
@@ -1043,11 +1092,7 @@ fun AppContent(
                                 modifier = Modifier
                                     .weight(1f)
                                     .fillMaxWidth()
-                                    .clip(RoundedCornerShape(20.dp))
-                                    .clickable(
-                                        interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() },
-                                        indication = null
-                                    ) { item.third() },
+                                    .clip(RoundedCornerShape(20.dp)),
                                 horizontalAlignment = Alignment.CenterHorizontally,
                                 verticalArrangement = Arrangement.Center
                             ) {
@@ -1349,9 +1394,9 @@ fun AppContent(
             visible = showSplash,
             enter = androidx.compose.animation.fadeIn(),
             exit = androidx.compose.animation.scaleOut(
-                targetScale = 1.1f,
-                animationSpec = spring(dampingRatio = 0.8f, stiffness = Spring.StiffnessLow)
-            ) + androidx.compose.animation.fadeOut(animationSpec = androidx.compose.animation.core.tween(600)),
+                targetScale = 1.06f,
+                animationSpec = tween(480, easing = androidx.compose.animation.core.CubicBezierEasing(0.2f, 0f, 0f, 1f))
+            ) + androidx.compose.animation.fadeOut(animationSpec = androidx.compose.animation.core.tween(420)),
             modifier = Modifier
                 .fillMaxSize()
                 .zIndex(100f)
@@ -1367,22 +1412,33 @@ fun AppContent(
             )
         }
         
+        // Clear toast immediately on navigation to prevent lingering toasts from previous screens
+        LaunchedEffect(page) {
+            ToastManager.clearToast()
+        }
+
         var lastNonNullToastMessage by remember { mutableStateOf<String?>(null) }
         if (toastMessage != null) {
             lastNonNullToastMessage = toastMessage
         }
 
-        // Global Toast Message (Concept Style)
+        // Global Toast Message (Floating Dynamic Pill with animateBackOutDown)
         androidx.compose.animation.AnimatedVisibility(
             visible = toastMessage != null,
-            enter = androidx.compose.animation.slideInVertically(
-                initialOffsetY = { it },
-                animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessLow)
-            ) + androidx.compose.animation.fadeIn(),
-            exit = androidx.compose.animation.slideOutVertically(
-                targetOffsetY = { it },
-                animationSpec = spring(dampingRatio = Spring.DampingRatioNoBouncy, stiffness = Spring.StiffnessMedium)
-            ) + androidx.compose.animation.fadeOut(),
+            enter = (androidx.compose.animation.slideInVertically(
+                initialOffsetY = { (it * 0.7f).toInt() },
+                animationSpec = spring(dampingRatio = 0.72f, stiffness = Spring.StiffnessMediumLow)
+            ) + androidx.compose.animation.scaleIn(
+                initialScale = 0.88f,
+                animationSpec = spring(dampingRatio = 0.72f, stiffness = Spring.StiffnessMediumLow)
+            ) + androidx.compose.animation.fadeIn(tween(200))),
+            exit = (androidx.compose.animation.slideOutVertically(
+                targetOffsetY = { (it * 1.3f).toInt() },
+                animationSpec = tween(170, easing = androidx.compose.animation.core.FastOutLinearInEasing)
+            ) + androidx.compose.animation.scaleOut(
+                targetScale = 0.80f,
+                animationSpec = tween(170, easing = androidx.compose.animation.core.FastOutLinearInEasing)
+            ) + androidx.compose.animation.fadeOut(tween(130))),
             modifier = Modifier
                 .align(Alignment.BottomCenter)
                 .windowInsetsPadding(WindowInsets.safeDrawing.only(WindowInsetsSides.Horizontal))

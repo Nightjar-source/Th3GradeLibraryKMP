@@ -4,6 +4,9 @@ package com.Nightjar.gradeiraqi3library.ui
 import com.Nightjar.gradeiraqi3library.LocalSharedTransitionScope
 import com.Nightjar.gradeiraqi3library.LocalAnimatedVisibilityScope
 import androidx.compose.animation.ExperimentalSharedTransitionApi
+import androidx.compose.animation.core.spring
+import androidx.compose.animation.core.Spring
+import com.Nightjar.gradeiraqi3library.theme.popInOnInitialLoad
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
@@ -122,7 +125,8 @@ fun BookmarksScreen(
                 columns = if (isMedium) GridCells.Fixed(2) else GridCells.Adaptive(minSize = 340.dp),
                 modifier = Modifier
                     .fillMaxWidth()
-                    .weight(1f),
+                    .weight(1f)
+                    .elasticOverscroll(),
                 verticalArrangement = Arrangement.spacedBy(16.dp),
                 horizontalArrangement = Arrangement.spacedBy(16.dp),
                 contentPadding = PaddingValues(top = 0.dp, bottom = bottomPadding)
@@ -183,14 +187,34 @@ fun BookAccordionItem(
 
     var columnModifier = Modifier
         .fillMaxWidth()
+        .popInOnInitialLoad(index)
         .liquidGlass(isDark, borderRadius = 20.dp, alpha = 0.5f)
         .clip(RoundedCornerShape(20.dp))
 
     if (sharedTransitionScope != null && animatedVisibilityScope != null) {
         with(sharedTransitionScope) {
             columnModifier = columnModifier.sharedBounds(
-                sharedContentState = rememberSharedContentState(key = "book-${item.id}"),
-                animatedVisibilityScope = animatedVisibilityScope, renderInOverlayDuringTransition = false
+                sharedContentState = rememberSharedContentState(key = "card_${item.id}"),
+                animatedVisibilityScope = animatedVisibilityScope,
+                enter = androidx.compose.animation.fadeIn(animationSpec = androidx.compose.animation.core.tween(240, easing = androidx.compose.animation.core.LinearOutSlowInEasing)),
+                exit = androidx.compose.animation.fadeOut(animationSpec = androidx.compose.animation.core.tween(200, easing = androidx.compose.animation.core.FastOutLinearInEasing)),
+                renderInOverlayDuringTransition = false,
+                boundsTransform = { initialBounds, targetBounds ->
+                    val isExpanding = targetBounds.width > initialBounds.width
+                    if (isExpanding) {
+                        // Open physics: fast, responsive, fluid expansion
+                        spring(
+                            dampingRatio = 0.82f,
+                            stiffness = 380f
+                        )
+                    } else {
+                        // Close physics: soft, cushioned, elegant contraction
+                        spring(
+                            dampingRatio = 0.88f,
+                            stiffness = 320f
+                        )
+                    }
+                }
             )
         }
     }

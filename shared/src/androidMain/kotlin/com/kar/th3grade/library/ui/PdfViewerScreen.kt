@@ -36,8 +36,10 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.zIndex
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.core.view.WindowCompat
+import com.Nightjar.gradeiraqi3library.data.AllItems
 import androidx.core.view.WindowInsetsCompat
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.text.style.TextAlign
@@ -176,10 +178,8 @@ actual fun PdfViewerScreen(
         onDispose {
             try {
                 pdfRenderer?.close()
-                pdfRenderer = null // تصفير المعالج قبل الإغلاق لضمان فتح ملف جديد بأمان
-                // Do not delete tempFile to persist PDF on local storage cache!
-                PdfBitmapCache.cache.evictAll() // تفريغ ذاكرة الرام فوراً عند إغلاق الملزمة لتسريع التطبيق
-                // Ensure status bar is restored when closing the viewer screen
+                pdfRenderer = null
+                PdfBitmapCache.cache.evictAll()
                 activity?.window?.let { window ->
                     val controller = WindowCompat.getInsetsController(window, window.decorView)
                     controller.show(WindowInsetsCompat.Type.statusBars())
@@ -192,24 +192,43 @@ actual fun PdfViewerScreen(
 
     val sharedTransitionScope = LocalSharedTransitionScope.current
     val animatedVisibilityScope = LocalAnimatedVisibilityScope.current
-
     var isFirstPageReady by remember { mutableStateOf(false) }
-    var isCoverVisible by remember { mutableStateOf(true) }
-    LaunchedEffect(pdfRenderer, isFirstPageReady) {
-        if (pdfRenderer != null && isFirstPageReady) {
-            isCoverVisible = false
-        }
-    }
+
+    val cornerRadius by if (animatedVisibilityScope != null) {
+        androidx.compose.animation.core.animateDpAsState(
+            targetValue = if (animatedVisibilityScope.transition.targetState == androidx.compose.animation.EnterExitState.Visible) 0.dp else 28.dp,
+            label = "corner"
+        )
+    } else remember { mutableStateOf(0.dp) }
 
     val rootModifier = Modifier
         .fillMaxSize()
+        .clip(androidx.compose.foundation.shape.RoundedCornerShape(cornerRadius))
         .then(
             if (sharedTransitionScope != null && animatedVisibilityScope != null) {
                 with(sharedTransitionScope) {
                     Modifier.sharedBounds(
                         sharedContentState = rememberSharedContentState(key = "card_${item.id}"),
                         animatedVisibilityScope = animatedVisibilityScope,
-                        boundsTransform = { _, _ -> spring(stiffness = Spring.StiffnessMediumLow, dampingRatio = Spring.DampingRatioNoBouncy) }
+                        enter = androidx.compose.animation.fadeIn(animationSpec = androidx.compose.animation.core.tween(240, easing = androidx.compose.animation.core.LinearOutSlowInEasing)),
+                        exit = androidx.compose.animation.fadeOut(animationSpec = androidx.compose.animation.core.tween(200, easing = androidx.compose.animation.core.FastOutLinearInEasing)),
+                        renderInOverlayDuringTransition = false,
+                        boundsTransform = { initialBounds, targetBounds ->
+                            val isExpanding = targetBounds.width > initialBounds.width
+                            if (isExpanding) {
+                                // Open physics: fast, responsive, fluid expansion
+                                spring(
+                                    dampingRatio = 0.82f,
+                                    stiffness = 380f
+                                )
+                            } else {
+                                // Close physics: soft, cushioned, elegant contraction
+                                spring(
+                                    dampingRatio = 0.88f,
+                                    stiffness = 320f
+                                )
+                            }
+                        }
                     )
                 }
             } else Modifier
@@ -217,6 +236,7 @@ actual fun PdfViewerScreen(
         .background(MaterialTheme.colorScheme.background)
 
     Box(modifier = rootModifier) {
+
         if (loadingError != null) {
             Column(
                 modifier = Modifier
@@ -581,11 +601,20 @@ actual fun PdfViewerScreen(
             }
         }
 
-            // 2. Loading overlay (rendered when PDF is not fully loaded/ready)
+            // 2. Loading overlay (rendered ONLY while PDF is initializing from disk)
+            var showLoading by remember { mutableStateOf(false) }
+            LaunchedEffect(pdfRenderer) {
+                if (pdfRenderer == null) {
+                    kotlinx.coroutines.delay(250)
+                    showLoading = true
+                } else {
+                    showLoading = false
+                }
+            }
             androidx.compose.animation.AnimatedVisibility(
-                visible = pdfRenderer == null || !isFirstPageReady,
+                visible = showLoading,
                 enter = fadeIn(),
-                exit = fadeOut(animationSpec = tween(300))
+                exit = fadeOut(animationSpec = tween(150))
             ) {
                 Box(
                     modifier = Modifier

@@ -12,6 +12,8 @@ import com.Nightjar.gradeiraqi3library.data.PlatformActionHandler
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import com.prof18.rssparser.RssParser
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 
 object SyncEngine {
     private val settings = Settings()
@@ -80,7 +82,11 @@ object SyncEngine {
         try {
             val readStr = settings.getString("read_news_ids", "")
             if (readStr.isNotEmpty()) {
-                _readNewsIds.value = readStr.split(",").toSet()
+                if (readStr.trim().startsWith("[")) {
+                    _readNewsIds.value = json.decodeFromString<List<String>>(readStr).toSet()
+                } else {
+                    _readNewsIds.value = readStr.split(",").filter { it.isNotEmpty() }.toSet()
+                }
             }
         } catch (e: Exception) {
             e.printStackTrace()
@@ -88,11 +94,16 @@ object SyncEngine {
     }
 
     fun markNewsAsRead(id: String) {
+        if (id.isEmpty()) return
         val current = _readNewsIds.value.toMutableSet()
         if (!current.contains(id)) {
             current.add(id)
             _readNewsIds.value = current
-            settings.putString("read_news_ids", current.joinToString(","))
+            try {
+                settings.putString("read_news_ids", json.encodeToString(current.toList()))
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
         }
     }
 
@@ -246,7 +257,12 @@ object SyncEngine {
         try {
             val cachedNews = settings.getString("app_news_cache", "")
             if (cachedNews.isNotEmpty()) {
-                _newsList.value = json.decodeFromString<List<NewsItem>>(cachedNews)
+                val list = json.decodeFromString<List<NewsItem>>(cachedNews).map {
+                    if (it.formattedDate.isEmpty() && it.pubDate.isNotEmpty()) {
+                        it.copy(formattedDate = formatNewsDate(it.pubDate))
+                    } else it
+                }
+                _newsList.value = list
             }
         } catch (e: Exception) {
             e.printStackTrace()
@@ -285,8 +301,34 @@ object SyncEngine {
         _lastFetchedCount.value = -1
     }
 
-    suspend fun fetchAndSync(forced: Boolean = false): Int {
-        if (_syncing.value) return 0 // Sync Lock: exit immediately if a sync is already in progress
+    fun formatNewsDate(pubDate: String): String = try {
+        val dParts = pubDate.split(" ")
+        if (dParts.size >= 5) {
+            val day = dParts[1]
+            val month = when (dParts[2].lowercase()) {
+                "jan" -> "1"; "feb" -> "2"; "mar" -> "3"; "apr" -> "4"
+                "may" -> "5"; "jun" -> "6"; "jul" -> "7"; "aug" -> "8"
+                "sep" -> "9"; "oct" -> "10"; "nov" -> "11"; "dec" -> "12"
+                else -> "1"
+            }
+            val year = dParts[3]
+            val timeParts = dParts[4].split(":")
+            var hour = timeParts[0].toIntOrNull() ?: 12
+            val min = timeParts[1]
+            
+            // تعديل التوقيت ليكون بتوقيت العراق (+3)
+            hour += 3
+            if (hour >= 24) hour -= 24
+            
+            val amPm = if (hour >= 12) "م" else "ص"
+            if (hour > 12) hour -= 12
+            if (hour == 0) hour = 12
+            "$day-$month-$year  $hour:$min $amPm"
+        } else pubDate
+    } catch (e: Exception) { pubDate }
+
+    suspend fun fetchAndSync(forced: Boolean = false): Int = withContext(Dispatchers.Default) {
+        if (_syncing.value) return@withContext 0 // Sync Lock: exit immediately if a sync is already in progress
         val now = ClockSystem.currentTimeMillis()
         val lastSync = _appSettings.value.lastSync
         val timeSinceSync = now - lastSync
@@ -370,13 +412,15 @@ object SyncEngine {
             val channel = fetchWithFallbacks()
 
             val fetchedItems = channel.items.map { item ->
+                val pubDate = item.pubDate ?: ""
                 NewsItem(
                     id = item.guid ?: item.link ?: "",
                     title = item.title ?: "",
                     link = item.link ?: "",
                     contentSnippet = item.description ?: "",
-                    pubDate = item.pubDate ?: "",
-                    imageUrl = item.image ?: extractImageFromContent(item.content ?: item.description ?: "")
+                    pubDate = pubDate,
+                    imageUrl = item.image ?: extractImageFromContent(item.content ?: item.description ?: ""),
+                    formattedDate = formatNewsDate(pubDate)
                 )
             }
             
@@ -456,7 +500,11 @@ object SyncEngine {
                     }
                     if (readIdsChanged) {
                         _readNewsIds.value = currentReadIds
-                        settings.putString("read_news_ids", currentReadIds.joinToString(","))
+                        try {
+                            settings.putString("read_news_ids", json.encodeToString(currentReadIds.toList()))
+                        } catch (e: Exception) {
+                            e.printStackTrace()
+                        }
                     }
 
                     // Merge new items on top, de-duplicate by id
@@ -483,25 +531,25 @@ object SyncEngine {
                     }
                     platformActionHandler?.showNewsNotification(newUniqueItems.map { it.title }, newUniqueItems.size)
                     saveSettings(_appSettings.value.copy(lastSync = now))
-                    return newUniqueItems.size
+                    return@withContext newUniqueItems.size
                 } else {
                     // Fetch succeeded but no new items were found.
                     // We MUST update lastSync here so the 5-minute skip rule applies, preventing
                     // the backup alarm from immediately repeating the same network request after WorkManager.
                     saveSettings(_appSettings.value.copy(lastSync = now))
                     _lastFetchedCount.value = 0
-                    return 0
+                    return@withContext 0
                 }
             } else {
                 // Feeds might be empty initially, still counts as a successful connection check
                 saveSettings(_appSettings.value.copy(lastSync = now))
             }
-            return 0
+            return@withContext 0
         } catch (e: Throwable) {
             if (e is kotlinx.coroutines.CancellationException) throw e
             e.printStackTrace()
             _lastFetchedCount.value = -2 // signal error
-            return -2
+            return@withContext -2
         } finally {
             _syncing.value = false
         }

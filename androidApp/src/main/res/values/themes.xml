@@ -1,13 +1,21 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <style name="Theme.App.Starting" parent="Theme.SplashScreen">
-        <!-- Set the splash screen background to match our dark theme -->
-        <item name="windowSplashScreenBackground">#1E1B4B</item>
-        <!-- Set the splash screen icon -->
-        <item name="windowSplashScreenAnimatedIcon">@drawable/app_icon</item>
-        <!-- Set the post-splash theme to follow our light theme configuration -->
-        <item name="postSplashScreenTheme">@android:style/Theme.Material.Light.NoActionBar</item>
-        <item name="android:windowTranslucentStatus">true</item>
+    <!-- Base App Theme -->
+    <style name="Theme.App" parent="android:Theme.Material.Light.NoActionBar">
         <item name="android:statusBarColor">@android:color/transparent</item>
+        <item name="android:navigationBarColor">@android:color/transparent</item>
+        <item name="android:windowLayoutInDisplayCutoutMode">shortEdges</item>
+        <item name="android:windowBackground">@drawable/splash_background</item>
+    </style>
+
+    <!-- Splash screen theme for Android < 12 -->
+    <style name="Theme.App.Starting" parent="Theme.SplashScreen">
+        <item name="android:windowBackground">@drawable/splash_background</item>
+        <item name="windowSplashScreenBackground">@drawable/splash_background</item>
+        <item name="windowSplashScreenAnimatedIcon">@drawable/app_icon</item>
+        <item name="windowSplashScreenIconBackgroundColor">@android:color/transparent</item>
+        <item name="postSplashScreenTheme">@style/Theme.App</item>
+        <item name="android:statusBarColor">@android:color/transparent</item>
+        <item name="android:navigationBarColor">@android:color/transparent</item>
     </style>
 </resources>

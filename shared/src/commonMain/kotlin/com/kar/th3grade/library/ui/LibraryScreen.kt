@@ -57,10 +57,14 @@ import androidx.compose.ui.layout.Layout
 import androidx.compose.ui.unit.Constraints
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.CubicBezierEasing
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.Spring
+import androidx.compose.ui.composed
 import androidx.compose.ui.unit.lerp
+import com.Nightjar.gradeiraqi3library.theme.LocalIsLowEndDevice
 
+import com.Nightjar.gradeiraqi3library.theme.popInOnInitialLoad
 
 @Composable
 fun LibraryScreen(
@@ -112,6 +116,7 @@ fun LibraryScreen(
                             .fillMaxHeight()
                             .widthIn(max = 800.dp)
                             .padding(horizontal = 16.dp)
+                            .elasticOverscroll()
                             .verticalScroll(scrollState),
                         verticalArrangement = Arrangement.spacedBy(16.dp)
                     ) {
@@ -143,7 +148,7 @@ fun LibraryScreen(
                             Box(modifier = Modifier.weight(1f)) {
                                 CategoryMenuCard(
                                     title = "الكتب الرسمية",
-                                    desc = "المنهج الوزاري المعتمد 2026",
+                                    desc = "المنهج الوزاري المعتمد 2027",
                                     brush = Brush.linearGradient(listOf(Color(0xFF6366F1), Color(0xFF1D4ED8))),
                                     icon = Icons.Default.Book,
                                     index = 1,
@@ -163,7 +168,7 @@ fun LibraryScreen(
 
                         CategoryMenuCard(
                             title = "الكتب الرسمية",
-                            desc = "المنهج الوزاري المعتمد 2026",
+                            desc = "المنهج الوزاري المعتمد 2027",
                             brush = Brush.linearGradient(listOf(Color(0xFF6366F1), Color(0xFF1D4ED8))),
                             icon = Icons.Default.Book,
                             index = 1,
@@ -178,8 +183,14 @@ fun LibraryScreen(
             } else {
                 // Category contents list/grid
                 val allList = if (category == "books") AllItems.books else AllItems.notes
-                val filteredList = allList.filter {
-                    it.title.contains(searchQuery, ignoreCase = true)
+                val filteredList = remember(searchQuery, category) {
+                    if (searchQuery.isBlank()) {
+                        allList
+                    } else {
+                        allList.filter {
+                            it.title.contains(searchQuery, ignoreCase = true)
+                        }
+                    }
                 }
 
                 // Uses hoisted lazyGridState
@@ -227,7 +238,8 @@ fun LibraryScreen(
                         },
                         modifier = Modifier
                             .weight(1f)
-                            .fillMaxWidth(),
+                            .fillMaxWidth()
+                            .elasticOverscroll(),
                         horizontalArrangement = Arrangement.spacedBy(16.dp, Alignment.CenterHorizontally),
                         verticalArrangement = Arrangement.spacedBy(if (isGridView) 16.dp else 12.dp),
                         contentPadding = PaddingValues(
@@ -258,57 +270,47 @@ fun CategoryMenuCard(
     brush: Brush,
     icon: androidx.compose.ui.graphics.vector.ImageVector,
     index: Int = 0,
+    modifier: Modifier = Modifier,
     onClick: () -> Unit
 ) {
-    var hasAnimated by rememberSaveable { mutableStateOf(false) }
-    val alphaAnim = remember { androidx.compose.animation.core.Animatable(if (hasAnimated) 1f else 0f) }
-    val yOffsetAnim = remember { androidx.compose.animation.core.Animatable(if (hasAnimated) 0f else 50f) }
+    val isLowEnd = com.Nightjar.gradeiraqi3library.theme.LocalIsLowEndDevice.current
+    val infiniteTransition = rememberInfiniteTransition(label = "cardOrbs")
+    val orbScale1 by if (!isLowEnd) {
+        infiniteTransition.animateFloat(
+            initialValue = 1f,
+            targetValue = 1.25f,
+            animationSpec = infiniteRepeatable(animation = tween(3000), repeatMode = RepeatMode.Reverse),
+            label = "orb1"
+        )
+    } else remember { mutableStateOf(1f) }
 
-    LaunchedEffect(Unit) {
-        if (!hasAnimated) {
-            val delayMs = index * 100L
-            kotlinx.coroutines.delay(delayMs)
-            launch {
-                alphaAnim.animateTo(1f, animationSpec = tween(500, easing = FastOutSlowInEasing))
-            }
-            launch {
-                yOffsetAnim.animateTo(0f, animationSpec = tween(500, easing = FastOutSlowInEasing))
-            }
-            hasAnimated = true
-        }
-    }
+    val orbScale2 by if (!isLowEnd) {
+        infiniteTransition.animateFloat(
+            initialValue = 1f,
+            targetValue = 1.3f,
+            animationSpec = infiniteRepeatable(animation = tween(4000, delayMillis = 500), repeatMode = RepeatMode.Reverse),
+            label = "orb2"
+        )
+    } else remember { mutableStateOf(1f) }
 
-    val infiniteTransition = rememberInfiniteTransition()
-    val orbScale1 by infiniteTransition.animateFloat(
-        initialValue = 1f,
-        targetValue = 1.3f,
-        animationSpec = infiniteRepeatable(animation = tween(3000), repeatMode = RepeatMode.Reverse)
-    )
-    val orbScale2 by infiniteTransition.animateFloat(
-        initialValue = 1f,
-        targetValue = 1.4f,
-        animationSpec = infiniteRepeatable(animation = tween(4000, delayMillis = 500), repeatMode = RepeatMode.Reverse)
-    )
-    val floatY by infiniteTransition.animateFloat(
-        initialValue = -15f,
-        targetValue = 15f,
-        animationSpec = infiniteRepeatable(animation = tween(2500, easing = FastOutSlowInEasing), repeatMode = RepeatMode.Reverse)
-    )
+    val floatY by if (!isLowEnd) {
+        infiniteTransition.animateFloat(
+            initialValue = -10f,
+            targetValue = 10f,
+            animationSpec = infiniteRepeatable(animation = tween(2500, easing = FastOutSlowInEasing), repeatMode = RepeatMode.Reverse),
+            label = "floatIcon"
+        )
+    } else remember { mutableStateOf(0f) }
 
     val screenWidthDp = with(androidx.compose.ui.platform.LocalDensity.current) { androidx.compose.ui.platform.LocalWindowInfo.current.containerSize.width.toDp() }
     val isWide = screenWidthDp >= 600.dp
 
     Card(
-        modifier = Modifier
+        modifier = modifier
             .fillMaxWidth()
             .then(if (isWide) Modifier.aspectRatio(1.6f) else Modifier.height(190.dp))
-            .graphicsLayer {
-                alpha = alphaAnim.value
-                translationY = yOffsetAnim.value
-                ambientShadowColor = Color.Black.copy(alpha = 0.5f)
-                spotShadowColor = Color.Black.copy(alpha = 0.5f)
-            }
-            .clip(RoundedCornerShape(32.dp)),
+            .clip(RoundedCornerShape(32.dp))
+            .popInOnInitialLoad(index),
         shape = RoundedCornerShape(32.dp)
     ) {
         Box(
@@ -323,40 +325,44 @@ fun CategoryMenuCard(
                 )
                 .bounceClick { onClick() }
         ) {
-            // Liquid Orb 1 (Top Left, White)
-            Box(
-                modifier = Modifier
-                    .offset(x = (-48).dp, y = (-48).dp)
-                    .size(192.dp) // w-48 h-48 in web
-                    .graphicsLayer { 
-                        scaleX = orbScale1; scaleY = orbScale1 
-                        translationX = orbScale1 * 20f
-                    }
-                    .background(
-                        Brush.radialGradient(
-                            colors = listOf(Color.White.copy(alpha = 0.22f), Color.Transparent)
-                        ),
-                        shape = CircleShape
-                    )
-            )
-            // Liquid Orb 2 (Bottom Right, Dark)
-            Box(
-                modifier = Modifier
-                    .align(Alignment.BottomEnd)
-                    .offset(x = 32.dp, y = 32.dp)
-                    .size(160.dp) // w-40 h-40 in web
-                    .graphicsLayer { 
-                        scaleX = orbScale2; scaleY = orbScale2 
-                        translationX = -orbScale2 * 20f
-                        translationY = orbScale2 * 10f
-                    }
-                    .background(
-                        Brush.radialGradient(
-                            colors = listOf(Color.Black.copy(alpha = 0.12f), Color.Transparent)
-                        ),
-                        shape = CircleShape
-                    )
-            )
+            if (!isLowEnd) {
+                // Liquid Orb 1 (Top Left, White)
+                Box(
+                    modifier = Modifier
+                        .offset(x = (-48).dp, y = (-48).dp)
+                        .size(192.dp)
+                        .graphicsLayer { 
+                            scaleX = orbScale1
+                            scaleY = orbScale1 
+                            translationX = orbScale1 * 20f
+                        }
+                        .background(
+                            Brush.radialGradient(
+                                colors = listOf(Color.White.copy(alpha = 0.22f), Color.Transparent)
+                            ),
+                            shape = CircleShape
+                        )
+                )
+                // Liquid Orb 2 (Bottom Right, Dark)
+                Box(
+                    modifier = Modifier
+                        .align(Alignment.BottomEnd)
+                        .offset(x = 32.dp, y = 32.dp)
+                        .size(160.dp)
+                        .graphicsLayer { 
+                            scaleX = orbScale2
+                            scaleY = orbScale2 
+                            translationX = -orbScale2 * 20f
+                            translationY = orbScale2 * 10f
+                        }
+                        .background(
+                            Brush.radialGradient(
+                                colors = listOf(Color.Black.copy(alpha = 0.12f), Color.Transparent)
+                            ),
+                            shape = CircleShape
+                        )
+                )
+            }
 
             // Floating background icon
             Box(
@@ -559,13 +565,32 @@ fun LazyGridItemScope.ContentCard(
                 fadeOutSpec = tween(200)
             )
             .fillMaxWidth()
+            .popInOnInitialLoad(index)
             .then(
                 if (sharedTransitionScope != null && animatedVisibilityScope != null) {
                     with(sharedTransitionScope) {
                         Modifier.sharedBounds(
                             sharedContentState = rememberSharedContentState(key = "card_${item.id}"),
-                            animatedVisibilityScope = animatedVisibilityScope, renderInOverlayDuringTransition = false,
-                            boundsTransform = { _, _ -> spring(stiffness = Spring.StiffnessMediumLow, dampingRatio = Spring.DampingRatioNoBouncy) }
+                            animatedVisibilityScope = animatedVisibilityScope,
+                            enter = fadeIn(animationSpec = tween(240, easing = androidx.compose.animation.core.LinearOutSlowInEasing)),
+                            exit = fadeOut(animationSpec = tween(200, easing = androidx.compose.animation.core.FastOutLinearInEasing)),
+                            renderInOverlayDuringTransition = false,
+                            boundsTransform = { initialBounds, targetBounds ->
+                                val isExpanding = targetBounds.width > initialBounds.width
+                                if (isExpanding) {
+                                    // Open physics: fast, responsive, fluid expansion
+                                    spring(
+                                        dampingRatio = 0.82f,
+                                        stiffness = 380f
+                                    )
+                                } else {
+                                    // Close physics: soft, cushioned, elegant contraction
+                                    spring(
+                                        dampingRatio = 0.88f,
+                                        stiffness = 320f
+                                    )
+                                }
+                            }
                         )
                     }
                 } else Modifier

@@ -3,6 +3,7 @@ package com.Nightjar.gradeiraqi3library.ui
 import com.Nightjar.gradeiraqi3library.LocalSharedTransitionScope
 import com.Nightjar.gradeiraqi3library.LocalAnimatedVisibilityScope
 import androidx.compose.animation.ExperimentalSharedTransitionApi
+import com.Nightjar.gradeiraqi3library.theme.popInOnInitialLoad
 
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -41,9 +42,21 @@ import org.jetbrains.compose.resources.painterResource
 fun ShortcutsScreen(
     platformActionHandler: PlatformActionHandler,
     isDark: Boolean,
-    bottomPadding: androidx.compose.ui.unit.Dp = 130.dp
+    bottomPadding: androidx.compose.ui.unit.Dp = 130.dp,
+    onScrollableStateChanged: (Boolean) -> Unit = {},
+    lazyGridState: androidx.compose.foundation.lazy.grid.LazyGridState = androidx.compose.foundation.lazy.grid.rememberLazyGridState()
 ) {
     val allItemsList = AllItems.books + AllItems.notes
+
+    val canScroll by remember {
+        derivedStateOf {
+            lazyGridState.canScrollForward || lazyGridState.canScrollBackward
+        }
+    }
+    LaunchedEffect(canScroll) {
+        onScrollableStateChanged(canScroll)
+    }
+
     BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
         val screenWidthDp = with(androidx.compose.ui.platform.LocalDensity.current) { androidx.compose.ui.platform.LocalWindowInfo.current.containerSize.width.toDp() }
         val isWide = screenWidthDp >= 600.dp
@@ -57,11 +70,13 @@ fun ShortcutsScreen(
             val dynamicTopPadding = (this@BoxWithConstraints.maxHeight * 0.2f).coerceAtLeast(statusBarHeight + 76.dp)
 
             LazyVerticalGrid(
+                state = lazyGridState,
                 columns = if (isWide) GridCells.Fixed(4) else GridCells.Adaptive(minSize = 150.dp),
                 modifier = Modifier
                     .fillMaxWidth()
                     .weight(1f)
-                    .padding(horizontal = 16.dp),
+                    .padding(horizontal = 16.dp)
+                    .elasticOverscroll(),
                 horizontalArrangement = Arrangement.spacedBy(16.dp),
                 verticalArrangement = Arrangement.spacedBy(16.dp),
                 contentPadding = PaddingValues(top = 0.dp, bottom = bottomPadding)
@@ -128,8 +143,9 @@ fun ShortcutItemCard(
     if (sharedTransitionScope != null && animatedVisibilityScope != null) {
         with(sharedTransitionScope) {
             imageModifier = imageModifier.sharedBounds(
-                sharedContentState = rememberSharedContentState(key = "cover-${item.id}"),
-                animatedVisibilityScope = animatedVisibilityScope
+                sharedContentState = rememberSharedContentState(key = "card_${item.id}"),
+                animatedVisibilityScope = animatedVisibilityScope,
+                renderInOverlayDuringTransition = false
             )
         }
     }
@@ -137,7 +153,7 @@ fun ShortcutItemCard(
     Column(
         modifier = modifier
             .fillMaxWidth()
-            .graphicsLayer { alpha = alphaAnim.value }
+            .popInOnInitialLoad(index)
             .clip(RoundedCornerShape(28.dp))
             .background(if (isDark) Color.White.copy(alpha = 0.05f) else Color.Black.copy(alpha = 0.03f))
             .clickable { onClick() }

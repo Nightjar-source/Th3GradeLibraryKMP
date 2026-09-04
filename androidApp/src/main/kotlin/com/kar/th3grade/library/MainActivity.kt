@@ -141,7 +141,10 @@ class MainActivity : ComponentActivity() {
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
-        installSplashScreen()
+        window.setBackgroundDrawableResource(R.drawable.splash_background)
+        var isComposeDrawn = false
+        val splashScreen = installSplashScreen()
+        splashScreen.setKeepOnScreenCondition { !isComposeDrawn }
         enableEdgeToEdge()
         super.onCreate(savedInstanceState)
         
@@ -241,6 +244,31 @@ class MainActivity : ComponentActivity() {
         // Sequence is handled by hasCompletedInitialSetup above, so we remove the duplicate check here
 
         val platformHandler = object : PlatformActionHandler {
+            override fun isLowEndDevice(): Boolean {
+                // 1. Android 9 and older (legacy Skia drivers)
+                if (Build.VERSION.SDK_INT <= Build.VERSION_CODES.P) return true
+                
+                val activityManager = getSystemService(android.content.Context.ACTIVITY_SERVICE) as? android.app.ActivityManager
+                // 2. Android Go / Manufacturer Low RAM flag
+                if (activityManager?.isLowRamDevice == true) return true
+                
+                // 3. Exact physical total RAM check (<= 3.2GB RAM)
+                if (activityManager != null) {
+                    val memoryInfo = android.app.ActivityManager.MemoryInfo()
+                    activityManager.getMemoryInfo(memoryInfo)
+                    val totalRamGb = memoryInfo.totalMem / (1024.0 * 1024.0 * 1024.0)
+                    if (totalRamGb <= 3.2) return true
+                    
+                    // 4. CPU Core count check (Quad-core or lower with < 4.0GB RAM is considered low-end)
+                    val cores = Runtime.getRuntime().availableProcessors()
+                    if (cores <= 4 && totalRamGb < 4.0) return true
+                } else {
+                    val cores = Runtime.getRuntime().availableProcessors()
+                    if (cores <= 4) return true
+                }
+                return false
+            }
+
             override fun addHomeScreenShortcut(item: BookItem) {
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
                     val shortcutManager = getSystemService(ShortcutManager::class.java)
@@ -505,6 +533,10 @@ class MainActivity : ComponentActivity() {
         }
 
         setContent {
+            androidx.compose.runtime.LaunchedEffect(Unit) {
+                kotlinx.coroutines.delay(250) // Ensure layout and draw passes are absolutely complete on heavy UI skins like HyperOS
+                isComposeDrawn = true
+            }
             val appSettings = com.Nightjar.gradeiraqi3library.network.SyncEngine.appSettings.collectAsState().value
             val isSystemDark = androidx.compose.foundation.isSystemInDarkTheme()
             val isDarkThemeActive = when (appSettings.theme) {
@@ -568,28 +600,16 @@ class MainActivity : ComponentActivity() {
 
     override fun onTrimMemory(level: Int) {
         super.onTrimMemory(level)
-        if (level >= TRIM_MEMORY_BACKGROUND || level == TRIM_MEMORY_RUNNING_CRITICAL) {
-            try {
+        try {
+            if (level == TRIM_MEMORY_UI_HIDDEN || level == TRIM_MEMORY_BACKGROUND) {
+                // UI is hidden or app is in background -> Drop large caches to conserve memory according to guidelines
                 com.Nightjar.gradeiraqi3library.ui.PdfBitmapCache.cache.evictAll()
                 coil3.SingletonImageLoader.get(this).let { loader ->
                     loader.memoryCache?.clear()
                 }
-                System.gc()
-            } catch (e: Exception) {
-                e.printStackTrace()
             }
-        } else if (level == TRIM_MEMORY_RUNNING_LOW || level == TRIM_MEMORY_RUNNING_MODERATE) {
-            try {
-                val cache = com.Nightjar.gradeiraqi3library.ui.PdfBitmapCache.cache
-                cache.trimToSize(cache.size() / 2)
-                coil3.SingletonImageLoader.get(this).let { loader ->
-                    loader.memoryCache?.let { mc ->
-                        mc.trimToSize(mc.size / 2)
-                    }
-                }
-            } catch (e: Exception) {
-                e.printStackTrace()
-            }
+        } catch (e: Exception) {
+            e.printStackTrace()
         }
     }
 

@@ -7,9 +7,12 @@ import androidx.compose.animation.ExperimentalSharedTransitionApi
 import androidx.compose.ui.zIndex
 import androidx.compose.animation.*
 import androidx.compose.animation.core.*
+import com.Nightjar.gradeiraqi3library.theme.popInOnInitialLoad
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.combinedClickable
+import androidx.compose.ui.graphics.Brush
 import org.jetbrains.compose.resources.painterResource
 import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.layout.*
@@ -241,9 +244,11 @@ fun NewsScreen(
                         columns = if (isMedium) GridCells.Fixed(2) else GridCells.Adaptive(minSize = 340.dp),
                         state = lazyGridState,
                         modifier = Modifier
-                            .fillMaxSize(),
-                        verticalArrangement = Arrangement.spacedBy(10.dp),
-                        horizontalArrangement = Arrangement.spacedBy(10.dp),
+                            .fillMaxSize()
+                            .padding(horizontal = 14.dp)
+                            .elasticOverscroll(topEnabled = false),
+                        verticalArrangement = Arrangement.spacedBy(14.dp),
+                        horizontalArrangement = Arrangement.spacedBy(14.dp),
                         contentPadding = PaddingValues(top = 0.dp, bottom = bottomPadding)
                     ) {
                         item(key = "top_spacer", contentType = "spacer", span = { androidx.compose.foundation.lazy.grid.GridItemSpan(maxLineSpan) }) {
@@ -287,16 +292,21 @@ fun NewsScreen(
                         } else {
                             itemsIndexed(newsList, key = { _, it -> it.id }, contentType = { _, _ -> "news_item" }) { index, newsItem ->
                                 NewsCardSwipeable(
-                                    modifier = Modifier.animateItem(
-                                        fadeInSpec = tween(500),
-                                        placementSpec = spring(stiffness = Spring.StiffnessMediumLow),
-                                        fadeOutSpec = tween(200)
-                                    ),
+                                    modifier = Modifier
+                                        .animateItem(
+                                            fadeInSpec = tween(500),
+                                            placementSpec = spring(stiffness = Spring.StiffnessMediumLow),
+                                            fadeOutSpec = tween(200)
+                                        )
+                                        .popInOnInitialLoad(index),
                                     news = newsItem,
                                     isDark = isDark,
-                                    isRead = readNewsIds.contains(newsItem.id),
+                                    isRead = readNewsIds.contains(newsItem.id) || (newsItem.link.isNotEmpty() && readNewsIds.contains(newsItem.link)),
                                     onClick = {
                                         SyncEngine.markNewsAsRead(newsItem.id)
+                                        if (newsItem.link.isNotEmpty()) {
+                                            SyncEngine.markNewsAsRead(newsItem.link)
+                                        }
                                         onClick(newsItem.link, newsItem.title)
                                     },
                                     onDelete = {
@@ -515,7 +525,7 @@ fun NewsCardSwipeable(
 
     var cardModifier = Modifier
         .graphicsLayer { translationX = animatedOffset }
-        .clip(RoundedCornerShape(20.dp))
+        .clip(RoundedCornerShape(24.dp))
 
     if (sharedTransitionScope != null && animatedVisibilityScope != null) {
         with(sharedTransitionScope) {
@@ -533,7 +543,7 @@ fun NewsCardSwipeable(
             Box(
                 modifier = Modifier
                     .matchParentSize()
-                    .clip(RoundedCornerShape(20.dp))
+                    .clip(RoundedCornerShape(24.dp))
                     .background(
                         MaterialTheme.colorScheme.errorContainer.copy(alpha = progress)
                     )
@@ -582,93 +592,150 @@ fun NewsCard(
     news: NewsItem,
     isDark: Boolean,
     isRead: Boolean,
-    modifier: Modifier = Modifier,
-    onClick: (() -> Unit)? = null
+    modifier: Modifier = Modifier
 ) {
-    val cardModifier = if (onClick != null) {
-        modifier
-            .fillMaxWidth()
-            .clip(RoundedCornerShape(20.dp))
-            .background(MaterialTheme.colorScheme.surfaceVariant)
-            .then(modifier)
-    } else {
-        modifier
-            .fillMaxWidth()
-            .clip(RoundedCornerShape(20.dp))
-            .background(MaterialTheme.colorScheme.surfaceVariant)
-    }
+    val cleanDate = news.formattedDate.ifEmpty { formatNewsDate(news.pubDate) }
 
     Column(
         modifier = modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(20.dp))
-            .background(MaterialTheme.colorScheme.surfaceVariant)
-            .padding(10.dp)
-    ) {
-        // Image
-        if (!news.imageUrl.isNullOrEmpty()) {
-            AsyncImage(
-                model = ImageRequest.Builder(LocalPlatformContext.current)
-                    .data(news.imageUrl)
-                    .crossfade(true)
-                    .memoryCachePolicy(CachePolicy.ENABLED)
-                    .diskCachePolicy(CachePolicy.ENABLED)
-                    .build(),
-                contentDescription = null,
-                contentScale = ContentScale.Crop,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(130.dp)
-                    .clip(RoundedCornerShape(14.dp))
+            .clip(RoundedCornerShape(24.dp))
+            .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = if (isDark) 0.65f else 0.85f))
+            .border(
+                width = 1.dp,
+                color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = if (isDark) 0.25f else 0.4f),
+                shape = RoundedCornerShape(24.dp)
             )
-            Spacer(modifier = Modifier.height(8.dp))
-        }
-
-        // Date badge
-        val cleanDate = formatNewsDate(news.pubDate)
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.SpaceBetween,
-            modifier = Modifier.fillMaxWidth()
+            .padding(8.dp)
+    ) {
+        // Image container with floating Date/Read badges
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(155.dp)
+                .clip(RoundedCornerShape(18.dp))
+                .background(
+                    Brush.linearGradient(
+                        listOf(
+                            MaterialTheme.colorScheme.primary.copy(alpha = 0.15f),
+                            MaterialTheme.colorScheme.surfaceVariant
+                        )
+                    )
+                )
         ) {
+            // 1. Persistent Vector Placeholder in background (visible while loading, offline, or if article has no image)
+            Box(
+                modifier = Modifier.fillMaxSize(),
+                contentAlignment = Alignment.Center
+            ) {
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.Center
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Newspaper,
+                        contentDescription = "صورة الخبر",
+                        tint = MaterialTheme.colorScheme.primary.copy(alpha = 0.50f),
+                        modifier = Modifier.size(46.dp)
+                    )
+                    Spacer(modifier = Modifier.height(6.dp))
+                    Text(
+                        text = "مكتبة الثالث متوسط",
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.Medium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
+                    )
+                }
+            }
+
+            // 2. Real Image rendered with smooth Fluid crossfade animation over the placeholder
+            if (!news.imageUrl.isNullOrEmpty()) {
+                AsyncImage(
+                    model = ImageRequest.Builder(LocalPlatformContext.current)
+                        .data(news.imageUrl)
+                        .crossfade(true)
+                        .crossfade(450)
+                        .memoryCachePolicy(CachePolicy.ENABLED)
+                        .diskCachePolicy(CachePolicy.ENABLED)
+                        .build(),
+                    contentDescription = null,
+                    contentScale = ContentScale.Crop,
+                    modifier = Modifier.fillMaxSize()
+                )
+            }
+
+            // Top gradient scrim to guarantee crisp badge readability
             Box(
                 modifier = Modifier
+                    .fillMaxWidth()
+                    .height(48.dp)
+                    .align(Alignment.TopCenter)
                     .background(
-                        if (isRead) MaterialTheme.colorScheme.surfaceVariant
-                        else MaterialTheme.colorScheme.primaryContainer,
-                        RoundedCornerShape(6.dp)
+                        Brush.verticalGradient(
+                            listOf(Color.Black.copy(alpha = 0.55f), Color.Transparent)
+                        )
                     )
-                    .padding(horizontal = 7.dp, vertical = 3.dp)
+            )
+
+            // Date badge and Read status row floating on top of the image
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(8.dp)
+                    .align(Alignment.TopCenter)
             ) {
-                Text(
-                    text = cleanDate,
-                    fontSize = 10.sp,
-                    fontWeight = FontWeight.Medium,
-                    color = if (isRead) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.onPrimaryContainer
-                )
-            }
-            if (isRead) {
-                Text(
-                    text = "مقروء ✓",
-                    fontSize = 9.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.primary,
-                    modifier = Modifier.padding(end = 4.dp)
-                )
+                // Date Badge
+                Box(
+                    modifier = Modifier
+                        .background(
+                            color = Color.Black.copy(alpha = 0.65f),
+                            shape = RoundedCornerShape(10.dp)
+                        )
+                        .padding(horizontal = 8.dp, vertical = 4.dp)
+                ) {
+                    Text(
+                        text = cleanDate,
+                        fontSize = 10.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        color = Color.White
+                    )
+                }
+
+                // Read Status Badge
+                if (isRead) {
+                    Box(
+                        modifier = Modifier
+                            .background(
+                                color = MaterialTheme.colorScheme.primary.copy(alpha = 0.9f),
+                                shape = RoundedCornerShape(10.dp)
+                            )
+                            .padding(horizontal = 8.dp, vertical = 4.dp)
+                    ) {
+                        Text(
+                            text = "مقروء ✓",
+                            fontSize = 9.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.onPrimary
+                        )
+                    }
+                }
             }
         }
 
-        Spacer(modifier = Modifier.height(5.dp))
+        Spacer(modifier = Modifier.height(8.dp))
 
-        // Title only – no description
+        // News title text placed below the image
         Text(
             text = news.title,
-            fontSize = 13.sp,
-            fontWeight = FontWeight.SemiBold,
+            fontSize = 13.5.sp,
+            fontWeight = FontWeight.Bold,
             color = MaterialTheme.colorScheme.onSurface,
             maxLines = 2,
             overflow = TextOverflow.Ellipsis,
-            lineHeight = 18.sp
+            lineHeight = 19.sp,
+            modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
         )
     }
 }

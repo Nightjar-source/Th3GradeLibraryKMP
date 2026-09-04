@@ -33,7 +33,8 @@ android {
 
     buildTypes {
         getByName("release") {
-            isMinifyEnabled = false
+            isMinifyEnabled = true
+            isShrinkResources = true
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
@@ -48,14 +49,15 @@ android {
         targetCompatibility = JavaVersion.VERSION_21
     }
     
-
-
     // ضمان حزم جميع ملفات PDF والصور بدون ضغط
     androidResources {
         noCompress += listOf("pdf", "png", "jpg", "jpeg")
     }
     
     packaging {
+        jniLibs {
+            useLegacyPackaging = false
+        }
         resources {
             // لا تستثني أي ملفات
             excludes -= setOf("**/*.pdf")

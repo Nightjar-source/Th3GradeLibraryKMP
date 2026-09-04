@@ -12,7 +12,9 @@ import androidx.compose.material.icons.filled.Book
 import androidx.compose.material.icons.filled.Message
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material3.*
-import androidx.compose.runtime.Composable
+import androidx.compose.runtime.*
+import androidx.compose.animation.core.*
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -23,6 +25,9 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.Nightjar.gradeiraqi3library.theme.liquidGlass
+import com.Nightjar.gradeiraqi3library.theme.KufiReemFontFamily
+import com.Nightjar.gradeiraqi3library.theme.LocalIsLowEndDevice
+import com.Nightjar.gradeiraqi3library.theme.popInOnInitialLoad
 import org.jetbrains.compose.resources.painterResource
 import com.Nightjar.gradeiraqi3library.generated.resources.Res
 import com.Nightjar.gradeiraqi3library.generated.resources.app_icon
@@ -30,8 +35,20 @@ import com.Nightjar.gradeiraqi3library.generated.resources.app_icon
 @Composable
 fun AboutScreen(
     onOpenUrl: (String) -> Unit,
-    isDark: Boolean
+    isDark: Boolean,
+    bottomPadding: androidx.compose.ui.unit.Dp = 130.dp,
+    onScrollableStateChanged: (Boolean) -> Unit = {},
+    scrollState: androidx.compose.foundation.ScrollState = androidx.compose.foundation.rememberScrollState()
 ) {
+    val canScroll by remember {
+        derivedStateOf {
+            scrollState.maxValue > 0 && scrollState.maxValue < Int.MAX_VALUE
+        }
+    }
+    LaunchedEffect(canScroll) {
+        onScrollableStateChanged(canScroll)
+    }
+
     BoxWithConstraints(
         modifier = Modifier.fillMaxSize(),
         contentAlignment = Alignment.TopCenter
@@ -39,7 +56,7 @@ fun AboutScreen(
         val screenWidthDp = with(androidx.compose.ui.platform.LocalDensity.current) { androidx.compose.ui.platform.LocalWindowInfo.current.containerSize.width.toDp() }
         val isWide = screenWidthDp >= 600.dp
         
-        val dynamicBottomPadding = (maxHeight * 0.25f).coerceAtLeast(130.dp)
+        val dynamicBottomPadding = (maxHeight * 0.25f).coerceAtLeast(bottomPadding)
         
         // Dynamic top padding matches LibraryScreen (20% of screen)
         val statusBarHeight = WindowInsets.statusBars.asPaddingValues().calculateTopPadding()
@@ -50,7 +67,8 @@ fun AboutScreen(
                 .fillMaxSize()
                 .widthIn(max = 800.dp)
                 .padding(horizontal = 16.dp)
-                .verticalScroll(rememberScrollState()),
+                .elasticOverscroll()
+                .verticalScroll(scrollState),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             Spacer(modifier = Modifier.height(dynamicTopPadding))
@@ -60,18 +78,23 @@ fun AboutScreen(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(24.dp)
                 ) {
-                    AppMessageCard(modifier = Modifier.weight(1f), isDark = isDark)
-                    DeveloperCard(modifier = Modifier.weight(1f), onOpenUrl = onOpenUrl)
+                    AppMessageCard(modifier = Modifier.weight(1f).popInOnInitialLoad(0), isDark = isDark)
+                    DeveloperCard(modifier = Modifier.weight(1f).popInOnInitialLoad(1), onOpenUrl = onOpenUrl)
                 }
             } else {
                 Column(
                     modifier = Modifier.fillMaxWidth(),
                     verticalArrangement = Arrangement.spacedBy(24.dp)
                 ) {
-                    AppMessageCard(modifier = Modifier.fillMaxWidth(), isDark = isDark)
-                    DeveloperCard(modifier = Modifier.fillMaxWidth(), onOpenUrl = onOpenUrl)
+                    AppMessageCard(modifier = Modifier.fillMaxWidth().popInOnInitialLoad(0), isDark = isDark)
+                    DeveloperCard(modifier = Modifier.fillMaxWidth().popInOnInitialLoad(1), onOpenUrl = onOpenUrl)
                 }
             }
+
+            Spacer(modifier = Modifier.height(24.dp))
+
+            // Golden Spiritual Card
+            GoldenSpiritualCard(modifier = Modifier.fillMaxWidth().popInOnInitialLoad(2), isDark = isDark)
 
             Spacer(modifier = Modifier.height(dynamicBottomPadding))
         }
@@ -212,5 +235,67 @@ fun DeveloperCard(modifier: Modifier = Modifier, onOpenUrl: (String) -> Unit) {
                 }
             }
         }
+    }
+}
+
+/**
+ * Compact golden spiritual card with clean Glassmorphism background and sweeping golden glittering calligraphy.
+ */
+@Composable
+fun GoldenSpiritualCard(modifier: Modifier = Modifier, isDark: Boolean = false) {
+    val isLowEnd = LocalIsLowEndDevice.current
+    val transition = rememberInfiniteTransition(label = "spiritual_gold_shimmer")
+    
+    val shimmerOffset by if (!isLowEnd) {
+        transition.animateFloat(
+            initialValue = -350f,
+            targetValue = 900f,
+            animationSpec = infiniteRepeatable(
+                animation = tween(durationMillis = 2800, easing = LinearEasing),
+                repeatMode = RepeatMode.Restart
+            ),
+            label = "gold_shimmer_offset"
+        )
+    } else remember { mutableStateOf(200f) }
+
+    val goldenShimmerBrush = if (!isLowEnd) {
+        Brush.linearGradient(
+            colors = listOf(
+                if (isDark) Color(0xFFFFD54F) else Color(0xFFC58E00),
+                Color(0xFFFFF9C4),
+                Color.White.copy(alpha = 0.98f),
+                if (isDark) Color(0xFFFFB300) else Color(0xFFD48800),
+                if (isDark) Color(0xFFFFD54F) else Color(0xFFC58E00)
+            ),
+            start = Offset(shimmerOffset, 0f),
+            end = Offset(shimmerOffset + 380f, 60f)
+        )
+    } else {
+        Brush.linearGradient(
+            colors = listOf(
+                if (isDark) Color(0xFFFFD54F) else Color(0xFFC58E00),
+                if (isDark) Color(0xFFFFB300) else Color(0xFFD48800)
+            )
+        )
+    }
+
+    Box(
+        modifier = modifier
+            .fillMaxWidth()
+            .liquidGlass(isDark, borderRadius = 24.dp, alpha = 0.55f)
+            .padding(horizontal = 20.dp, vertical = 18.dp),
+        contentAlignment = Alignment.Center
+    ) {
+        Text(
+            text = "بِاسْمِ عَلِيٍّ الْعَظِيمِ، وَقُلْ هُوَ اللَّهُ أَحَدٌ، وَلَا حَوْلَ وَلَا قُوَّةَ إِلَّا بِاللَّهِ الْعَلِيِّ الْعَظِيمِ",
+            style = MaterialTheme.typography.titleSmall.copy(
+                fontWeight = FontWeight.Bold,
+                fontFamily = KufiReemFontFamily,
+                fontSize = 14.5.sp,
+                lineHeight = 23.sp,
+                brush = goldenShimmerBrush
+            ),
+            textAlign = TextAlign.Center
+        )
     }
 }

@@ -36,6 +36,7 @@ fun OnboardingScreen(
         Column(
             modifier = Modifier
                 .fillMaxSize()
+                .elasticOverscroll()
                 .verticalScroll(rememberScrollState())
                 .padding(horizontal = 24.dp)
                 .statusBarsPadding()
