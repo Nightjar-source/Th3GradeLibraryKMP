@@ -56,11 +56,8 @@ fun AboutScreen(
         val screenWidthDp = with(androidx.compose.ui.platform.LocalDensity.current) { androidx.compose.ui.platform.LocalWindowInfo.current.containerSize.width.toDp() }
         val isWide = screenWidthDp >= 600.dp
         
-        val dynamicBottomPadding = (maxHeight * 0.25f).coerceAtLeast(bottomPadding)
-        
-        // Dynamic top padding matches LibraryScreen (20% of screen)
         val statusBarHeight = WindowInsets.statusBars.asPaddingValues().calculateTopPadding()
-        val dynamicTopPadding = (maxHeight * 0.2f).coerceAtLeast(statusBarHeight + 76.dp)
+        val dynamicTopPadding = if (isWide) statusBarHeight + 64.dp else statusBarHeight + 76.dp
 
         Column(
             modifier = Modifier
@@ -96,7 +93,7 @@ fun AboutScreen(
             // Golden Spiritual Card
             GoldenSpiritualCard(modifier = Modifier.fillMaxWidth().popInOnInitialLoad(2), isDark = isDark)
 
-            Spacer(modifier = Modifier.height(dynamicBottomPadding))
+            Spacer(modifier = Modifier.height(bottomPadding))
         }
     }
 }

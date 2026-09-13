@@ -64,8 +64,6 @@ import androidx.compose.ui.composed
 import androidx.compose.ui.unit.lerp
 import com.Nightjar.gradeiraqi3library.theme.LocalIsLowEndDevice
 
-import com.Nightjar.gradeiraqi3library.theme.popInOnInitialLoad
-
 @Composable
 fun LibraryScreen(
     category: String?, // "books", "notes" or null for categories choice
@@ -105,7 +103,7 @@ fun LibraryScreen(
                 }
 
                     val statusBarHeight = WindowInsets.statusBars.asPaddingValues().calculateTopPadding()
-                    val dynamicTopPadding = (this@BoxWithConstraints.maxHeight * 0.2f).coerceAtLeast(statusBarHeight + 76.dp)
+                    val dynamicTopPadding = if (isWide) statusBarHeight + 64.dp else statusBarHeight + 76.dp
                     
                 Box(
                     modifier = Modifier.fillMaxSize(),
@@ -176,8 +174,7 @@ fun LibraryScreen(
                         )
                     }
                     
-                    val dynamicBottomPadding = (this@BoxWithConstraints.maxHeight * 0.25f).coerceAtLeast(130.dp)
-                    Spacer(modifier = Modifier.height(dynamicBottomPadding)) // Allow scrolling bottom content to middle
+                    Spacer(modifier = Modifier.height(bottomPadding)) // Allow scrolling bottom content to middle
                 }
                 }
             } else {
@@ -225,10 +222,15 @@ fun LibraryScreen(
                         }
                     }
                 } else {
-                    val dynamicTopPadding = (this@BoxWithConstraints.maxHeight * 0.2f).coerceAtLeast(WindowInsets.statusBars.asPaddingValues().calculateTopPadding() + 76.dp)
-                    val dynamicBottomPadding = (this@BoxWithConstraints.maxHeight * 0.2f).coerceAtLeast(bottomPadding)
+                    val statusBarHeight = WindowInsets.statusBars.asPaddingValues().calculateTopPadding()
                     val screenWidthDp = with(androidx.compose.ui.platform.LocalDensity.current) { androidx.compose.ui.platform.LocalWindowInfo.current.containerSize.width.toDp() }
                     val isMedium = screenWidthDp >= 600.dp
+                    val dynamicTopPadding = if (isMedium) {
+                        statusBarHeight + 64.dp
+                    } else {
+                        statusBarHeight + 76.dp
+                    }
+                    val dynamicBottomPadding = bottomPadding
                     LazyVerticalGrid(
                         state = lazyGridState,
                         columns = if (isGridView) {
@@ -273,6 +275,24 @@ fun CategoryMenuCard(
     modifier: Modifier = Modifier,
     onClick: () -> Unit
 ) {
+    var hasAnimated by rememberSaveable { mutableStateOf(false) }
+    val alphaAnim = remember { androidx.compose.animation.core.Animatable(if (hasAnimated) 1f else 0f) }
+    val yOffsetAnim = remember { androidx.compose.animation.core.Animatable(if (hasAnimated) 0f else 50f) }
+
+    LaunchedEffect(Unit) {
+        if (!hasAnimated) {
+            val delayMs = index * 100L
+            kotlinx.coroutines.delay(delayMs)
+            launch {
+                alphaAnim.animateTo(1f, animationSpec = tween(500, easing = FastOutSlowInEasing))
+            }
+            launch {
+                yOffsetAnim.animateTo(0f, animationSpec = tween(500, easing = FastOutSlowInEasing))
+            }
+            hasAnimated = true
+        }
+    }
+
     val isLowEnd = com.Nightjar.gradeiraqi3library.theme.LocalIsLowEndDevice.current
     val infiniteTransition = rememberInfiniteTransition(label = "cardOrbs")
     val orbScale1 by if (!isLowEnd) {
@@ -309,8 +329,13 @@ fun CategoryMenuCard(
         modifier = modifier
             .fillMaxWidth()
             .then(if (isWide) Modifier.aspectRatio(1.6f) else Modifier.height(190.dp))
-            .clip(RoundedCornerShape(32.dp))
-            .popInOnInitialLoad(index),
+            .graphicsLayer {
+                alpha = alphaAnim.value
+                translationY = yOffsetAnim.value
+                ambientShadowColor = Color.Black.copy(alpha = 0.5f)
+                spotShadowColor = Color.Black.copy(alpha = 0.5f)
+            }
+            .clip(RoundedCornerShape(32.dp)),
         shape = RoundedCornerShape(32.dp)
     ) {
         Box(
@@ -556,41 +581,15 @@ fun LazyGridItemScope.ContentCard(
             )
         },
         modifier = Modifier
-            .animateItem(
-                fadeInSpec = tween(400, easing = FastOutSlowInEasing),
-                placementSpec = spring(
-                    dampingRatio = 0.8f,
-                    stiffness = Spring.StiffnessMediumLow
-                ),
-                fadeOutSpec = tween(200)
-            )
             .fillMaxWidth()
-            .popInOnInitialLoad(index)
             .then(
                 if (sharedTransitionScope != null && animatedVisibilityScope != null) {
                     with(sharedTransitionScope) {
                         Modifier.sharedBounds(
                             sharedContentState = rememberSharedContentState(key = "card_${item.id}"),
                             animatedVisibilityScope = animatedVisibilityScope,
-                            enter = fadeIn(animationSpec = tween(240, easing = androidx.compose.animation.core.LinearOutSlowInEasing)),
-                            exit = fadeOut(animationSpec = tween(200, easing = androidx.compose.animation.core.FastOutLinearInEasing)),
                             renderInOverlayDuringTransition = false,
-                            boundsTransform = { initialBounds, targetBounds ->
-                                val isExpanding = targetBounds.width > initialBounds.width
-                                if (isExpanding) {
-                                    // Open physics: fast, responsive, fluid expansion
-                                    spring(
-                                        dampingRatio = 0.82f,
-                                        stiffness = 380f
-                                    )
-                                } else {
-                                    // Close physics: soft, cushioned, elegant contraction
-                                    spring(
-                                        dampingRatio = 0.88f,
-                                        stiffness = 320f
-                                    )
-                                }
-                            }
+                            boundsTransform = { _, _ -> spring(dampingRatio = 0.85f, stiffness = 320f) }
                         )
                     }
                 } else Modifier

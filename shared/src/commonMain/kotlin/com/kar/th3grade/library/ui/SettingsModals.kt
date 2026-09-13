@@ -181,32 +181,56 @@ fun AppSettingsModal(
                     // Theme Settings
                     Text("وضع الإضاءة", fontWeight = FontWeight.Bold, fontSize = 13.sp, color = MaterialTheme.colorScheme.primary, modifier = Modifier.padding(horizontal = 20.dp))
                     Spacer(modifier = Modifier.height(8.dp))
-                    Row(
+                    BoxWithConstraints(
                         modifier = Modifier
                             .fillMaxWidth()
                             .padding(horizontal = 20.dp)
+                            .height(48.dp)
                             .background(MaterialTheme.colorScheme.surfaceVariant, RoundedCornerShape(12.dp))
-                            .padding(4.dp),
-                        horizontalArrangement = Arrangement.SpaceEvenly
                     ) {
-                        ThemeOptionButton(
-                            label = "فاتح",
-                            isSelected = settings.theme == "light",
-                            onClick = { onUpdateSettings(settings.copy(theme = "light")) },
-                            modifier = Modifier.weight(1f)
+                        val options = listOf("light", "dark", "system")
+                        val selectedIndex = options.indexOf(settings.theme).takeIf { it >= 0 } ?: 2
+
+                        val tabWidth = maxWidth / 3
+                        val indicatorOffset by androidx.compose.animation.core.animateDpAsState(
+                            targetValue = tabWidth * selectedIndex,
+                            animationSpec = androidx.compose.animation.core.spring(
+                                dampingRatio = androidx.compose.animation.core.Spring.DampingRatioNoBouncy,
+                                stiffness = androidx.compose.animation.core.Spring.StiffnessMedium
+                            ),
+                            label = "theme_indicator_offset"
                         )
-                        ThemeOptionButton(
-                            label = "مظلم",
-                            isSelected = settings.theme == "dark",
-                            onClick = { onUpdateSettings(settings.copy(theme = "dark")) },
-                            modifier = Modifier.weight(1f)
+
+                        // Sliding Indicator
+                        Box(
+                            modifier = Modifier
+                                .offset(x = indicatorOffset)
+                                .width(tabWidth)
+                                .fillMaxHeight()
+                                .padding(4.dp)
+                                .background(MaterialTheme.colorScheme.primary, RoundedCornerShape(10.dp))
                         )
-                        ThemeOptionButton(
-                            label = "تلقائي",
-                            isSelected = settings.theme == "system",
-                            onClick = { onUpdateSettings(settings.copy(theme = "system")) },
-                            modifier = Modifier.weight(1f)
-                        )
+
+                        Row(modifier = Modifier.fillMaxSize()) {
+                            ThemeOptionButton(
+                                label = "فاتح",
+                                isSelected = settings.theme == "light",
+                                onClick = { onUpdateSettings(settings.copy(theme = "light")) },
+                                modifier = Modifier.weight(1f).fillMaxHeight()
+                            )
+                            ThemeOptionButton(
+                                label = "مظلم",
+                                isSelected = settings.theme == "dark",
+                                onClick = { onUpdateSettings(settings.copy(theme = "dark")) },
+                                modifier = Modifier.weight(1f).fillMaxHeight()
+                            )
+                            ThemeOptionButton(
+                                label = "تلقائي",
+                                isSelected = settings.theme == "system",
+                                onClick = { onUpdateSettings(settings.copy(theme = "system")) },
+                                modifier = Modifier.weight(1f).fillMaxHeight()
+                            )
+                        }
                     }
 
                     Spacer(modifier = Modifier.height(16.dp))
@@ -698,19 +722,25 @@ fun ThemeOptionButton(
     onClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
+    val textColor by androidx.compose.animation.animateColorAsState(
+        targetValue = if (isSelected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant,
+        animationSpec = androidx.compose.animation.core.tween(durationMillis = 220),
+        label = "theme_text_color"
+    )
+
     Box(
         modifier = modifier
-            .clip(RoundedCornerShape(12.dp))
-            .background(if (isSelected) MaterialTheme.colorScheme.surface else Color.Transparent)
-            .clickable { onClick() }
-            .padding(vertical = 10.dp),
+            .padding(2.dp)
+            .clip(RoundedCornerShape(10.dp))
+            .clickable(onClick = onClick),
         contentAlignment = Alignment.Center
     ) {
         Text(
             text = label,
             fontSize = 14.sp,
-            fontWeight = FontWeight.Bold,
-            color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
+            fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
+            color = textColor,
+            textAlign = TextAlign.Center
         )
     }
 }

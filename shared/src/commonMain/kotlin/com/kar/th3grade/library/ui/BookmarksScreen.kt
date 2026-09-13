@@ -63,7 +63,6 @@ fun BookmarksScreen(
     lazyGridState: androidx.compose.foundation.lazy.grid.LazyGridState = androidx.compose.foundation.lazy.grid.rememberLazyGridState()
 ) {
     BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
-        val dynamicBottomPadding = (maxHeight * 0.25f).coerceAtLeast(bottomPadding)
         Column(
             modifier = Modifier
                 .fillMaxSize()
@@ -133,7 +132,7 @@ fun BookmarksScreen(
             ) {
                 item(key = "top_spacer", span = { androidx.compose.foundation.lazy.grid.GridItemSpan(maxLineSpan) }) {
                     val statusBarHeight = WindowInsets.statusBars.asPaddingValues().calculateTopPadding()
-                    val dynamicTopPadding = (this@BoxWithConstraints.maxHeight * 0.2f).coerceAtLeast(statusBarHeight + 76.dp)
+                    val dynamicTopPadding = if (isMedium) statusBarHeight + 64.dp else statusBarHeight + 76.dp
                     Spacer(modifier = Modifier.height(dynamicTopPadding))
                 }
                 
@@ -149,10 +148,6 @@ fun BookmarksScreen(
                             onNavigateToPdf = { pageIdx -> onNavigateToPdf(book, pageIdx) }
                         )
                     }
-                }
-                
-                item(key = "bottom_spacer", span = { androidx.compose.foundation.lazy.grid.GridItemSpan(maxLineSpan) }) {
-                    Spacer(modifier = Modifier.height(dynamicBottomPadding))
                 }
             }
         }
@@ -174,20 +169,10 @@ fun BookAccordionItem(
 
     val sharedTransitionScope = LocalSharedTransitionScope.current
     val animatedVisibilityScope = LocalAnimatedVisibilityScope.current
-
-    var imageModifier = Modifier.fillMaxSize()
-    if (sharedTransitionScope != null && animatedVisibilityScope != null) {
-        with(sharedTransitionScope) {
-            imageModifier = imageModifier.sharedElement(
-                sharedContentState = rememberSharedContentState(key = "cover-${item.id}"),
-                animatedVisibilityScope = animatedVisibilityScope
-            )
-        }
-    }
+    val imageModifier = Modifier.fillMaxSize()
 
     var columnModifier = Modifier
         .fillMaxWidth()
-        .popInOnInitialLoad(index)
         .liquidGlass(isDark, borderRadius = 20.dp, alpha = 0.5f)
         .clip(RoundedCornerShape(20.dp))
 
@@ -196,25 +181,8 @@ fun BookAccordionItem(
             columnModifier = columnModifier.sharedBounds(
                 sharedContentState = rememberSharedContentState(key = "card_${item.id}"),
                 animatedVisibilityScope = animatedVisibilityScope,
-                enter = androidx.compose.animation.fadeIn(animationSpec = androidx.compose.animation.core.tween(240, easing = androidx.compose.animation.core.LinearOutSlowInEasing)),
-                exit = androidx.compose.animation.fadeOut(animationSpec = androidx.compose.animation.core.tween(200, easing = androidx.compose.animation.core.FastOutLinearInEasing)),
                 renderInOverlayDuringTransition = false,
-                boundsTransform = { initialBounds, targetBounds ->
-                    val isExpanding = targetBounds.width > initialBounds.width
-                    if (isExpanding) {
-                        // Open physics: fast, responsive, fluid expansion
-                        spring(
-                            dampingRatio = 0.82f,
-                            stiffness = 380f
-                        )
-                    } else {
-                        // Close physics: soft, cushioned, elegant contraction
-                        spring(
-                            dampingRatio = 0.88f,
-                            stiffness = 320f
-                        )
-                    }
-                }
+                boundsTransform = { _, _ -> spring(stiffness = Spring.StiffnessMediumLow, dampingRatio = Spring.DampingRatioNoBouncy) }
             )
         }
     }

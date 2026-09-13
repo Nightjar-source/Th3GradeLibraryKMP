@@ -15,6 +15,7 @@ import androidx.compose.foundation.combinedClickable
 import androidx.compose.ui.graphics.Brush
 import org.jetbrains.compose.resources.painterResource
 import androidx.compose.foundation.gestures.detectHorizontalDragGestures
+import androidx.compose.foundation.gestures.detectDragGesturesAfterLongPress
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.GridCells
@@ -153,8 +154,6 @@ fun NewsScreen(
     }
 
     BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
-        val dynamicBottomPadding = (maxHeight * 0.25f).coerceAtLeast(bottomPadding)
-        
         AnimatedContent(
             targetState = syncing && newsList.isEmpty() && isInitialLoad,
             transitionSpec = {
@@ -253,7 +252,7 @@ fun NewsScreen(
                     ) {
                         item(key = "top_spacer", contentType = "spacer", span = { androidx.compose.foundation.lazy.grid.GridItemSpan(maxLineSpan) }) {
                             val statusBarHeight = WindowInsets.statusBars.asPaddingValues().calculateTopPadding()
-                            val dynamicTopPadding = (this@BoxWithConstraints.maxHeight * 0.2f).coerceAtLeast(statusBarHeight + 76.dp)
+                            val dynamicTopPadding = if (isMedium) statusBarHeight + 64.dp else statusBarHeight + 76.dp
                             Spacer(modifier = Modifier.height(dynamicTopPadding))
                         }
                         
@@ -321,7 +320,6 @@ fun NewsScreen(
                                 )
                             }
                         }
-                        item(key = "bottom_spacer", contentType = "spacer", span = { androidx.compose.foundation.lazy.grid.GridItemSpan(maxLineSpan) }) { Spacer(modifier = Modifier.height(dynamicBottomPadding)) }
                     }
                 }
             }
@@ -565,8 +563,11 @@ fun NewsCardSwipeable(
             isRead = isRead,
             modifier = cardModifier
                 .clickable(onClick = onClick)
-                .pointerInput(Unit) {
-                    detectHorizontalDragGestures(
+                .pointerInput(news.id) {
+                    detectDragGesturesAfterLongPress(
+                        onDragStart = {
+                            haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                        },
                         onDragEnd = {
                             if (abs(offsetX) > deleteThreshold) {
                                 haptic.performHapticFeedback(HapticFeedbackType.LongPress)
@@ -577,11 +578,13 @@ fun NewsCardSwipeable(
                         },
                         onDragCancel = {
                             offsetX = 0f
+                        },
+                        onDrag = { change, dragAmount ->
+                            change.consume()
+                            // Swipe left = negative dragAmount.x (moves card left)
+                            offsetX = (offsetX + dragAmount.x).coerceIn(-deleteThreshold * 1.5f, 0f)
                         }
-                    ) { _, dragAmount ->
-                        // Swipe left = negative dragAmount. Card moves left (negative translationX)
-                        offsetX = (offsetX + dragAmount).coerceIn(-deleteThreshold * 1.5f, 0f)
-                    }
+                    )
                 }
         )
     }

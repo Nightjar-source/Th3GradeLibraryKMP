@@ -26,9 +26,11 @@ import org.w3c.dom.HTMLIFrameElement
 @Composable
 actual fun PdfViewerScreen(
     item: BookItem,
-    isSaved: Boolean,
-    onToggleSave: () -> Unit,
-    onClose: () -> Unit
+    isSaved: (Int) -> Boolean,
+    onToggleSave: (Int) -> Unit,
+    onClose: () -> Unit,
+    initialPage: Int?,
+    isDark: Boolean
 ) {
     // Construct the relative path to the asset resource served by Wasm dev/prod server
     val resourcePath = "composeResources/com.Nightjar.gradeiraqi3library.generated.resources.Res/" + item.pdfPath
@@ -84,16 +86,16 @@ actual fun PdfViewerScreen(
             )
 
             IconButton(
-                onClick = onToggleSave,
+                onClick = { onToggleSave(0) },
                 modifier = Modifier.background(
-                    if (isSaved) Color(0x33F59E0B) else Color.White.copy(alpha = 0.1f),
+                    if (isSaved(0)) Color(0x33F59E0B) else Color.White.copy(alpha = 0.1f),
                     CircleShape
                 )
             ) {
                 Icon(
-                    imageVector = if (isSaved) Icons.Default.Star else Icons.Default.StarBorder,
+                    imageVector = if (isSaved(0)) Icons.Default.Star else Icons.Default.StarBorder,
                     contentDescription = "Bookmark",
-                    tint = if (isSaved) Color(0xFFF59E0B) else Color.White
+                    tint = if (isSaved(0)) Color(0xFFF59E0B) else Color.White
                 )
             }
         }

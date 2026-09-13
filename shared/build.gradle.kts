@@ -41,6 +41,8 @@ kotlin {
             implementation(libs.coil.compose)
             implementation(libs.coil.network.ktor2)
             implementation(libs.rssparser)
+            implementation(libs.androidx.lifecycle.viewmodel)
+            implementation(libs.androidx.lifecycle.viewmodel.compose)
 
         }
         

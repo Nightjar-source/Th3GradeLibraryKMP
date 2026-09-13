@@ -3,6 +3,7 @@ package com.Nightjar.gradeiraqi3library.ui
 
 import com.Nightjar.gradeiraqi3library.theme.bounceClick
 
+import android.os.Build
 import android.graphics.Bitmap
 import android.graphics.pdf.PdfRenderer
 import android.os.ParcelFileDescriptor
@@ -48,9 +49,13 @@ import androidx.compose.ui.unit.sp
 import com.Nightjar.gradeiraqi3library.data.BookItem
 import com.Nightjar.gradeiraqi3library.generated.resources.Res
 import org.jetbrains.compose.resources.painterResource
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.isActive
+import kotlinx.coroutines.ensureActive
+import kotlinx.coroutines.currentCoroutineContext
 import java.io.File
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.core.animate
@@ -74,10 +79,18 @@ actual fun PdfViewerScreen(
     isSaved: (Int) -> Boolean,
     onToggleSave: (Int) -> Unit,
     onClose: () -> Unit,
-    initialPage: Int?
+    initialPage: Int?,
+    isDark: Boolean
 ) {
     val context = LocalContext.current
     val appSettings by com.Nightjar.gradeiraqi3library.network.SyncEngine.appSettings.collectAsState()
+    val isSystemDark = androidx.compose.foundation.isSystemInDarkTheme()
+    val isAppDark = isDark || when (appSettings.theme) {
+        "dark" -> true
+        "light" -> false
+        else -> isSystemDark
+    }
+
     var tempFile by remember(item) { mutableStateOf<File?>(null) }
     var pdfRenderer by remember { mutableStateOf<PdfRenderer?>(null) }
     var loadingError by remember(item) { mutableStateOf<String?>(null) }
@@ -98,10 +111,44 @@ actual fun PdfViewerScreen(
         act
     }
 
-    LaunchedEffect(isZoomed, activity) {
-        activity?.window?.let { window ->
+    var isCurrentPageTopLight by remember { mutableStateOf(!isAppDark) }
+    var isCurrentPageBottomLight by remember { mutableStateOf(!isAppDark) }
+    val pageLuminanceMap = remember { mutableStateMapOf<Int, Pair<Boolean, Boolean>>() }
+
+    // Guaranteed cleanup on exit: restore system bars to match active app theme contrast
+    DisposableEffect(activity, isAppDark) {
+        onDispose {
+            activity?.let { act ->
+                val window = act.window
+                window.statusBarColor = android.graphics.Color.TRANSPARENT
+                window.navigationBarColor = android.graphics.Color.TRANSPARENT
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                    window.isNavigationBarContrastEnforced = false
+                    window.isStatusBarContrastEnforced = false
+                }
+                val controller = WindowCompat.getInsetsController(window, window.decorView)
+                controller.show(WindowInsetsCompat.Type.statusBars())
+                controller.isAppearanceLightStatusBars = !isAppDark
+                controller.isAppearanceLightNavigationBars = !isAppDark
+            }
+        }
+    }
+
+    LaunchedEffect(isZoomed, isCurrentPageTopLight, isCurrentPageBottomLight, activity) {
+        activity?.let { act ->
+            val window = act.window
             window.statusBarColor = android.graphics.Color.TRANSPARENT
+            window.navigationBarColor = android.graphics.Color.TRANSPARENT
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                window.isNavigationBarContrastEnforced = false
+                window.isStatusBarContrastEnforced = false
+            }
             val controller = WindowCompat.getInsetsController(window, window.decorView)
+            
+            // Dynamic contrast: adapt status bar and 3-button navigation bar to real-time content
+            controller.isAppearanceLightStatusBars = isCurrentPageTopLight
+            controller.isAppearanceLightNavigationBars = isCurrentPageBottomLight
+
             if (isZoomed) {
                 controller.systemBarsBehavior = androidx.core.view.WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
                 controller.hide(WindowInsetsCompat.Type.statusBars())
@@ -162,7 +209,12 @@ actual fun PdfViewerScreen(
 
             var pfd: ParcelFileDescriptor? = null
             try {
+                if (!isActive) return@LaunchedEffect
                 pfd = ParcelFileDescriptor.open(file, ParcelFileDescriptor.MODE_READ_ONLY)
+                if (!isActive) {
+                    pfd?.close()
+                    return@LaunchedEffect
+                }
                 pdfRenderer = PdfRenderer(pfd)
             } catch (initEx: Exception) {
                 pfd?.close()
@@ -177,12 +229,42 @@ actual fun PdfViewerScreen(
     DisposableEffect(item, activity) {
         onDispose {
             try {
-                pdfRenderer?.close()
+                val rendererToClose = pdfRenderer
                 pdfRenderer = null
+                val fileToDelete = tempFile
+                
+                // Asynchronously close PdfRenderer inside pdfMutex on Dispatchers.IO
+                // This guarantees any active page.close() finishes first, preventing SIGSEGV in libpdfium.so
+                CoroutineScope(Dispatchers.IO).launch {
+                    try {
+                        pdfMutex.withLock {
+                            try {
+                                rendererToClose?.close()
+                            } catch (e: Exception) {
+                                e.printStackTrace()
+                            }
+                            try {
+                                fileToDelete?.delete()
+                            } catch (_: Exception) {}
+                        }
+                    } catch (e: Exception) {
+                        e.printStackTrace()
+                    }
+                }
+
                 PdfBitmapCache.cache.evictAll()
-                activity?.window?.let { window ->
+                activity?.let { act ->
+                    val window = act.window
+                    window.statusBarColor = android.graphics.Color.TRANSPARENT
+                    window.navigationBarColor = android.graphics.Color.TRANSPARENT
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                        window.isNavigationBarContrastEnforced = false
+                        window.isStatusBarContrastEnforced = false
+                    }
                     val controller = WindowCompat.getInsetsController(window, window.decorView)
                     controller.show(WindowInsetsCompat.Type.statusBars())
+                    controller.isAppearanceLightStatusBars = !isAppDark
+                    controller.isAppearanceLightNavigationBars = !isAppDark
                 }
             } catch (e: Exception) {
                 e.printStackTrace()
@@ -266,6 +348,20 @@ actual fun PdfViewerScreen(
                         }
                     }
 
+                    val currentPage = pagerState.currentPage
+                    val currentLum = pageLuminanceMap[currentPage]
+
+                    // Intelligently sync bars to current page contrast or reader background
+                    LaunchedEffect(currentPage, currentLum, isAppDark) {
+                        if (currentLum != null) {
+                            isCurrentPageTopLight = currentLum.first
+                            isCurrentPageBottomLight = currentLum.second
+                        } else {
+                            isCurrentPageTopLight = !isAppDark
+                            isCurrentPageBottomLight = !isAppDark
+                        }
+                    }
+
                     var showJumpDialog by remember { mutableStateOf(false) }
                     var jumpPageInput by remember { mutableStateOf("") }
 
@@ -289,10 +385,18 @@ actual fun PdfViewerScreen(
                                                 renderer = currentRenderer,
                                                 pageIndex = pageIndex,
                                                 scrollDirection = orientation,
+                                                isAppDark = isAppDark,
                                                 onZoomChanged = { isZoomed = it },
                                                 onPageReady = {
                                                     if (pageIndex == pagerState.currentPage) {
                                                         isFirstPageReady = true
+                                                    }
+                                                },
+                                                onLuminanceCalculated = { topLight, bottomLight ->
+                                                    pageLuminanceMap[pageIndex] = (topLight to bottomLight)
+                                                    if (pageIndex == pagerState.currentPage) {
+                                                        isCurrentPageTopLight = topLight
+                                                        isCurrentPageBottomLight = bottomLight
                                                     }
                                                 }
                                             )
@@ -316,10 +420,18 @@ actual fun PdfViewerScreen(
                                                 renderer = currentRenderer,
                                                 pageIndex = pageIndex,
                                                 scrollDirection = orientation,
+                                                isAppDark = isAppDark,
                                                 onZoomChanged = { isZoomed = it },
                                                 onPageReady = {
                                                     if (pageIndex == pagerState.currentPage) {
                                                         isFirstPageReady = true
+                                                    }
+                                                },
+                                                onLuminanceCalculated = { topLight, bottomLight ->
+                                                    pageLuminanceMap[pageIndex] = (topLight to bottomLight)
+                                                    if (pageIndex == pagerState.currentPage) {
+                                                        isCurrentPageTopLight = topLight
+                                                        isCurrentPageBottomLight = bottomLight
                                                     }
                                                 },
                                                 modifier = Modifier.fillMaxSize()
@@ -654,6 +766,18 @@ object PdfBitmapCache {
     }
 }
 
+fun clearPdfCache(cacheDir: File) {
+    try {
+        cacheDir.listFiles()?.forEach { file ->
+            if (file.name.startsWith("pdf_") && file.name.endsWith(".pdf")) {
+                file.delete()
+            }
+        }
+    } catch (e: Exception) {
+        e.printStackTrace()
+    }
+}
+
 suspend fun androidx.compose.ui.input.pointer.PointerInputScope.detectZoomPanGestures(
     onGesture: (pan: Offset, zoom: Float) -> Boolean
 ) {
@@ -699,13 +823,43 @@ suspend fun androidx.compose.ui.input.pointer.PointerInputScope.detectZoomPanGes
     }
 }
 
+fun sampleBitmapLuminance(bitmap: Bitmap): Pair<Boolean, Boolean> {
+    return try {
+        if (bitmap.width <= 0 || bitmap.height <= 0) return true to true
+        val w = bitmap.width
+        val h = bitmap.height
+
+        val topY = 24.coerceAtMost(h - 1)
+        val topP1 = bitmap.getPixel((w * 0.15f).toInt().coerceIn(0, w - 1), topY)
+        val topP2 = bitmap.getPixel(w / 2, topY)
+        val topP3 = bitmap.getPixel((w * 0.85f).toInt().coerceIn(0, w - 1), topY)
+        val avgTopLum = (androidx.core.graphics.ColorUtils.calculateLuminance(topP1) +
+                         androidx.core.graphics.ColorUtils.calculateLuminance(topP2) +
+                         androidx.core.graphics.ColorUtils.calculateLuminance(topP3)) / 3.0
+
+        val botY = (h - 24).coerceIn(0, h - 1)
+        val botP1 = bitmap.getPixel((w * 0.15f).toInt().coerceIn(0, w - 1), botY)
+        val botP2 = bitmap.getPixel(w / 2, botY)
+        val botP3 = bitmap.getPixel((w * 0.85f).toInt().coerceIn(0, w - 1), botY)
+        val avgBotLum = (androidx.core.graphics.ColorUtils.calculateLuminance(botP1) +
+                         androidx.core.graphics.ColorUtils.calculateLuminance(botP2) +
+                         androidx.core.graphics.ColorUtils.calculateLuminance(botP3)) / 3.0
+
+        (avgTopLum > 0.5) to (avgBotLum > 0.5)
+    } catch (_: Exception) {
+        true to true
+    }
+}
+
 @Composable
 fun AndroidPdfPage(
     renderer: PdfRenderer,
     pageIndex: Int,
     scrollDirection: String = "vertical",
+    isAppDark: Boolean = false,
     onZoomChanged: (Boolean) -> Unit = {},
     onPageReady: () -> Unit = {},
+    onLuminanceCalculated: (isTopLight: Boolean, isBottomLight: Boolean) -> Unit = { _, _ -> },
     modifier: Modifier = Modifier
 ) {
     val cacheKey = "pdf_${renderer.hashCode()}_page_$pageIndex"
@@ -732,20 +886,32 @@ fun AndroidPdfPage(
             withContext(Dispatchers.IO) {
                 try {
                     pdfMutex.withLock {
+                        currentCoroutineContext().ensureActive()
                         val page = renderer.openPage(pageIndex)
-                        // Scale down slightly to save memory, but keep clear
-                        val width = (page.width * 1.5).toInt()
-                        val height = (page.height * 1.5).toInt()
-                        val bmp = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
-                        
-                        val canvas = android.graphics.Canvas(bmp)
-                        canvas.drawColor(android.graphics.Color.WHITE)
+                        try {
+                            // Dynamic RAM-based scaling to prevent OutOfMemoryError
+                            val maxMemoryMb = (Runtime.getRuntime().maxMemory() / (1024 * 1024)).toInt()
+                            val scaleFactor = when {
+                                maxMemoryMb >= 512 -> 1.5 // High-end devices with large heap
+                                maxMemoryMb >= 256 -> 1.2 // Mid-range
+                                else -> 1.0 // Low-end or tight memory
+                            }
+                            
+                            val width = (page.width * scaleFactor).toInt()
+                            val height = (page.height * scaleFactor).toInt()
+                            val bmp = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
+                            
+                            val canvas = android.graphics.Canvas(bmp)
+                            canvas.drawColor(android.graphics.Color.WHITE)
 
-                        page.render(bmp, null, null, PdfRenderer.Page.RENDER_MODE_FOR_DISPLAY)
-                        page.close()
-                        
-                        PdfBitmapCache.cache.put(cacheKey, bmp)
-                        bitmap = bmp
+                            page.render(bmp, null, null, PdfRenderer.Page.RENDER_MODE_FOR_DISPLAY)
+                            PdfBitmapCache.cache.put(cacheKey, bmp)
+                            bitmap = bmp
+                        } finally {
+                            try {
+                                page.close()
+                            } catch (_: Exception) {}
+                        }
                     }
                 } catch (e: kotlinx.coroutines.CancellationException) {
                     throw e
@@ -783,6 +949,16 @@ fun AndroidPdfPage(
             } else {
                 h = containerHeight
                 w = containerHeight * imageRatio
+            }
+
+            LaunchedEffect(currentBitmap, scale, scrollDirection, isAppDark, h, containerHeight) {
+                try {
+                    val (bmpTopLight, bmpBotLight) = sampleBitmapLuminance(currentBitmap)
+                    val touchesEdges = (scrollDirection == "vertical") || (scale > 1.05f) || (h >= containerHeight - 80f)
+                    val effectiveTopLight = if (touchesEdges) bmpTopLight else !isAppDark
+                    val effectiveBottomLight = if (touchesEdges) bmpBotLight else !isAppDark
+                    onLuminanceCalculated(effectiveTopLight, effectiveBottomLight)
+                } catch (_: Exception) {}
             }
 
             Image(
@@ -860,7 +1036,7 @@ fun AndroidPdfPage(
         ) {
             com.Nightjar.gradeiraqi3library.ui.ExpressiveLoadingIndicator(
                 modifier = Modifier.size(56.dp),
-                color = Color.White
+                color = MaterialTheme.colorScheme.primary
             )
         }
     }

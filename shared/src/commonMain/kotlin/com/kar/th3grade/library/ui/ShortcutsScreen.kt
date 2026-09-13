@@ -60,14 +60,12 @@ fun ShortcutsScreen(
     BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
         val screenWidthDp = with(androidx.compose.ui.platform.LocalDensity.current) { androidx.compose.ui.platform.LocalWindowInfo.current.containerSize.width.toDp() }
         val isWide = screenWidthDp >= 600.dp
-        val dynamicBottomPadding = (maxHeight * 0.25f).coerceAtLeast(bottomPadding)
         Column(
             modifier = Modifier
                 .fillMaxSize()
         ) {
-            // Dynamic top padding matches LibraryScreen (20% of screen)
             val statusBarHeight = WindowInsets.statusBars.asPaddingValues().calculateTopPadding()
-            val dynamicTopPadding = (this@BoxWithConstraints.maxHeight * 0.2f).coerceAtLeast(statusBarHeight + 76.dp)
+            val dynamicTopPadding = if (isWide) statusBarHeight + 64.dp else statusBarHeight + 76.dp
 
             LazyVerticalGrid(
                 state = lazyGridState,
@@ -104,9 +102,6 @@ fun ShortcutsScreen(
                             platformActionHandler.addHomeScreenShortcut(item)
                         }
                     )
-                }
-                item(key = "bottom_spacer", span = { GridItemSpan(maxLineSpan) }) {
-                    Spacer(modifier = Modifier.height(dynamicBottomPadding))
                 }
             }
         }

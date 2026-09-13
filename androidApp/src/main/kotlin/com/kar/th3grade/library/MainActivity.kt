@@ -20,6 +20,8 @@ import androidx.work.PeriodicWorkRequestBuilder
 import androidx.work.WorkManager
 import java.util.concurrent.TimeUnit
 import androidx.activity.enableEdgeToEdge
+import androidx.activity.SystemBarStyle
+import androidx.core.view.WindowCompat
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.collectAsState
@@ -89,6 +91,9 @@ class MainActivity : ComponentActivity() {
     private val pageState = mutableStateOf<String?>(null)
     private val searchQueryState = mutableStateOf<String?>(null)
 
+    @Volatile
+    private var isComposeDrawn = false
+
     private lateinit var notificationPermissionLauncher: androidx.activity.result.ActivityResultLauncher<String>
     private lateinit var batteryOptimizationLauncher: androidx.activity.result.ActivityResultLauncher<Intent>
 
@@ -142,23 +147,23 @@ class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         window.setBackgroundDrawableResource(R.drawable.splash_background)
-        var isComposeDrawn = false
         val splashScreen = installSplashScreen()
+
+        // تثبيت العرض (setKeepOnScreenCondition): يمنع إغلاق شاشة النظام قبل اكتمال رسم شاشة Compose تحتها تماماً
         splashScreen.setKeepOnScreenCondition { !isComposeDrawn }
-        enableEdgeToEdge()
+        enableEdgeToEdge(
+            statusBarStyle = SystemBarStyle.auto(android.graphics.Color.TRANSPARENT, android.graphics.Color.TRANSPARENT),
+            navigationBarStyle = SystemBarStyle.dark(android.graphics.Color.TRANSPARENT)
+        )
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            window.isNavigationBarContrastEnforced = false
+            window.isStatusBarContrastEnforced = false
+        }
+        window.statusBarColor = android.graphics.Color.TRANSPARENT
+        window.navigationBarColor = android.graphics.Color.TRANSPARENT
         super.onCreate(savedInstanceState)
         
-        // Unlock maximum dynamic refresh rate (1Hz - 144Hz depending on device)
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-            val modes = windowManager.defaultDisplay.supportedModes
-            val maxMode = modes.maxByOrNull { it.refreshRate }
-            if (maxMode != null) {
-                window.attributes = window.attributes.apply {
-                    preferredDisplayModeId = maxMode.modeId
-                }
-            }
-        }
-        
+
         batteryOptimizationLauncher = registerForActivityResult(
             androidx.activity.result.contract.ActivityResultContracts.StartActivityForResult()
         ) { _ ->
@@ -238,8 +243,14 @@ class MainActivity : ComponentActivity() {
             e.printStackTrace()
         }
 
-        // Schedule Background Sync Worker – interval driven by user's syncInterval setting
-        scheduleBackgroundSync(this)
+        // Schedule background operations asynchronously to keep main thread 100% free and eliminate startup delay
+        CoroutineScope(Dispatchers.IO + SupervisorJob()).launch {
+            try {
+                com.Nightjar.gradeiraqi3library.ui.clearPdfCache(cacheDir)
+                androidx.browser.customtabs.CustomTabsClient.connectAndInitialize(applicationContext, "com.android.chrome")
+            } catch (_: Exception) {}
+            scheduleBackgroundSync(applicationContext)
+        }
 
         // Sequence is handled by hasCompletedInitialSetup above, so we remove the duplicate check here
 
@@ -530,11 +541,48 @@ class MainActivity : ComponentActivity() {
                     android.widget.Toast.makeText(this@MainActivity, "جهازك لا يحتوي على هذه الخاصية، أنت في أمان!", android.widget.Toast.LENGTH_SHORT).show()
                 }
             }
+
+            override fun clearDiskCache() {
+                CoroutineScope(Dispatchers.IO).launch {
+                    try {
+                        // 1. Delete all temporary PDF files via unified cache manager
+                        com.Nightjar.gradeiraqi3library.ui.clearPdfCache(cacheDir)
+                        // 2. Clear Coil Image disk & memory cache
+                        coil3.SingletonImageLoader.get(this@MainActivity).let { loader ->
+                            loader.diskCache?.clear()
+                            loader.memoryCache?.clear()
+                        }
+                        // 3. Evict PDF page bitmap cache
+                        com.Nightjar.gradeiraqi3library.ui.PdfBitmapCache.cache.evictAll()
+                        System.gc()
+                    } catch (e: Exception) {
+                        e.printStackTrace()
+                    }
+                }
+            }
+
+            override fun updateSystemBars(isLightStatusBars: Boolean, isLightNavigationBars: Boolean) {
+                runOnUiThread {
+                    try {
+                        window.statusBarColor = android.graphics.Color.TRANSPARENT
+                        window.navigationBarColor = android.graphics.Color.TRANSPARENT
+                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                            window.isNavigationBarContrastEnforced = false
+                            window.isStatusBarContrastEnforced = false
+                        }
+                        val controller = WindowCompat.getInsetsController(window, window.decorView)
+                        controller.isAppearanceLightStatusBars = isLightStatusBars
+                        controller.isAppearanceLightNavigationBars = isLightNavigationBars
+                    } catch (e: Exception) {
+                        e.printStackTrace()
+                    }
+                }
+            }
         }
 
         setContent {
             androidx.compose.runtime.LaunchedEffect(Unit) {
-                kotlinx.coroutines.delay(250) // Ensure layout and draw passes are absolutely complete on heavy UI skins like HyperOS
+                kotlinx.coroutines.delay(200) // Small delay to prevent native splash exit flicker on Xiaomi/HyperOS
                 isComposeDrawn = true
             }
             val appSettings = com.Nightjar.gradeiraqi3library.network.SyncEngine.appSettings.collectAsState().value
@@ -550,19 +598,16 @@ class MainActivity : ComponentActivity() {
             if (!view.isInEditMode) {
                 androidx.compose.runtime.SideEffect {
                     val activity = view.context as ComponentActivity
-                    activity.enableEdgeToEdge(
-                        statusBarStyle = androidx.activity.SystemBarStyle.auto(
-                            android.graphics.Color.TRANSPARENT,
-                            android.graphics.Color.TRANSPARENT
-                        ) { isDarkThemeActive },
-                        navigationBarStyle = androidx.activity.SystemBarStyle.auto(
-                            android.graphics.Color.TRANSPARENT,
-                            android.graphics.Color.TRANSPARENT
-                        ) { isDarkThemeActive }
-                    )
+                    val window = activity.window
+                    window.statusBarColor = android.graphics.Color.TRANSPARENT
+                    window.navigationBarColor = android.graphics.Color.TRANSPARENT
                     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-                        activity.window.isNavigationBarContrastEnforced = false
+                        window.isNavigationBarContrastEnforced = false
+                        window.isStatusBarContrastEnforced = false
                     }
+                    val controller = WindowCompat.getInsetsController(window, window.decorView)
+                    controller.isAppearanceLightStatusBars = !isDarkThemeActive
+                    controller.isAppearanceLightNavigationBars = !isDarkThemeActive
                 }
             }
 
@@ -600,27 +645,63 @@ class MainActivity : ComponentActivity() {
 
     override fun onTrimMemory(level: Int) {
         super.onTrimMemory(level)
-        try {
-            if (level == TRIM_MEMORY_UI_HIDDEN || level == TRIM_MEMORY_BACKGROUND) {
-                // UI is hidden or app is in background -> Drop large caches to conserve memory according to guidelines
+        if (level == TRIM_MEMORY_UI_HIDDEN) {
+            try {
+                // UI is completely hidden (e.g. user pressed Home or switched apps).
+                // Evict transient UI caches to increase the system's capacity for background processes.
+                com.Nightjar.gradeiraqi3library.ui.PdfBitmapCache.cache.trimToSize(0)
+                coil3.SingletonImageLoader.get(this).let { loader ->
+                    loader.memoryCache?.clear()
+                }
+                System.gc()
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
+        } else if (level >= TRIM_MEMORY_BACKGROUND || level == TRIM_MEMORY_RUNNING_CRITICAL) {
+            try {
+                com.Nightjar.gradeiraqi3library.ui.clearPdfCache(cacheDir)
                 com.Nightjar.gradeiraqi3library.ui.PdfBitmapCache.cache.evictAll()
                 coil3.SingletonImageLoader.get(this).let { loader ->
                     loader.memoryCache?.clear()
                 }
+                System.gc()
+            } catch (e: Exception) {
+                e.printStackTrace()
             }
-        } catch (e: Exception) {
-            e.printStackTrace()
+        } else if (level == TRIM_MEMORY_RUNNING_LOW || level == TRIM_MEMORY_RUNNING_MODERATE) {
+            try {
+                val cache = com.Nightjar.gradeiraqi3library.ui.PdfBitmapCache.cache
+                cache.trimToSize(cache.size() / 2)
+                coil3.SingletonImageLoader.get(this).let { loader ->
+                    loader.memoryCache?.let { mc ->
+                        mc.trimToSize(mc.size / 2)
+                    }
+                }
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
         }
     }
 
     override fun onLowMemory() {
         super.onLowMemory()
         try {
+            com.Nightjar.gradeiraqi3library.ui.clearPdfCache(cacheDir)
             com.Nightjar.gradeiraqi3library.ui.PdfBitmapCache.cache.evictAll()
             coil3.SingletonImageLoader.get(this).let { loader ->
                 loader.memoryCache?.clear()
             }
             System.gc()
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        // Delete all temporary PDF cache files upon exiting the app to ensure zero storage footprint
+        try {
+            com.Nightjar.gradeiraqi3library.ui.clearPdfCache(cacheDir)
         } catch (e: Exception) {
             e.printStackTrace()
         }
@@ -653,11 +734,9 @@ class MainActivity : ComponentActivity() {
         }
 
         if (bookId != null) {
-            if (bookIdState.value == null) {
-                bookIdState.value = bookId
-                isNoteState.value = isNote
-                pageState.value = "pdf"
-            }
+            bookIdState.value = bookId
+            isNoteState.value = isNote
+            pageState.value = "pdf"
         } else if (page != null) {
             pageState.value = page
         }

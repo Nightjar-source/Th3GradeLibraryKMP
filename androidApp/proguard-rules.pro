@@ -38,12 +38,6 @@
 -dontwarn io.ktor.**
 -dontwarn javax.annotation.**
 
-# 7. توصيات غوغل للأداء الأقصى وتخفيف المعالجة بالخلفية
--assumenosideeffects class android.util.Log {
-    public static boolean isLoggable(java.lang.String, int);
-    public static int v(...);
-    public static int d(...);
-    public static int i(...);
-    public static int w(...);
-    public static int e(...);
-}
+# 7. توصيات غوغل و R8 الرسمية (AGP 9+) لإزالة السجلات بأمان تام دون كسر منطق الأكواد
+# يزيل تلقائياً Verbose (2), Debug (3), Info (4) ويبقي التحذيرات والأخطاء Warn (5) و Error (6)
+-maximumremovedandroidloglevel 4

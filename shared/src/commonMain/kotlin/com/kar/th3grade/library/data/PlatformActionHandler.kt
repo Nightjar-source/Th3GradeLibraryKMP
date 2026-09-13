@@ -22,4 +22,8 @@ interface PlatformActionHandler {
     fun requestAutoRevokeExemption() {}
     /** Graceful degradation: checks if device is low RAM (<3GB) or running old OS (<= Android 9 API 28) */
     fun isLowEndDevice(): Boolean { return false }
+    /** Clears all disk cache including temporary PDF files and image cache */
+    fun clearDiskCache() {}
+    /** Dynamically updates system status bar and 3-button navigation bar icon appearance in real time */
+    fun updateSystemBars(isLightStatusBars: Boolean, isLightNavigationBars: Boolean) {}
 }

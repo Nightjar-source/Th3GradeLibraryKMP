@@ -43,15 +43,22 @@ fun OnboardingScreen(
                 .windowInsetsPadding(WindowInsets.safeDrawing.only(WindowInsetsSides.Horizontal)),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
+            val windowInfo = androidx.compose.ui.platform.LocalWindowInfo.current
+            val density = androidx.compose.ui.platform.LocalDensity.current
+            val screenWidthDp = with(density) { windowInfo.containerSize.width.toDp() }
+            val screenHeightDp = with(density) { windowInfo.containerSize.height.toDp() }
+            val isWide = screenWidthDp >= 600.dp || screenWidthDp > screenHeightDp
+
             Column(
-                modifier = Modifier.widthIn(max = 1200.dp),
+                modifier = Modifier.widthIn(max = 1100.dp),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                Spacer(modifier = Modifier.height(32.dp))
+                Spacer(modifier = Modifier.height(if (isWide && screenHeightDp < 520.dp) 16.dp else 28.dp))
                 
-                // Welcome Card
+                // Welcome Card (Dynamic width on tablet/DeX/landscape vs portrait phone)
+                val welcomeCardMaxWidth = if (isWide) 640.dp else 520.dp
                 Card(
-                    modifier = Modifier.fillMaxWidth().widthIn(max = 600.dp).padding(bottom = 32.dp),
+                    modifier = Modifier.widthIn(max = welcomeCardMaxWidth).fillMaxWidth().padding(bottom = if (isWide) 20.dp else 32.dp),
                     shape = RoundedCornerShape(24.dp),
                     colors = CardDefaults.cardColors(containerColor = Color.Transparent),
                     elevation = CardDefaults.cardElevation(0.dp)
@@ -67,61 +74,62 @@ fun OnboardingScreen(
                                     )
                                 )
                             )
-                            .padding(24.dp),
+                            .padding(horizontal = 24.dp, vertical = if (isWide && screenHeightDp < 520.dp) 16.dp else 24.dp),
                         contentAlignment = Alignment.Center
                     ) {
                         Column(horizontalAlignment = Alignment.CenterHorizontally) {
                             Text(
                                 text = "🎓",
-                                fontSize = 48.sp,
-                                modifier = Modifier.padding(bottom = 16.dp)
+                                fontSize = if (isWide && screenHeightDp < 520.dp) 36.sp else 48.sp,
+                                modifier = Modifier.padding(bottom = 12.dp)
                             )
                             Text(
                                 text = "أهلاً بكم في تطبيق مكتبة الثالث متوسط!",
                                 style = MaterialTheme.typography.titleLarge.copy(
                                     fontWeight = FontWeight.Bold,
-                                    fontSize = 22.sp
+                                    fontSize = if (isWide && screenHeightDp < 520.dp) 19.sp else 22.sp
                                 ),
                                 textAlign = TextAlign.Center,
                                 color = MaterialTheme.colorScheme.onPrimaryContainer,
-                                modifier = Modifier.padding(bottom = 12.dp)
+                                modifier = Modifier.padding(bottom = 10.dp)
                             )
                             Text(
                                 text = "نوفر لك أحدث الملازم، الكتب المدرسية، الأخبار الرسمية، والمحفوظات لتعمل بدون إنترنت بسلاسة وبأفضل تجربة.",
-                                style = MaterialTheme.typography.bodyLarge,
+                                style = MaterialTheme.typography.bodyLarge.copy(
+                                    fontSize = if (isWide && screenHeightDp < 520.dp) 14.sp else 16.sp
+                                ),
                                 textAlign = TextAlign.Center,
-                                color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.8f)
+                                color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.85f)
                             )
                         }
                     }
                 }
 
-                Spacer(modifier = Modifier.height(16.dp))
+                Spacer(modifier = Modifier.height(8.dp))
 
                 // Title
                 Text(
                     text = "لضمان عمل التطبيق بشكل ممتاز على هاتفك واستمتع، نحتاج إلى 3 خطوات سريعة:",
                     style = MaterialTheme.typography.titleLarge.copy(
                         fontWeight = FontWeight.Bold,
-                        fontSize = 20.sp
+                        fontSize = if (isWide && screenHeightDp < 520.dp) 17.sp else 19.sp
                     ),
                     textAlign = TextAlign.Center,
                     color = MaterialTheme.colorScheme.onBackground,
-                    modifier = Modifier.padding(bottom = 32.dp)
+                    modifier = Modifier
+                        .widthIn(max = if (isWide) 680.dp else 520.dp)
+                        .padding(bottom = if (isWide) 20.dp else 32.dp)
                 )
 
-                val screenWidthDp = with(androidx.compose.ui.platform.LocalDensity.current) { androidx.compose.ui.platform.LocalWindowInfo.current.containerSize.width.toDp() }
-                val isWide = screenWidthDp >= 600.dp
-                
                 if (isWide) {
                     @OptIn(androidx.compose.foundation.layout.ExperimentalLayoutApi::class)
                     androidx.compose.foundation.layout.FlowRow(
-                        modifier = Modifier.fillMaxWidth(),
+                        modifier = Modifier.widthIn(max = 1100.dp).fillMaxWidth(),
                         horizontalArrangement = Arrangement.spacedBy(16.dp, Alignment.CenterHorizontally),
                         verticalArrangement = Arrangement.spacedBy(16.dp)
                     ) {
                         OnboardingStepCard(
-                            modifier = Modifier.width(350.dp),
+                            modifier = Modifier.widthIn(min = 280.dp, max = 340.dp),
                             icon = { Icon(Icons.Default.NotificationsActive, null, tint = MaterialTheme.colorScheme.primary) },
                             title = "1. إشعارات النظام:",
                             description = "لتبقى على اطلاع بآخر التحديثات والتنبيهات.",
@@ -129,7 +137,7 @@ fun OnboardingScreen(
                             onClick = { platformActionHandler.requestNotificationPermission() }
                         )
                         OnboardingStepCard(
-                            modifier = Modifier.width(350.dp),
+                            modifier = Modifier.widthIn(min = 280.dp, max = 340.dp),
                             icon = { Icon(Icons.Default.Security, null, tint = MaterialTheme.colorScheme.error) },
                             title = "2. منع إيقاف نشاط التطبيق:",
                             description = "تنبيه هام: يُرجى الانتقال للإعدادات وإيقاف خيار \"إيقاف مؤقت لنشاط التطبيق في حال عدم استخدامه\" لضمان استمرار الخدمة في الخلفية.",
@@ -137,7 +145,7 @@ fun OnboardingScreen(
                             onClick = { platformActionHandler.requestAutoRevokeExemption() }
                         )
                         OnboardingStepCard(
-                            modifier = Modifier.width(350.dp),
+                            modifier = Modifier.widthIn(min = 280.dp, max = 340.dp),
                             icon = { Icon(Icons.Default.BatteryAlert, null, tint = MaterialTheme.colorScheme.primary) },
                             title = "3. تخطي خمول البطارية:",
                             description = "استثناء التطبيق من قيود توفير الطاقة لضمان المزامنة.",
@@ -150,7 +158,7 @@ fun OnboardingScreen(
                     }
                 } else {
                     Column(
-                        modifier = Modifier.fillMaxWidth(),
+                        modifier = Modifier.widthIn(max = 520.dp).fillMaxWidth(),
                         verticalArrangement = Arrangement.spacedBy(16.dp)
                     ) {
                         OnboardingStepCard(

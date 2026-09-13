@@ -20,6 +20,8 @@ import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.ui.draw.blur
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.text.BasicTextField
+import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawWithContent
@@ -43,6 +45,8 @@ import com.Nightjar.gradeiraqi3library.theme.Th3GradeTheme
 import com.Nightjar.gradeiraqi3library.theme.liquidGlass
 import com.Nightjar.gradeiraqi3library.theme.parseHexColor
 import com.Nightjar.gradeiraqi3library.ui.*
+import androidx.lifecycle.viewmodel.compose.viewModel
+import com.Nightjar.gradeiraqi3library.viewmodel.AppViewModel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import androidx.compose.foundation.Image
@@ -93,19 +97,40 @@ fun App(
             LocalLayoutDirection provides LayoutDirection.Rtl,
             com.Nightjar.gradeiraqi3library.theme.LocalIsLowEndDevice provides (platformActionHandler?.isLowEndDevice() ?: false)
         ) {
-            Surface(
-                modifier = Modifier.fillMaxSize(),
-                color = MaterialTheme.colorScheme.background
-            ) {
-                AppContent(
-                    platformActionHandler = platformActionHandler,
-                    isDark = isDarkTheme,
-                    initialBookId = initialBookId,
-                    initialIsNote = initialIsNote,
-                    initialPage = initialPage,
-                    initialSearchQuery = initialSearchQuery,
-                    onIntentConsumed = onIntentConsumed
-                )
+            var showSplash by androidx.compose.runtime.saveable.rememberSaveable { mutableStateOf(true) }
+
+            androidx.compose.animation.AnimatedContent(
+                targetState = showSplash,
+                transitionSpec = {
+                    (androidx.compose.animation.fadeIn(animationSpec = androidx.compose.animation.core.tween(800)) +
+                     androidx.compose.animation.scaleIn(initialScale = 0.95f, animationSpec = androidx.compose.animation.core.spring(0.8f, 100f))) togetherWith
+                    (androidx.compose.animation.fadeOut(animationSpec = androidx.compose.animation.core.tween(500)) +
+                     androidx.compose.animation.scaleOut(targetScale = 1.05f, animationSpec = androidx.compose.animation.core.tween(500)))
+                },
+                label = "SplashTransition"
+            ) { isSplash ->
+                if (isSplash) {
+                    com.Nightjar.gradeiraqi3library.ui.AnimatedSplashScreen(
+                        onAnimationFinished = { 
+                            showSplash = false 
+                        }
+                    )
+                } else {
+                    Surface(
+                        modifier = Modifier.fillMaxSize(),
+                        color = MaterialTheme.colorScheme.background
+                    ) {
+                        AppContent(
+                            platformActionHandler = platformActionHandler,
+                            isDark = isDarkTheme,
+                            initialBookId = initialBookId,
+                            initialIsNote = initialIsNote,
+                            initialPage = initialPage,
+                            initialSearchQuery = initialSearchQuery,
+                            onIntentConsumed = onIntentConsumed
+                        )
+                    }
+                }
             }
         }
     }
@@ -116,6 +141,8 @@ val LocalSharedTransitionScope = compositionLocalOf<SharedTransitionScope?> { nu
 
 @OptIn(ExperimentalSharedTransitionApi::class)
 val LocalAnimatedVisibilityScope = compositionLocalOf<AnimatedVisibilityScope?> { null }
+
+val LocalStableStatusBarHeight = staticCompositionLocalOf { 24.dp }
 
 @OptIn(ExperimentalSharedTransitionApi::class)
 @Composable
@@ -142,13 +169,14 @@ fun AppContent(
     val shortcutsLazyGridState = androidx.compose.foundation.lazy.grid.rememberLazyGridState()
     val aboutScrollState = androidx.compose.foundation.rememberScrollState()
 
-    val pageHistory = androidx.compose.runtime.saveable.rememberSaveable { 
-        mutableStateOf(
-            if (initialPage != null && initialPage != "home") listOf("home", initialPage) 
-            else listOf("home")
-        ) 
+    val viewModel: AppViewModel = viewModel()
+
+    LaunchedEffect(initialPage, initialSearchQuery) {
+        viewModel.initDeepLink(initialPage, initialSearchQuery)
     }
-    var page by androidx.compose.runtime.saveable.rememberSaveable { mutableStateOf(initialPage ?: "home") }
+
+    val pageHistory = viewModel.pageHistory
+    var page by viewModel::page
 
     val density = androidx.compose.ui.platform.LocalDensity.current
     val bottomBarHeightPx = with(density) { 200.dp.toPx() } // Safety height to slide completely off screen under nav bars
@@ -202,58 +230,42 @@ fun AppContent(
             }
         }
     }
-    var isNavigatingBack by remember { mutableStateOf(false) }
+    var isNavigatingBack by viewModel::isNavigatingBack
 
-    fun popPage(): Boolean {
-        isNavigatingBack = true
-        val current = pageHistory.value
-        if (current.size > 1) {
-            val updated = current.dropLast(1)
-            pageHistory.value = updated
-            page = updated.last()
-            return true
-        }
-        return false
-    }
+    fun popPage(): Boolean = viewModel.popPage()
 
     // Connect properties to SyncEngine (Unified Persistent Storage)
     val isGridView by SyncEngine.isGridView.collectAsState()
     val selectedCategory by SyncEngine.selectedCategory.collectAsState()
 
-    var selectedItem by remember { mutableStateOf<BookItem?>(null) }
+    var selectedItem by viewModel::selectedItem
 
     LaunchedEffect(page, selectedCategory, selectedItem) {
         isBottomBarVisible = true
         accumulatedScrollY = 0f
         canCurrentPageScroll = false
     }
-    var isSearchOpen by remember { mutableStateOf(false) }
-    var searchQuery by remember { mutableStateOf(initialSearchQuery ?: "") }
 
-    var showSplash by remember { mutableStateOf(true) }
-    var showOnboarding by remember { mutableStateOf(!appSettings.isOnboardingCompleted) }
-
-    // Modal states
-    var isDrawerOpen by remember { mutableStateOf(false) }
-    var isAppSettingsOpen by remember { mutableStateOf(false) }
-    var isNewsSettingsOpen by remember { mutableStateOf(false) }
-    var showClearCacheDialog by remember { mutableStateOf(false) }
-
-    fun navigateTo(newPage: String) {
-        isNavigatingBack = false
-        isAppSettingsOpen = false
-        isNewsSettingsOpen = false
-        if (newPage == "home") {
-            pageHistory.value = listOf("home")
-            page = "home"
-        } else {
-            val current = pageHistory.value
-            if (newPage != current.lastOrNull()) {
-                pageHistory.value = current.filter { it != newPage } + newPage
-                page = newPage
-            }
+    LaunchedEffect(isDark, page) {
+        if (page != "pdf") {
+            platformActionHandler.updateSystemBars(
+                isLightStatusBars = !isDark,
+                isLightNavigationBars = !isDark
+            )
         }
     }
+    var isSearchOpen by viewModel::isSearchOpen
+    var searchQuery by viewModel::searchQuery
+
+    var showOnboarding by remember { mutableStateOf(!appSettings.isOnboardingCompleted) }
+
+    // Modal states hoisted in AppViewModel
+    var isDrawerOpen by viewModel::isDrawerOpen
+    var isAppSettingsOpen by viewModel::isAppSettingsOpen
+    var isNewsSettingsOpen by viewModel::isNewsSettingsOpen
+    var showClearCacheDialog by viewModel::showClearCacheDialog
+
+    fun navigateTo(newPage: String) = viewModel.navigateTo(newPage)
 
     // Bookmarks list from SyncEngine (Persistent Cache)
     val savedItemIds by SyncEngine.savedBookmarks.collectAsState()
@@ -261,7 +273,7 @@ fun AppContent(
         val savedBookIds = savedItemIds.map { it.split(":")[0] }.toSet()
         (AllItems.books + AllItems.notes).filter { it.id in savedBookIds }
     }
-    var pdfInitialPage by remember { mutableStateOf<Int?>(null) }
+    var pdfInitialPage by viewModel::pdfInitialPage
 
     // Platform Back Handlers
     val isSettingsOpen = isAppSettingsOpen || isNewsSettingsOpen
@@ -276,12 +288,7 @@ fun AppContent(
         } else if (isAppSettingsOpen) {
             isAppSettingsOpen = false
         } else if (selectedItem != null) {
-            popPage()
-            scope.launch {
-                kotlinx.coroutines.delay(350)
-                selectedItem = null
-                pdfInitialPage = null
-            }
+            viewModel.clearSelectedItem()
         } else {
             when (page) {
                 "list" -> {
@@ -316,9 +323,7 @@ fun AppContent(
                     scope.launch { gridState.scrollToItem(index) }
                 }
 
-                pdfInitialPage = SyncEngine.lastReadPages.value[target.id]
-                selectedItem = target
-                navigateTo("pdf") // Push PDF on top
+                viewModel.selectItem(target, SyncEngine.lastReadPages.value[target.id])
                 consumed = true
             }
         }
@@ -349,11 +354,9 @@ fun AppContent(
         // Background sync is handled properly by WorkManager according to the user's interval.
     }
 
-    // First time install auto-fetch & notification permission: trigger only after splash and onboarding finish
-    LaunchedEffect(showSplash, showOnboarding) {
-        if (!showSplash && !showOnboarding) {
-            
-            
+    // First time install auto-fetch & notification permission: trigger only after onboarding finish
+    LaunchedEffect(showOnboarding) {
+        if (!showOnboarding) {
             // Always sync when the app is fully opened by the user, regardless of background sync interval!
             scope.launch(kotlinx.coroutines.Dispatchers.Default) {
                 SyncEngine.fetchAndSync(forced = true)
@@ -364,18 +367,20 @@ fun AppContent(
     SharedTransitionLayout {
         CompositionLocalProvider(LocalSharedTransitionScope provides this@SharedTransitionLayout) {
             BoxWithConstraints(
-                modifier = Modifier
-                    .fillMaxSize()
+                modifier = Modifier.fillMaxSize()
             ) {
         val screenWidthDp = with(androidx.compose.ui.platform.LocalDensity.current) { androidx.compose.ui.platform.LocalWindowInfo.current.containerSize.width.toDp() }
         val isWide = screenWidthDp >= 600.dp
-        val navBarHeight = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
-        val listBottomPadding = if (isWide) 24.dp + navBarHeight else 120.dp + navBarHeight
+        
+        val currentNavBar = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
+        val currentStatusBar = WindowInsets.statusBars.asPaddingValues().calculateTopPadding()
+        
+        val listBottomPadding = if (isWide) 24.dp + currentNavBar else 110.dp + currentNavBar
 
+        CompositionLocalProvider(LocalStableStatusBarHeight provides currentStatusBar) {
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(end = if (isWide && page in listOf("home", "list", "news", "bookmarks", "shortcuts", "about")) 90.dp else 0.dp) // reduced from 108.dp for smaller rail
         ) {
                 // Background Orbs (Premium Liquid M3 Aesthetics)
                 if (platformActionHandler?.isLowEndDevice() != true) {
@@ -412,22 +417,20 @@ fun AppContent(
                 }
                 }
 
-                // Page Content (Always matches full content area)
-                val horizontalInsets = if (page != "pdf") WindowInsets.safeDrawing.only(WindowInsetsSides.Horizontal) else WindowInsets(0,0,0,0)
+                // Page Content (Always matches full content area edge-to-edge)
                 Box(
                     modifier = Modifier
                         .fillMaxSize()
-                        .windowInsetsPadding(horizontalInsets)
                         .nestedScroll(nestedScrollConnection),
                     contentAlignment = Alignment.TopCenter
                 ) {
                     Box(
                         modifier = Modifier
-                            .fillMaxHeight()
-                            .fillMaxWidth() // removed widthIn to allow full edge-to-edge content on tablets
+                            .fillMaxSize()
                     ) {
                         AnimatedContent(
                             targetState = page,
+                            modifier = Modifier.fillMaxSize(),
                             transitionSpec = {
                                 val pageOrder = listOf("home", "list", "news", "bookmarks", "shortcuts", "about")
                                 val initialIndex = pageOrder.indexOf(initialState).takeIf { it >= 0 } ?: 0
@@ -438,35 +441,48 @@ fun AppContent(
                                         fadeOut(tween(180))
                                     )
                                 } else if (initialState == "pdf") {
-                                    fadeIn(tween(200, easing = androidx.compose.animation.core.LinearOutSlowInEasing)).togetherWith(
-                                        fadeOut(tween(280, easing = androidx.compose.animation.core.CubicBezierEasing(0.4f, 0f, 1f, 1f)))
-                                    )
+                                    EnterTransition.None.togetherWith(
+                                        fadeOut(tween(260, easing = androidx.compose.animation.core.FastOutLinearInEasing))
+                                    ).apply {
+                                        targetContentZIndex = -1f
+                                    }
                                 } else {
-                                    // RTL partial-slide transitions matching caliq5 exactly
-                                    val fluidEasing = androidx.compose.animation.core.CubicBezierEasing(0.2f, 0f, 0f, 1f)
+                                    // Caliq5 ultra-fluid full-edge slide transitions: smooth gliding from true screen edges
+                                    val fluidEasing = androidx.compose.animation.core.CubicBezierEasing(0.16f, 1f, 0.3f, 1f)
                                     val slideSpec = androidx.compose.animation.core.tween<androidx.compose.ui.unit.IntOffset>(
-                                        durationMillis = 280,
+                                        durationMillis = 350,
                                         easing = fluidEasing
                                     )
                                     val fadeSpec = androidx.compose.animation.core.tween<Float>(
-                                        durationMillis = 220,
+                                        durationMillis = 260,
                                         easing = androidx.compose.animation.core.LinearOutSlowInEasing
                                     )
                                     val direction = if (isNavigatingBack || targetIndex < initialIndex) 1 else -1 // RTL: Forward is -1 (from left), Backward is 1 (from right)
 
                                     (slideInHorizontally(
-                                        initialOffsetX = { fullWidth -> (fullWidth * 0.38f * direction).toInt() },
+                                        initialOffsetX = { fullWidth -> fullWidth * direction },
                                         animationSpec = slideSpec
                                     ) + fadeIn(animationSpec = fadeSpec)).togetherWith(
                                         slideOutHorizontally(
-                                            targetOffsetX = { fullWidth -> (-fullWidth * 0.22f * direction).toInt() },
+                                            targetOffsetX = { fullWidth -> -fullWidth * direction },
                                             animationSpec = slideSpec
                                         ) + fadeOut(animationSpec = fadeSpec)
                                     )
                                 }
                             }
                         ) { targetPage ->
-                            CompositionLocalProvider(LocalAnimatedVisibilityScope provides this@AnimatedContent) {
+                            val pageContentPadding = PaddingValues(
+                                end = if (isWide && targetPage in listOf("home", "list", "news", "bookmarks", "shortcuts", "about")) 90.dp else 0.dp
+                            )
+                            val innerHorizontalInsets = if (targetPage != "pdf") WindowInsets.safeDrawing.only(WindowInsetsSides.Horizontal) else WindowInsets(0, 0, 0, 0)
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .windowInsetsPadding(innerHorizontalInsets)
+                                    .padding(pageContentPadding),
+                                contentAlignment = Alignment.TopCenter
+                            ) {
+                                CompositionLocalProvider(LocalAnimatedVisibilityScope provides this@AnimatedContent) {
                                 when (targetPage) {
                                     "home" -> LibraryScreen(
                                         category = null,
@@ -478,9 +494,7 @@ fun AppContent(
                                             navigateTo("list")
                                         },
                                         onNavigateToPdf = {
-                                            selectedItem = it
-                                            pdfInitialPage = SyncEngine.lastReadPages.value[it.id]
-                                            navigateTo("pdf")
+                                            viewModel.selectItem(it, SyncEngine.lastReadPages.value[it.id])
                                         },
                                         isDark = isDark,
                                         onToggleViewMode = { SyncEngine.saveGridView(!isGridView) },
@@ -503,9 +517,7 @@ fun AppContent(
                                             navigateTo("list")
                                         },
                                         onNavigateToPdf = {
-                                            selectedItem = it
-                                            pdfInitialPage = SyncEngine.lastReadPages.value[it.id]
-                                            navigateTo("pdf")
+                                            viewModel.selectItem(it, SyncEngine.lastReadPages.value[it.id])
                                         },
                                         isDark = isDark,
                                         onToggleViewMode = { SyncEngine.saveGridView(!isGridView) },
@@ -533,9 +545,7 @@ fun AppContent(
                                         savedPages = savedItemIds.toList(),
                                         isDark = isDark,
                                         onNavigateToPdf = { item, pageIdx ->
-                                            pdfInitialPage = pageIdx
-                                            selectedItem = item
-                                            navigateTo("pdf")
+                                            viewModel.selectItem(item, pageIdx)
                                         },
                                         bottomPadding = listBottomPadding,
                                         onScrollableStateChanged = { canCurrentPageScroll = it },
@@ -573,45 +583,51 @@ fun AppContent(
                                                     }
                                                 },
                                                 onClose = {
-                                                    popPage()
-                                                    scope.launch {
-                                                        kotlinx.coroutines.delay(350) // Wait for transition to finish
-                                                        selectedItem = null
-                                                        pdfInitialPage = null
-                                                    }
+                                                    viewModel.clearSelectedItem()
                                                 },
-                                                initialPage = pdfInitialPage
+                                                initialPage = pdfInitialPage,
+                                                isDark = isDark
                                             )
                                         }
                                     }
                                 }
+                            }
                             }
                         }
                     }
                 }
                 }
 
-                // --- Floating App Bar (Always visible except PDF and WebView) ---
+                // --- Floating App Bar (Always visible except PDF, WebView, and Onboarding) ---
                 androidx.compose.animation.AnimatedVisibility(
-                    visible = page != "pdf" && page != "web",
+                    visible = !showOnboarding && page != "pdf" && page != "web",
                     enter = slideInVertically(animationSpec = tween(400, easing = FastOutSlowInEasing)) { -it } + fadeIn(tween(400)),
                     exit = slideOutVertically(animationSpec = tween(400, easing = FastOutSlowInEasing)) { -it } + fadeOut(tween(400)),
-                    modifier = Modifier.align(Alignment.TopCenter).fillMaxWidth().zIndex(50f)
+                    modifier = Modifier.align(Alignment.TopCenter).fillMaxWidth().zIndex(100f)
                 ) {
+                    val topBarHeight = if (isWide) 48.dp else 56.dp
+                    val topBarPaddingV = if (isWide) 4.dp else 8.dp
                     Box(
                         modifier = Modifier
                             .statusBarsPadding()
                             .windowInsetsPadding(WindowInsets.safeDrawing.only(WindowInsetsSides.Horizontal))
-                            .padding(horizontal = 16.dp, vertical = 8.dp),
+                            .padding(
+                                start = 16.dp,
+                                end = if (isWide) 96.dp else 16.dp,
+                                top = topBarPaddingV,
+                                bottom = topBarPaddingV
+                            ),
                         contentAlignment = Alignment.Center
                     ) {
                         Row(
                             modifier = Modifier
                                 .widthIn(max = 608.dp)
                                 .fillMaxWidth()
-                                .height(56.dp)
+                                .defaultMinSize(minHeight = topBarHeight)
+                                .wrapContentHeight()
                                 .liquidGlass(isDark, borderRadius = 28.dp, alpha = 0.95f)
-                                .padding(horizontal = 8.dp),
+                                .animateContentSize(spring(dampingRatio = 0.8f, stiffness = 250f))
+                                .padding(horizontal = 8.dp, vertical = 2.dp),
                             horizontalArrangement = Arrangement.SpaceBetween,
                             verticalAlignment = Alignment.CenterVertically
                         ) {
@@ -619,48 +635,63 @@ fun AppContent(
                                 verticalAlignment = Alignment.CenterVertically,
                                 modifier = Modifier.padding(start = 8.dp)
                             ) {
-                                if (page != "home") {
-                                    IconButton(
-                                        onClick = {
-                                            if (page == "list" && selectedCategory != null) {
-                                                SyncEngine.saveSelectedCategory(null)
-                                                navigateTo("home")
-                                            } else {
-                                                if (!popPage()) {
+                                Box(
+                                    modifier = Modifier.size(44.dp),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    androidx.compose.animation.AnimatedVisibility(
+                                        visible = (page != "home"),
+                                        enter = fadeIn(tween(220)) + scaleIn(initialScale = 0.75f, animationSpec = tween(220)),
+                                        exit = fadeOut(tween(200)) + scaleOut(targetScale = 0.75f, animationSpec = tween(200))
+                                    ) {
+                                        IconButton(
+                                            onClick = {
+                                                if (page == "list" && selectedCategory != null) {
+                                                    SyncEngine.saveSelectedCategory(null)
                                                     navigateTo("home")
+                                                } else {
+                                                    if (!popPage()) {
+                                                        navigateTo("home")
+                                                    }
                                                 }
                                             }
+                                        ) {
+                                            Icon(
+                                                imageVector = Icons.Default.ChevronRight,
+                                                contentDescription = "Back",
+                                                tint = MaterialTheme.colorScheme.onSurface
+                                            )
                                         }
-                                    ) {
-                                        Icon(
-                                            imageVector = Icons.Default.ChevronRight,
-                                            contentDescription = "Back",
-                                            tint = MaterialTheme.colorScheme.onSurface
-                                        )
                                     }
-                                } else {
-                                    Box(
-                                        modifier = Modifier
-                                            .size(42.dp)
-                                            .clip(CircleShape)
-                                            .background(
-                                                Brush.radialGradient(
-                                                    listOf(
-                                                        parseHexColor(appSettings.primaryColor).copy(alpha = 0.5f),
-                                                        Color.Transparent
+
+                                    androidx.compose.animation.AnimatedVisibility(
+                                        visible = (page == "home"),
+                                        enter = fadeIn(tween(220)) + scaleIn(initialScale = 0.75f, animationSpec = tween(220)),
+                                        exit = fadeOut(tween(200)) + scaleOut(targetScale = 0.75f, animationSpec = tween(200))
+                                    ) {
+                                        Box(
+                                            modifier = Modifier
+                                                .size(40.dp)
+                                                .clip(CircleShape)
+                                                .background(
+                                                    Brush.radialGradient(
+                                                        listOf(
+                                                            parseHexColor(appSettings.primaryColor).copy(alpha = 0.5f),
+                                                            Color.Transparent
+                                                        )
                                                     )
-                                                )
-                                            ),
-                                        contentAlignment = Alignment.Center
-                                    ) {
-                                        Image(
-                                            painter = painterResource(com.Nightjar.gradeiraqi3library.generated.resources.Res.drawable.app_icon),
-                                            contentDescription = "App Icon",
-                                            modifier = Modifier.size(28.dp).clip(CircleShape)
-                                        )
+                                                ),
+                                            contentAlignment = Alignment.Center
+                                        ) {
+                                            Image(
+                                                painter = painterResource(com.Nightjar.gradeiraqi3library.generated.resources.Res.drawable.app_icon),
+                                                contentDescription = "App Icon",
+                                                modifier = Modifier.size(28.dp).clip(CircleShape)
+                                            )
+                                        }
                                     }
-                                    Spacer(modifier = Modifier.width(12.dp))
                                 }
+                                Spacer(modifier = Modifier.width(8.dp))
 
                                 var savedTitle by remember { mutableStateOf("مكتبة الثالث متوسط") }
                                 val appBarTitleRaw = when (page) {
@@ -685,58 +716,53 @@ fun AppContent(
                                 ) { targetTitle ->
                                     Text(
                                         text = targetTitle,
-                                        fontSize = 18.sp,
+                                        fontSize = if (isWide) 16.sp else 18.sp,
                                         fontWeight = FontWeight.Bold,
                                         fontFamily = if (targetTitle == "مكتبة الثالث متوسط") com.Nightjar.gradeiraqi3library.theme.KufiReemFontFamily else null,
-                                        color = MaterialTheme.colorScheme.onSurface
+                                        color = MaterialTheme.colorScheme.onSurface,
+                                        maxLines = 1,
+                                        overflow = TextOverflow.Ellipsis
                                     )
                                 }
                             }
 
-                            Row(
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.spacedBy(4.dp)
-                            ) {
-                                AnimatedVisibility(
-                                    visible = page == "news",
-                                    enter = fadeIn() + scaleIn(initialScale = 0.8f),
-                                    exit = fadeOut() + scaleOut(targetScale = 0.8f)
+                            AnimatedContent(
+                                targetState = page,
+                                transitionSpec = {
+                                    fadeIn(tween(300)) + scaleIn(initialScale = 0.8f) togetherWith fadeOut(tween(300)) + scaleOut(targetScale = 0.8f)
+                                },
+                                label = "actionsTransition",
+                                modifier = Modifier.animateContentSize()
+                            ) { targetPage ->
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(4.dp)
                                 ) {
-                                    IconButton(onClick = { isNewsSettingsOpen = true }) {
-                                        Icon(Icons.Default.Settings, contentDescription = "Settings", tint = MaterialTheme.colorScheme.onSurface)
-                                    }
-                                }
-
-                                AnimatedVisibility(
-                                    visible = page == "list",
-                                    enter = fadeIn() + scaleIn(initialScale = 0.8f),
-                                    exit = fadeOut() + scaleOut(targetScale = 0.8f)
-                                ) {
-                                    Row(verticalAlignment = Alignment.CenterVertically) {
+                                    if (targetPage == "news") {
+                                        IconButton(onClick = { isNewsSettingsOpen = true }) {
+                                            Icon(Icons.Default.Settings, contentDescription = "Settings", tint = MaterialTheme.colorScheme.onSurface)
+                                        }
+                                    } else if (targetPage == "list") {
                                         IconButton(onClick = { SyncEngine.saveGridView(!isGridView) }) {
-                                            AnimatedContent(
-                                                targetState = isGridView,
-                                                transitionSpec = { fadeIn(tween(300)) + scaleIn(initialScale = 0.8f) togetherWith fadeOut(tween(300)) + scaleOut(targetScale = 0.8f) }
-                                            ) { gridView ->
+                                            androidx.compose.animation.AnimatedContent(targetState = isGridView) { isGrid ->
                                                 Icon(
-                                                    imageVector = if (gridView) Icons.Default.ViewList else Icons.Default.GridView,
+                                                    imageVector = if (isGrid) Icons.Default.ViewList else Icons.Default.GridView,
                                                     contentDescription = "Toggle Grid/List view",
                                                     tint = MaterialTheme.colorScheme.onSurface
                                                 )
                                             }
                                         }
                                         IconButton(onClick = { isSearchOpen = !isSearchOpen }) {
-                                            AnimatedContent(
-                                                targetState = isSearchOpen,
-                                                transitionSpec = { fadeIn(tween(300)) + scaleIn(initialScale = 0.8f) togetherWith fadeOut(tween(300)) + scaleOut(targetScale = 0.8f) }
-                                            ) { searchOpen ->
+                                            androidx.compose.animation.AnimatedContent(targetState = isSearchOpen) { isOpen ->
                                                 Icon(
-                                                    imageVector = if (searchOpen) Icons.Default.Close else Icons.Default.Search,
+                                                    imageVector = if (isOpen) Icons.Default.Close else Icons.Default.Search,
                                                     contentDescription = "Toggle Search",
                                                     tint = MaterialTheme.colorScheme.onSurface
                                                 )
                                             }
                                         }
+                                    } else {
+                                        Spacer(modifier = Modifier.width(48.dp)) // Maintain minimum width to prevent title shifting if no icons
                                     }
                                 }
                             }
@@ -746,7 +772,7 @@ fun AppContent(
 
                 // --- Floating Search Bar (Aligned inside the Main Content Area) ---
                 androidx.compose.animation.AnimatedVisibility(
-                    visible = page == "list" && isSearchOpen,
+                    visible = !showOnboarding && page == "list" && isSearchOpen,
                     enter = slideInVertically(
                         initialOffsetY = { -it / 2 },
                         animationSpec = spring(dampingRatio = 0.75f, stiffness = Spring.StiffnessLow)
@@ -755,9 +781,11 @@ fun AppContent(
                         targetOffsetY = { -it / 2 },
                         animationSpec = spring(dampingRatio = Spring.DampingRatioNoBouncy, stiffness = Spring.StiffnessMedium)
                     ) + fadeOut(animationSpec = tween(200)),
-                    modifier = Modifier.align(Alignment.TopCenter)
+                    modifier = Modifier.align(Alignment.TopCenter).zIndex(100f)
                 ) {
-                    val topPadding = 80.dp
+                    val searchBarHeight = if (isWide) 48.dp else 56.dp
+                    val topPadding = if (isWide) 64.dp else 80.dp
+                    val searchFontSize = if (isWide) 14.sp else 15.sp
                     var isListening by remember { mutableStateOf(false) }
                     val pulseAnim = animateFloatAsState(
                         targetValue = if (isListening) 1.2f else 1f,
@@ -772,37 +800,61 @@ fun AppContent(
                             .fillMaxWidth()
                             .statusBarsPadding()
                             .windowInsetsPadding(WindowInsets.safeDrawing.only(WindowInsetsSides.Horizontal))
-                            .padding(top = topPadding, start = 16.dp, end = 16.dp),
+                            .padding(
+                                top = topPadding,
+                                start = 16.dp,
+                                end = if (isWide) 96.dp else 16.dp
+                            ),
                         contentAlignment = Alignment.TopCenter
                     ) {
                         Row(
                             modifier = Modifier
                                 .widthIn(max = 608.dp)
                                 .fillMaxWidth()
-                                .height(56.dp)
+                                .defaultMinSize(minHeight = searchBarHeight)
+                                .wrapContentHeight()
                                 .liquidGlass(isDark, borderRadius = 28.dp, alpha = 0.95f)
-                                .padding(horizontal = 16.dp),
+                                .animateContentSize(spring(dampingRatio = 0.8f, stiffness = 250f))
+                                .padding(horizontal = 16.dp, vertical = if (isWide) 4.dp else 6.dp),
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             Icon(
                                 imageVector = Icons.Default.Search,
                                 contentDescription = null,
-                                tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
+                                modifier = Modifier.size(if (isWide) 20.dp else 24.dp)
                             )
-                            Spacer(modifier = Modifier.width(12.dp))
-                            TextField(
+                            Spacer(modifier = Modifier.width(10.dp))
+                            BasicTextField(
                                 value = if (isListening) "جاري الاستماع..." else searchQuery,
                                 onValueChange = { if (!isListening) searchQuery = it },
-                                placeholder = { Text("ابحث عن ملزمة أو كتاب...", color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)) },
-                                colors = TextFieldDefaults.colors(
-                                    focusedContainerColor = Color.Transparent,
-                                    unfocusedContainerColor = Color.Transparent,
-                                    focusedIndicatorColor = Color.Transparent,
-                                    unfocusedIndicatorColor = Color.Transparent
+                                textStyle = LocalTextStyle.current.copy(
+                                    color = MaterialTheme.colorScheme.onSurface,
+                                    fontSize = searchFontSize
                                 ),
+                                cursorBrush = SolidColor(MaterialTheme.colorScheme.primary),
                                 modifier = Modifier.weight(1f),
                                 singleLine = true,
-                                readOnly = isListening
+                                readOnly = isListening,
+                                decorationBox = { innerTextField ->
+                                    Box(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        contentAlignment = Alignment.CenterStart
+                                    ) {
+                                        if (searchQuery.isEmpty() && !isListening) {
+                                            Text(
+                                                text = "ابحث عن ملزمة أو كتاب...",
+                                                style = LocalTextStyle.current.copy(
+                                                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
+                                                    fontSize = searchFontSize
+                                                ),
+                                                maxLines = 1,
+                                                overflow = TextOverflow.Ellipsis
+                                            )
+                                        }
+                                        innerTextField()
+                                    }
+                                }
                             )
                             
                             IconButton(
@@ -820,6 +872,7 @@ fun AppContent(
                                     }
                                 },
                                 modifier = Modifier
+                                    .size(if (isWide) 36.dp else 40.dp)
                                     .graphicsLayer {
                                         val s = if (isListening) pulseAnim.value else 1f
                                         scaleX = s
@@ -830,16 +883,30 @@ fun AppContent(
                                         shape = CircleShape
                                     )
                             ) {
-                                Icon(
-                                    imageVector = if (isListening) Icons.Default.GraphicEq else Icons.Default.Mic,
-                                    contentDescription = "Voice search",
-                                    tint = if (isListening) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
-                                )
+                                androidx.compose.animation.AnimatedContent(targetState = isListening) { listening ->
+                                    Icon(
+                                        imageVector = if (listening) Icons.Default.GraphicEq else Icons.Default.Mic,
+                                        contentDescription = "Voice search",
+                                        tint = if (listening) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
+                                        modifier = Modifier.size(if (isWide) 20.dp else 24.dp)
+                                    )
+                                }
                             }
 
-                            if (searchQuery.isNotEmpty() && !isListening) {
-                                IconButton(onClick = { searchQuery = "" }) {
-                                    Icon(Icons.Default.Close, contentDescription = "Clear search")
+                            androidx.compose.animation.AnimatedVisibility(
+                                visible = searchQuery.isNotEmpty() && !isListening,
+                                enter = androidx.compose.animation.expandHorizontally() + androidx.compose.animation.fadeIn(),
+                                exit = androidx.compose.animation.shrinkHorizontally() + androidx.compose.animation.fadeOut()
+                            ) {
+                                IconButton(
+                                    onClick = { searchQuery = "" },
+                                    modifier = Modifier.size(if (isWide) 36.dp else 40.dp)
+                                ) {
+                                    Icon(
+                                        Icons.Default.Close,
+                                        contentDescription = "Clear search",
+                                        modifier = Modifier.size(if (isWide) 18.dp else 22.dp)
+                                    )
                                 }
                             }
                         }
@@ -851,10 +918,10 @@ fun AppContent(
         // --- Mobile Bottom Navigation Capsule (Only visible on small screens and main tabs) ---
         val mainTabs = listOf("home", "list", "news", "bookmarks", "shortcuts", "about")
         androidx.compose.animation.AnimatedVisibility(
-            visible = page in mainTabs && !isWide,
+            visible = !showOnboarding && page in mainTabs && !isWide,
             enter = slideInVertically(animationSpec = tween(300, easing = FastOutSlowInEasing)) { it } + fadeIn(tween(300)),
             exit = slideOutVertically(animationSpec = tween(300, easing = FastOutSlowInEasing)) { it } + fadeOut(tween(300)),
-            modifier = Modifier.align(Alignment.BottomCenter).fillMaxWidth().zIndex(50f)
+            modifier = Modifier.align(Alignment.BottomCenter).fillMaxWidth().zIndex(100f)
         ) {
             Box(
                 modifier = Modifier
@@ -986,10 +1053,10 @@ fun AppContent(
         
         // --- Tablet/Wide Floating Side Navigation Capsule ---
         androidx.compose.animation.AnimatedVisibility(
-            visible = page in mainTabs && isWide,
+            visible = !showOnboarding && page in mainTabs && isWide,
             enter = slideInHorizontally(animationSpec = tween(400, easing = FastOutSlowInEasing)) { -it } + fadeIn(tween(400)),
             exit = slideOutHorizontally(animationSpec = tween(400, easing = FastOutSlowInEasing)) { -it } + fadeOut(tween(400)),
-            modifier = Modifier.align(Alignment.CenterEnd).fillMaxHeight().zIndex(50f)
+            modifier = Modifier.align(Alignment.CenterEnd).fillMaxHeight().zIndex(100f)
         ) {
             Box(
                 modifier = Modifier
@@ -1342,7 +1409,8 @@ fun AppContent(
                                 onClick = {
                                     showClearCacheDialog = false
                                     SyncEngine.clearNewsCache()
-                                    SyncEngine.platformActionHandler?.showToast("تم مسح كاش الأخبار بالكامل بنجاح ✓")
+                                    platformActionHandler.clearDiskCache()
+                                    platformActionHandler.showToast("تم مسح كاش التطبيق والملفات المؤقتة بنجاح ✓")
                                 },
                                 modifier = Modifier.weight(1f),
                                 shape = RoundedCornerShape(12.dp),
@@ -1361,7 +1429,7 @@ fun AppContent(
 
         // --- Onboarding Screen ---
         androidx.compose.animation.AnimatedVisibility(
-            visible = showOnboarding && !showSplash,
+            visible = showOnboarding,
             enter = androidx.compose.animation.fadeIn(),
             exit = androidx.compose.animation.slideOutVertically(
                 targetOffsetY = { it / 4 },
@@ -1372,7 +1440,7 @@ fun AppContent(
             ) + androidx.compose.animation.fadeOut(animationSpec = androidx.compose.animation.core.tween(500)),
             modifier = Modifier
                 .fillMaxSize()
-                .zIndex(90f)
+                .zIndex(200f)
                 .clickable(
                     interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() },
                     indication = null
@@ -1385,29 +1453,6 @@ fun AppContent(
                     SyncEngine.completeOnboarding()
                     // If they skip, ensure we still request notification permission (as requested by user)
                     platformActionHandler.requestNotificationPermission()
-                }
-            )
-        }
-
-        // --- Splash Screen Overlay ---
-        androidx.compose.animation.AnimatedVisibility(
-            visible = showSplash,
-            enter = androidx.compose.animation.fadeIn(),
-            exit = androidx.compose.animation.scaleOut(
-                targetScale = 1.06f,
-                animationSpec = tween(480, easing = androidx.compose.animation.core.CubicBezierEasing(0.2f, 0f, 0f, 1f))
-            ) + androidx.compose.animation.fadeOut(animationSpec = androidx.compose.animation.core.tween(420)),
-            modifier = Modifier
-                .fillMaxSize()
-                .zIndex(100f)
-                .clickable(
-                    interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() },
-                    indication = null
-                ) {}
-        ) {
-            com.Nightjar.gradeiraqi3library.ui.AnimatedSplashScreen(
-                onAnimationFinished = { 
-                    showSplash = false 
                 }
             )
         }
@@ -1494,7 +1539,7 @@ fun AppContent(
 }
             }
         }
-
+        }
 @Composable
 fun RailNavItem(
     icon: androidx.compose.ui.graphics.vector.ImageVector,
