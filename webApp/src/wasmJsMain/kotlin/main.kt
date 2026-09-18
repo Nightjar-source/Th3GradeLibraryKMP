@@ -1,8 +1,8 @@
 import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.window.CanvasBasedWindow
-import com.Nightjar.gradeiraqi3library.App
-import com.Nightjar.gradeiraqi3library.data.BookItem
-import com.Nightjar.gradeiraqi3library.data.PlatformActionHandler
+import com.Nightjar.Th3GradeLibraryKMP.App
+import com.Nightjar.Th3GradeLibraryKMP.data.BookItem
+import com.Nightjar.Th3GradeLibraryKMP.data.PlatformActionHandler
 
 @JsFun("(msg) => alert(msg)")
 private external fun jsAlert(msg: String)
@@ -35,12 +35,12 @@ fun main() {
 
     // Register web network status listener
     try {
-        com.Nightjar.gradeiraqi3library.network.SyncEngine.setOnline(kotlinx.browser.window.navigator.onLine)
+        com.Nightjar.Th3GradeLibraryKMP.network.SyncEngine.setOnline(kotlinx.browser.window.navigator.onLine)
         kotlinx.browser.window.addEventListener("online", {
-            com.Nightjar.gradeiraqi3library.network.SyncEngine.setOnline(true)
+            com.Nightjar.Th3GradeLibraryKMP.network.SyncEngine.setOnline(true)
         })
         kotlinx.browser.window.addEventListener("offline", {
-            com.Nightjar.gradeiraqi3library.network.SyncEngine.setOnline(false)
+            com.Nightjar.Th3GradeLibraryKMP.network.SyncEngine.setOnline(false)
         })
     } catch (e: Exception) {
         e.printStackTrace()

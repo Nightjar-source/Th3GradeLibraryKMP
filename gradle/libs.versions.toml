@@ -17,8 +17,12 @@ rssparser = "6.0.8"
 work = "2.9.0"
 androidx-browser = "1.8.0"
 androidxLifecycle = "2.8.7"
+datastore = "1.1.4"
+pdfbox = "3.0.3"
 
 [libraries]
+androidx-datastore-preferences = { module = "androidx.datastore:datastore-preferences", version.ref = "datastore" }
+apache-pdfbox = { module = "org.apache.pdfbox:pdfbox", version.ref = "pdfbox" }
 androidx-lifecycle-viewmodel = { module = "androidx.lifecycle:lifecycle-viewmodel", version.ref = "androidxLifecycle" }
 androidx-lifecycle-viewmodel-compose = { module = "androidx.lifecycle:lifecycle-viewmodel-compose", version.ref = "androidxLifecycle" }
 androidx-activity-compose = { module = "androidx.activity:activity-compose", version.ref = "androidx-activityCompose" }

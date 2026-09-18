@@ -4,8 +4,8 @@
     <capability android:name="actions.intent.OPEN_APP_FEATURE">
         <intent
             android:action="android.intent.action.VIEW"
-            android:targetPackage="com.Nightjar.gradeiraqi3library"
-            android:targetClass="com.Nightjar.gradeiraqi3library.MainActivity">
+            android:targetPackage="com.Nightjar.Th3GradeLibraryKMP"
+            android:targetClass="com.Nightjar.Th3GradeLibraryKMP.MainActivity">
             <parameter
                 android:name="feature"
                 android:key="page"/>
@@ -16,8 +16,8 @@
     <capability android:name="actions.intent.GET_THING">
         <intent
             android:action="android.intent.action.VIEW"
-            android:targetPackage="com.Nightjar.gradeiraqi3library"
-            android:targetClass="com.Nightjar.gradeiraqi3library.MainActivity">
+            android:targetPackage="com.Nightjar.Th3GradeLibraryKMP"
+            android:targetClass="com.Nightjar.Th3GradeLibraryKMP.MainActivity">
             <parameter
                 android:name="thing.name"
                 android:key="search_query"/>

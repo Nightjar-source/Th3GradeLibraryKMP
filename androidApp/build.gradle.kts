@@ -7,15 +7,15 @@ plugins {
 val copySharedResources = tasks.register<Copy>("copySharedResources") {
     dependsOn(":shared:prepareComposeResourcesTaskForCommonMain")
     from(project(":shared").file("src/commonMain/composeResources"))
-    into(layout.buildDirectory.dir("intermediates/shared_assets/composeResources/com.Nightjar.gradeiraqi3library.generated.resources"))
+    into(layout.buildDirectory.dir("intermediates/shared_assets/composeResources/com.Nightjar.Th3GradeLibraryKMP.generated.resources"))
 }
 
 android {
-    namespace = "com.Nightjar.gradeiraqi3library"
+    namespace = "com.Nightjar.Th3GradeLibraryKMP"
     compileSdk = libs.versions.android.compileSdk.get().toInt()
 
     defaultConfig {
-        applicationId = "com.Nightjar.gradeiraqi3library"
+        applicationId = "com.Nightjar.Th3GradeLibraryKMP"
         minSdk = libs.versions.android.minSdk.get().toInt()
         targetSdk = libs.versions.android.targetSdk.get().toInt()
         versionCode = 3

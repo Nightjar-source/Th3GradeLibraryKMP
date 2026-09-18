@@ -8,7 +8,7 @@ plugins {
 
 kotlin {
     androidLibrary {
-        namespace = "com.Nightjar.gradeiraqi3library.shared"
+        namespace = "com.Nightjar.Th3GradeLibraryKMP.shared"
         compileSdk = libs.versions.android.compileSdk.get().toInt()
         minSdk = libs.versions.android.minSdk.get().toInt()
         
@@ -51,16 +51,13 @@ kotlin {
             implementation(libs.androidx.core.splashscreen)
             implementation(libs.ktor.client.cio)
             implementation(libs.androidx.browser)
-        }
-        
-        wasmJsMain.dependencies {
-            // Wasm library dependencies if any
+            implementation(libs.androidx.datastore.preferences)
         }
     }
 }
 
 compose.resources {
-    packageOfResClass = "com.Nightjar.gradeiraqi3library.generated.resources"
+    packageOfResClass = "com.Nightjar.Th3GradeLibraryKMP.generated.resources"
     publicResClass = true
 }
 
