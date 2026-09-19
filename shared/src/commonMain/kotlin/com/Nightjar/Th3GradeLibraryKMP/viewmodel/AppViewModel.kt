@@ -41,6 +41,17 @@ class AppViewModel : ViewModel() {
     var searchQuery by mutableStateOf("")
 
     private var hasInitializedLaunchState = false
+    private var isProcessDeathState = false
+
+    init {
+        viewModelScope.launch {
+            com.Nightjar.Th3GradeLibraryKMP.network.SyncEngine.isDataLoaded.collect { loaded ->
+                if (loaded && isProcessDeathState && page == "home" && selectedItem == null) {
+                    restoreState()
+                }
+            }
+        }
+    }
 
     /**
      * Initializes navigation state intelligently based on whether this is a cold launch or process death recovery:
@@ -52,6 +63,7 @@ class AppViewModel : ViewModel() {
     fun initLaunchState(isProcessDeath: Boolean, initialPage: String?, initialSearchQuery: String?) {
         if (hasInitializedLaunchState) return
         hasInitializedLaunchState = true
+        isProcessDeathState = isProcessDeath
 
         if (isProcessDeath) {
             restoreState()

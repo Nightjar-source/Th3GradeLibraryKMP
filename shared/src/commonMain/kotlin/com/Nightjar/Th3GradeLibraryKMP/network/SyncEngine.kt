@@ -67,6 +67,9 @@ object SyncEngine {
     private val _readNewsIds = MutableStateFlow<Set<String>>(emptySet())
     val readNewsIds = _readNewsIds.asStateFlow()
 
+    private val _isDataLoaded = MutableStateFlow(false)
+    val isDataLoaded = _isDataLoaded.asStateFlow()
+
     init {
         loadLocalSettings()
         loadLocalNews()
@@ -76,6 +79,17 @@ object SyncEngine {
         loadGridView()
         loadSelectedCategory()
         loadReadNews()
+    }
+
+    fun reloadFromPersistence() {
+        loadLocalSettings()
+        loadLocalNews()
+        loadBookmarks()
+        loadLastReadPages()
+        loadExpandedBookmarks()
+        loadGridView()
+        loadReadNews()
+        _isDataLoaded.value = true
     }
 
     private fun loadReadNews() {
