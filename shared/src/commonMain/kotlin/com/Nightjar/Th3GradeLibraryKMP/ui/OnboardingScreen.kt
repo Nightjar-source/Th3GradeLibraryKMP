@@ -89,7 +89,7 @@ fun OnboardingScreen(
                                     fontWeight = FontWeight.Bold,
                                     fontSize = if (isWide && screenHeightDp < 520.dp) 19.sp else 22.sp
                                 ),
-                                textAlign = TextAlign.Center,
+                                textAlign = TextAlign.Justify,
                                 color = MaterialTheme.colorScheme.onPrimaryContainer,
                                 modifier = Modifier.padding(bottom = 10.dp)
                             )
@@ -98,7 +98,7 @@ fun OnboardingScreen(
                                 style = MaterialTheme.typography.bodyLarge.copy(
                                     fontSize = if (isWide && screenHeightDp < 520.dp) 14.sp else 16.sp
                                 ),
-                                textAlign = TextAlign.Center,
+                                textAlign = TextAlign.Justify,
                                 color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.85f)
                             )
                         }
@@ -114,7 +114,7 @@ fun OnboardingScreen(
                         fontWeight = FontWeight.Bold,
                         fontSize = if (isWide && screenHeightDp < 520.dp) 17.sp else 19.sp
                     ),
-                    textAlign = TextAlign.Center,
+                    textAlign = TextAlign.Justify,
                     color = MaterialTheme.colorScheme.onBackground,
                     modifier = Modifier
                         .widthIn(max = if (isWide) 680.dp else 520.dp)
@@ -297,7 +297,7 @@ fun OnboardingStepCard(
                 text = description,
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
-                textAlign = TextAlign.Start,
+                textAlign = TextAlign.Justify,
                 modifier = Modifier.fillMaxWidth()
             )
             Spacer(modifier = Modifier.height(16.dp))

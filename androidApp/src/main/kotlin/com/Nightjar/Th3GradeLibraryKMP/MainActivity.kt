@@ -86,6 +86,7 @@ fun scheduleBackgroundSync(context: Context, forceReplace: Boolean = false) {
 }
 
 class MainActivity : ComponentActivity() {
+    private var currentSpeechRecognizer: android.speech.SpeechRecognizer? = null
     private val bookIdState = mutableStateOf<String?>(null)
     private val isNoteState = mutableStateOf(false)
     private val pageState = mutableStateOf<String?>(null)
@@ -210,14 +211,15 @@ class MainActivity : ComponentActivity() {
         val hasCompletedInitialSetup = sharedPrefs.getBoolean("hasCompletedInitialSetup", false)
 
         var systemAccentColorHex: String? = null
-        var androidColorScheme: ColorScheme? = null
+        var androidLightColorScheme: ColorScheme? = null
+        var androidDarkColorScheme: ColorScheme? = null
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
             try {
                 val colorInt = resources.getColor(android.R.color.system_accent1_500, theme)
                 systemAccentColorHex = String.format("#%06X", 0xFFFFFF and colorInt)
                 
-                val isDark = resources.configuration.uiMode and android.content.res.Configuration.UI_MODE_NIGHT_MASK == android.content.res.Configuration.UI_MODE_NIGHT_YES
-                androidColorScheme = if (isDark) dynamicDarkColorScheme(this) else dynamicLightColorScheme(this)
+                androidLightColorScheme = dynamicLightColorScheme(this)
+                androidDarkColorScheme = dynamicDarkColorScheme(this)
             } catch (e: Exception) {
                 e.printStackTrace()
             }
@@ -365,14 +367,15 @@ class MainActivity : ComponentActivity() {
                     return
                 }
 
-                val speechRecognizer = android.speech.SpeechRecognizer.createSpeechRecognizer(this@MainActivity)
+                currentSpeechRecognizer?.destroy()
+                currentSpeechRecognizer = android.speech.SpeechRecognizer.createSpeechRecognizer(this@MainActivity)
                 val speechIntent = Intent(android.speech.RecognizerIntent.ACTION_RECOGNIZE_SPEECH).apply {
                     putExtra(android.speech.RecognizerIntent.EXTRA_LANGUAGE_MODEL, android.speech.RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
                     putExtra(android.speech.RecognizerIntent.EXTRA_LANGUAGE, "ar")
                     putExtra(android.speech.RecognizerIntent.EXTRA_PARTIAL_RESULTS, true)
                 }
 
-                speechRecognizer.setRecognitionListener(object : android.speech.RecognitionListener {
+                currentSpeechRecognizer?.setRecognitionListener(object : android.speech.RecognitionListener {
                     override fun onReadyForSpeech(params: Bundle?) {}
                     override fun onBeginningOfSpeech() {}
                     override fun onRmsChanged(rmsdB: Float) {}
@@ -404,9 +407,16 @@ class MainActivity : ComponentActivity() {
                     override fun onEvent(eventType: Int, params: Bundle?) {}
                 })
                 
-                // We use main looper because SpeechRecognizer must be called from main thread
                 android.os.Handler(android.os.Looper.getMainLooper()).post {
-                    speechRecognizer.startListening(speechIntent)
+                    currentSpeechRecognizer?.startListening(speechIntent)
+                }
+            }
+
+            override fun stopVoiceSearch() {
+                android.os.Handler(android.os.Looper.getMainLooper()).post {
+                    currentSpeechRecognizer?.stopListening()
+                    currentSpeechRecognizer?.destroy()
+                    currentSpeechRecognizer = null
                 }
             }
 
@@ -616,7 +626,8 @@ class MainActivity : ComponentActivity() {
             App(
                 platformActionHandler = platformHandler,
                 systemAccentColor = systemAccentColorHex,
-                dynamicColorScheme = androidColorScheme,
+                dynamicLightColorScheme = androidLightColorScheme,
+                dynamicDarkColorScheme = androidDarkColorScheme,
                 initialBookId = bookIdState.value,
                 initialIsNote = isNoteState.value,
                 initialPage = pageState.value,
@@ -668,7 +679,7 @@ class MainActivity : ComponentActivity() {
             } catch (e: Exception) {
                 e.printStackTrace()
             }
-        } else if (level >= TRIM_MEMORY_BACKGROUND || level == TRIM_MEMORY_RUNNING_CRITICAL) {
+        } else if (level >= TRIM_MEMORY_BACKGROUND) {
             try {
                 com.Nightjar.Th3GradeLibraryKMP.ui.clearPdfCache(cacheDir)
                 com.Nightjar.Th3GradeLibraryKMP.ui.PdfBitmapCache.cache.evictAll()

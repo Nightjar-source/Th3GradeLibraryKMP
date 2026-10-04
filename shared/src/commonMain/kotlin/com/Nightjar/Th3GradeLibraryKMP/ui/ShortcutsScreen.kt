@@ -8,6 +8,7 @@ import com.Nightjar.Th3GradeLibraryKMP.theme.popInOnInitialLoad
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.stopScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.GridItemSpan
@@ -67,8 +68,16 @@ fun ShortcutsScreen(
             val statusBarHeight = WindowInsets.statusBars.asPaddingValues().calculateTopPadding()
             val dynamicTopPadding = if (isWide) statusBarHeight + 64.dp else statusBarHeight + 76.dp
 
+            val isNavigatingBack = com.Nightjar.Th3GradeLibraryKMP.theme.LocalIsNavigatingBack.current
+            LaunchedEffect(isNavigatingBack) {
+                if (isNavigatingBack) {
+                    lazyGridState.stopScroll()
+                }
+            }
+
             LazyVerticalGrid(
                 state = lazyGridState,
+                userScrollEnabled = !isNavigatingBack,
                 columns = if (isWide) GridCells.Fixed(4) else GridCells.Adaptive(minSize = 150.dp),
                 modifier = Modifier
                     .fillMaxWidth()
@@ -87,7 +96,7 @@ fun ShortcutsScreen(
                         text = "أضف اختصارات للشاشة الرئيسية",
                         fontSize = 18.sp,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.padding(bottom = 16.dp)
+                        modifier = Modifier.padding(bottom = 16.dp).popInOnInitialLoad(0)
                     )
                 }
                 itemsIndexed(
@@ -97,7 +106,7 @@ fun ShortcutsScreen(
                     ShortcutItemCard(
                         item = item,
                         isDark = isDark,
-                        index = index,
+                        index = index + 1,
                         onClick = {
                             platformActionHandler.addHomeScreenShortcut(item)
                         }
@@ -117,33 +126,7 @@ fun ShortcutItemCard(
     modifier: Modifier = Modifier,
     onClick: () -> Unit
 ) {
-    var hasAnimated by androidx.compose.runtime.saveable.rememberSaveable { mutableStateOf(false) }
-    val alphaAnim = remember { androidx.compose.animation.core.Animatable(if (hasAnimated) 1f else 0f) }
-    
-    LaunchedEffect(item.id) {
-        if (!hasAnimated) {
-            val delayMs = if (index < 8) (index * 30L) else 0L
-            if (delayMs > 0) {
-                kotlinx.coroutines.delay(delayMs)
-            }
-            alphaAnim.animateTo(1f, animationSpec = androidx.compose.animation.core.tween(200))
-            hasAnimated = true
-        }
-    }
-
-    val sharedTransitionScope = LocalSharedTransitionScope.current
-    val animatedVisibilityScope = LocalAnimatedVisibilityScope.current
-
-    var imageModifier = Modifier.fillMaxSize()
-    if (sharedTransitionScope != null && animatedVisibilityScope != null) {
-        with(sharedTransitionScope) {
-            imageModifier = imageModifier.sharedBounds(
-                sharedContentState = rememberSharedContentState(key = "card_${item.id}"),
-                animatedVisibilityScope = animatedVisibilityScope,
-                renderInOverlayDuringTransition = false
-            )
-        }
-    }
+    val imageModifier = Modifier.fillMaxSize()
 
     Column(
         modifier = modifier
@@ -202,7 +185,7 @@ fun ShortcutItemCard(
             maxLines = 2,
             overflow = TextOverflow.Ellipsis,
             color = MaterialTheme.colorScheme.onSurface,
-            textAlign = TextAlign.Center
+            textAlign = TextAlign.Justify
         )
     }
 }

@@ -1,5 +1,6 @@
 package com.Nightjar.Th3GradeLibraryKMP.ui
 
+import com.Nightjar.Th3GradeLibraryKMP.theme.expressiveButtonMorph
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.fadeIn
@@ -80,6 +81,13 @@ fun getGradientForColor(colorHex: String): Brush {
         "#800000" -> Brush.linearGradient(listOf(Color(0xFF800000), Color(0xFF4A0000))) // Maroon
         "#FFD700" -> Brush.linearGradient(listOf(Color(0xFFFFD700), Color(0xFFB8860B))) // Gold New
         "#C0C0C0" -> Brush.linearGradient(listOf(Color(0xFFC0C0C0), Color(0xFF808080))) // Silver
+        "#00BCD4" -> Brush.linearGradient(listOf(Color(0xFF00BCD4), Color(0xFF0097A7))) // Cyan
+        "#FF5722" -> Brush.linearGradient(listOf(Color(0xFFFF5722), Color(0xFFE64A19))) // Deep Orange
+        "#673AB7" -> Brush.linearGradient(listOf(Color(0xFF673AB7), Color(0xFF512DA8))) // Deep Indigo
+        "#795548" -> Brush.linearGradient(listOf(Color(0xFF795548), Color(0xFF5D4037))) // Brown
+        "#009688" -> Brush.linearGradient(listOf(Color(0xFF009688), Color(0xFF00796B))) // Teal
+        "#CDDC39" -> Brush.linearGradient(listOf(Color(0xFFCDDC39), Color(0xFFAFB42B))) // Lime
+        "#9C27B0" -> Brush.linearGradient(listOf(Color(0xFF9C27B0), Color(0xFF7B1FA2))) // Purple
         "#2563eb" -> Brush.linearGradient(listOf(Color(0xFF2563EB), Color(0xFF3B82F6))) // Royal Blue gradient
         "#ec4899" -> Brush.linearGradient(listOf(Color(0xFFEC4899), Color(0xFF3B82F6))) // Cloudy Pink-Blue
         "#06b6d4" -> Brush.linearGradient(listOf(Color(0xFF06B6D4), Color(0xFFEC4899))) // Sky Pink-Blue
@@ -112,7 +120,14 @@ fun AppSettingsModal(
         "#eab308", // Gold
         "#800000", // Maroon
         "#FFD700", // Gold New
-        "#C0C0C0"  // Silver
+        "#C0C0C0", // Silver
+        "#00BCD4", // Cyan
+        "#FF5722", // Deep Orange
+        "#673AB7", // Deep Indigo
+        "#795548", // Brown
+        "#009688", // Teal
+        "#CDDC39", // Lime
+        "#9C27B0"  // Purple
     )
 
     AnimatedVisibility(
@@ -149,7 +164,6 @@ fun AppSettingsModal(
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .animateContentSize()
                         .verticalScroll(rememberScrollState())
                         .padding(top = 16.dp, start = 20.dp, end = 20.dp) // Compact padding
                 ) {
@@ -349,38 +363,59 @@ fun AppSettingsModal(
                     // Manual color options
                     AnimatedVisibility(
                         visible = !settings.useMaterialYou,
-                        enter = androidx.compose.animation.fadeIn(androidx.compose.animation.core.tween(400)) + androidx.compose.animation.expandVertically(androidx.compose.animation.core.tween(400)),
-                        exit = androidx.compose.animation.fadeOut(androidx.compose.animation.core.tween(400)) + androidx.compose.animation.shrinkVertically(androidx.compose.animation.core.tween(400))
+                        enter = expandVertically(
+                            animationSpec = spring(
+                                dampingRatio = 0.75f,
+                                stiffness = 220f
+                            ),
+                            clip = false
+                        ) + fadeIn(androidx.compose.animation.core.tween(260)),
+                        exit = shrinkVertically(
+                            animationSpec = spring(
+                                dampingRatio = 0.75f,
+                                stiffness = 220f
+                            ),
+                            clip = false
+                        ) + fadeOut(androidx.compose.animation.core.tween(200))
                     ) {
-                        Column(modifier = Modifier.animateContentSize()) {
+                        Column {
                             Text("اختر لونك المفضل يدوياً:", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(horizontal = 20.dp))
                             Spacer(modifier = Modifier.height(8.dp))
-                            androidx.compose.foundation.lazy.LazyRow(
+                            Row(
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .horizontalFadingEdges(rememberScrollState(), length = 20.dp)
+                                    .horizontalScroll(rememberScrollState())
                                     .padding(vertical = 4.dp),
-                                contentPadding = PaddingValues(horizontal = 28.dp),
                                 horizontalArrangement = Arrangement.spacedBy(14.dp),
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
-                                items(colors.size) { index ->
-                                    val colorHex = colors[index]
+                                Spacer(modifier = Modifier.width(6.dp))
+                                colors.forEach { colorHex ->
                                     val isSelected = settings.primaryColor == colorHex
                                     val gradient = getGradientForColor(colorHex)
+                                    val colorInteractionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() }
                                     Box(
                                         modifier = Modifier
                                             .size(38.dp) // Compact size
-                                            .clip(CircleShape)
+                                            .expressiveButtonMorph(
+                                                restRadius = 19.dp,
+                                                pressedRadius = 8.dp,
+                                                pressedScale = 0.88f,
+                                                interactionSource = colorInteractionSource
+                                            )
                                             .background(gradient)
                                             .border(
                                                 width = if (isSelected) 3.dp else 1.dp,
                                                 color = if (isSelected) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.outline.copy(alpha = 0.2f),
-                                                shape = CircleShape
+                                                shape = RoundedCornerShape(19.dp)
                                             )
-                                            .clickable { onUpdateSettings(settings.copy(primaryColor = colorHex)) }
+                                            .clickable(
+                                                interactionSource = colorInteractionSource,
+                                                indication = androidx.compose.foundation.LocalIndication.current
+                                            ) { onUpdateSettings(settings.copy(primaryColor = colorHex)) }
                                     )
                                 }
+                                Spacer(modifier = Modifier.width(6.dp))
                             }
                         }
                     }
@@ -712,7 +747,7 @@ fun ThemeOptionButton(
             fontSize = 14.sp,
             fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
             color = textColor,
-            textAlign = TextAlign.Center
+            textAlign = TextAlign.Justify
         )
     }
 }
@@ -742,7 +777,7 @@ fun OptionGridButton(
             fontSize = 13.sp,
             fontWeight = FontWeight.Bold,
             color = contentColor,
-            textAlign = TextAlign.Center
+            textAlign = TextAlign.Justify
         )
     }
 }

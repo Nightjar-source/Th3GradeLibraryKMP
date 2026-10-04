@@ -16,6 +16,7 @@ import androidx.compose.ui.graphics.Brush
 import org.jetbrains.compose.resources.painterResource
 import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.gestures.detectDragGesturesAfterLongPress
+import androidx.compose.foundation.gestures.stopScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.GridCells
@@ -82,7 +83,7 @@ fun NewsScreen(
     val syncing by SyncEngine.syncing.collectAsState()
     val lastFetchCount by SyncEngine.lastFetchedCount.collectAsState()
     
-    val seenIds = androidx.compose.runtime.saveable.rememberSaveable { mutableStateOf(setOf<String>()) }
+    val seenIds = remember { mutableStateOf(setOf<String>()) }
     val scope = rememberCoroutineScope()
 
     // Show fetch result banner
@@ -93,7 +94,7 @@ fun NewsScreen(
     var networkBannerState by remember { mutableStateOf<NetworkBannerState?>(null) }
     var firstCheckDone by remember { mutableStateOf(false) }
 
-    var isInitialLoad by androidx.compose.runtime.saveable.rememberSaveable { mutableStateOf(true) }
+    var isInitialLoad by remember { mutableStateOf(true) }
     LaunchedEffect(syncing) {
         if (!syncing && isInitialLoad) {
             isInitialLoad = false
@@ -153,41 +154,21 @@ fun NewsScreen(
         }
     }
 
+    val isNavigatingBack = com.Nightjar.Th3GradeLibraryKMP.theme.LocalIsNavigatingBack.current
+    LaunchedEffect(isNavigatingBack) {
+        if (isNavigatingBack) {
+            lazyGridState.stopScroll()
+        }
+    }
+
     BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
-        AnimatedContent(
-            targetState = syncing && newsList.isEmpty() && isInitialLoad,
-            transitionSpec = {
-                (fadeIn(animationSpec = tween(400)) + scaleIn(initialScale = 0.95f, animationSpec = tween(400))) togetherWith
-                (fadeOut(animationSpec = tween(250)) + scaleOut(targetScale = 0.95f, animationSpec = tween(250)))
-            },
-            label = "newsLoadingState",
-            modifier = Modifier.fillMaxSize()
-        ) { isLoading ->
-            if (isLoading) {
-                Box(
-                    modifier = Modifier.fillMaxSize(),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Box(
-                        modifier = Modifier
-                            .size(90.dp)
-                            .liquidGlass(isDark, borderRadius = 24.dp, alpha = 0.8f),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        ExpressiveLoadingIndicator(
-                            modifier = Modifier.size(36.dp),
-                            color = MaterialTheme.colorScheme.primary
-                        )
-                    }
-                }
-            } else {
-                val pullRefreshState = rememberPullToRefreshState()
-                // Uses hoisted lazyListState
-                val canScroll by remember {
-                    derivedStateOf {
-                        lazyGridState.canScrollForward || lazyGridState.canScrollBackward
-                    }
-                }
+        val pullRefreshState = rememberPullToRefreshState()
+        // Uses hoisted lazyListState
+        val canScroll by remember {
+            derivedStateOf {
+                lazyGridState.canScrollForward || lazyGridState.canScrollBackward
+            }
+        }
                 LaunchedEffect(canScroll) {
                     onScrollableStateChanged(canScroll)
                 }
@@ -262,29 +243,43 @@ fun NewsScreen(
                                     modifier = Modifier.fillMaxWidth().heightIn(min = 400.dp).padding(32.dp),
                                     contentAlignment = Alignment.Center
                                 ) {
-                                    Column(
-                                        horizontalAlignment = Alignment.CenterHorizontally,
-                                        modifier = Modifier
-                                            .fillMaxWidth()
-                                            .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f), RoundedCornerShape(24.dp))
-                                            .padding(32.dp)
-                                    ) {
-                                        Icon(
-                                            imageVector = Icons.Default.Newspaper,
-                                            contentDescription = null,
-                                            modifier = Modifier.size(48.dp),
-                                            tint = MaterialTheme.colorScheme.primary.copy(alpha = 0.6f)
-                                        )
-                                        Spacer(modifier = Modifier.height(16.dp))
-                                        Text("آخر الأخبار لك", fontSize = 17.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface, textAlign = androidx.compose.ui.text.style.TextAlign.Center)
-                                        Spacer(modifier = Modifier.height(8.dp))
-                                        Text(
-                                            "أحدث الأخبار العاجلة والتبليغات الوزارية الرسمية تصلك أولاً بأول، اسحب للأسفل للتحديث.",
-                                            fontSize = 13.sp,
-                                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                            textAlign = androidx.compose.ui.text.style.TextAlign.Center,
-                                            lineHeight = 18.sp
-                                        )
+                                    if (syncing) {
+                                        Box(
+                                            modifier = Modifier
+                                                .size(90.dp)
+                                                .liquidGlass(isDark, borderRadius = 24.dp, alpha = 0.8f),
+                                            contentAlignment = Alignment.Center
+                                        ) {
+                                            ExpressiveLoadingIndicator(
+                                                modifier = Modifier.size(36.dp),
+                                                color = MaterialTheme.colorScheme.primary
+                                            )
+                                        }
+                                    } else {
+                                        Column(
+                                            horizontalAlignment = Alignment.CenterHorizontally,
+                                            modifier = Modifier
+                                                .fillMaxWidth()
+                                                .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f), RoundedCornerShape(24.dp))
+                                                .padding(32.dp)
+                                        ) {
+                                            Icon(
+                                                imageVector = Icons.Default.Newspaper,
+                                                contentDescription = null,
+                                                modifier = Modifier.size(48.dp),
+                                                tint = MaterialTheme.colorScheme.primary.copy(alpha = 0.6f)
+                                            )
+                                            Spacer(modifier = Modifier.height(16.dp))
+                                            Text("آخر الأخبار لك", fontSize = 17.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface, textAlign = androidx.compose.ui.text.style.TextAlign.Center)
+                                            Spacer(modifier = Modifier.height(8.dp))
+                                            Text(
+                                                "أحدث الأخبار العاجلة والتبليغات الوزارية الرسمية تصلك أولاً بأول، اسحب للأسفل للتحديث.",
+                                                fontSize = 13.sp,
+                                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                                textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+                                                lineHeight = 18.sp
+                                            )
+                                        }
                                     }
                                 }
                             }
@@ -322,8 +317,6 @@ fun NewsScreen(
                         }
                     }
                 }
-            }
-        }
 
         androidx.compose.animation.AnimatedVisibility(
             visible = !notificationsEnabled && !isNotificationWarningDismissed,
@@ -738,6 +731,7 @@ fun NewsCard(
             maxLines = 2,
             overflow = TextOverflow.Ellipsis,
             lineHeight = 19.sp,
+            textAlign = androidx.compose.ui.text.style.TextAlign.Justify,
             modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
         )
     }
@@ -778,23 +772,48 @@ fun NetworkStatusBanner(
     state: NetworkBannerState?,
     modifier: Modifier = Modifier
 ) {
-    if (state == null) return
-    
-    val backgroundColor = if (state == NetworkBannerState.ONLINE) Color(0xFF10B981) else Color(0xFFEF4444)
-    val text = if (state == NetworkBannerState.ONLINE) "تمت استعادة الاتصال" else "أنت غير متصل بالإنترنت"
-    val icon = if (state == NetworkBannerState.ONLINE) androidx.compose.material.icons.Icons.Default.Done else androidx.compose.material.icons.Icons.Default.Warning
-    
-    Row(
+    androidx.compose.animation.AnimatedVisibility(
+        visible = state != null,
+        enter = (androidx.compose.animation.slideInVertically(
+            initialOffsetY = { (it * 0.7f).toInt() },
+            animationSpec = androidx.compose.animation.core.spring(dampingRatio = 0.72f, stiffness = androidx.compose.animation.core.Spring.StiffnessMediumLow)
+        ) + androidx.compose.animation.scaleIn(
+            initialScale = 0.88f,
+            animationSpec = androidx.compose.animation.core.spring(dampingRatio = 0.72f, stiffness = androidx.compose.animation.core.Spring.StiffnessMediumLow)
+        ) + androidx.compose.animation.fadeIn(androidx.compose.animation.core.tween(200))),
+        exit = (androidx.compose.animation.slideOutVertically(
+            targetOffsetY = { (it * 1.3f).toInt() },
+            animationSpec = androidx.compose.animation.core.tween(170, easing = androidx.compose.animation.core.FastOutLinearInEasing)
+        ) + androidx.compose.animation.scaleOut(
+            targetScale = 0.80f,
+            animationSpec = androidx.compose.animation.core.tween(170, easing = androidx.compose.animation.core.FastOutLinearInEasing)
+        ) + androidx.compose.animation.fadeOut(androidx.compose.animation.core.tween(130))),
         modifier = modifier
-            .fillMaxWidth()
-            .padding(horizontal = 16.dp)
-            .background(backgroundColor, RoundedCornerShape(12.dp))
-            .padding(12.dp),
-        horizontalArrangement = Arrangement.Center,
-        verticalAlignment = Alignment.CenterVertically
     ) {
-        Icon(icon, contentDescription = null, tint = Color.White, modifier = Modifier.size(20.dp))
-        Spacer(modifier = Modifier.width(8.dp))
-        Text(text, color = Color.White, fontWeight = FontWeight.Bold)
+        val safeState = state ?: NetworkBannerState.OFFLINE
+        val backgroundColor = if (safeState == NetworkBannerState.ONLINE) androidx.compose.ui.graphics.Color(0xFF10B981) else androidx.compose.ui.graphics.Color(0xFFEF4444)
+        val text = if (safeState == NetworkBannerState.ONLINE) "تمت استعادة الاتصال" else "أنت غير متصل بالإنترنت"
+        val icon = if (safeState == NetworkBannerState.ONLINE) androidx.compose.material.icons.Icons.Default.Done else androidx.compose.material.icons.Icons.Default.Warning
+        
+        Row(
+            modifier = Modifier
+                .wrapContentWidth()
+                .padding(horizontal = 16.dp)
+                .animateContentSize(animationSpec = androidx.compose.animation.core.spring(dampingRatio = 0.8f, stiffness = 400f), alignment = Alignment.Center)
+                .background(backgroundColor, RoundedCornerShape(24.dp))
+                .border(
+                    width = 1.dp,
+                    color = androidx.compose.ui.graphics.Color.White.copy(alpha = 0.2f),
+                    shape = RoundedCornerShape(24.dp)
+                )
+                .padding(horizontal = 24.dp, vertical = 14.dp),
+            horizontalArrangement = Arrangement.Center,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Icon(icon, contentDescription = null, tint = androidx.compose.ui.graphics.Color.White, modifier = Modifier.size(20.dp))
+            Spacer(modifier = Modifier.width(8.dp))
+            Text(text, color = androidx.compose.ui.graphics.Color.White, fontWeight = FontWeight.Bold)
+        }
     }
 }
+

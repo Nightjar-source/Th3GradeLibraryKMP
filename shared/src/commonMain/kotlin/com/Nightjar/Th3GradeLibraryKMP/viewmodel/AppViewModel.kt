@@ -29,6 +29,7 @@ class AppViewModel : ViewModel() {
     // ===== Content Selection =====
     var selectedItem by mutableStateOf<BookItem?>(null)
     var pdfInitialPage by mutableStateOf<Int?>(null)
+    var isFromBookmarks by mutableStateOf(false)
 
     // ===== Modals and Dialogs =====
     var isDrawerOpen by mutableStateOf(false)
@@ -60,7 +61,13 @@ class AppViewModel : ViewModel() {
      * - If [isProcessDeath] is false (fresh cold launch by user after full close or swipe from recents):
      *   Starts cleanly at the "home" main screen, clearing any transient screen state while preserving all book progress in SyncEngine.
      */
-    fun initLaunchState(isProcessDeath: Boolean, initialPage: String?, initialSearchQuery: String?) {
+    fun initLaunchState(
+        isProcessDeath: Boolean,
+        initialPage: String?,
+        initialSearchQuery: String?,
+        initialBookId: String? = null,
+        initialIsNote: Boolean = false
+    ) {
         if (hasInitializedLaunchState) return
         hasInitializedLaunchState = true
         isProcessDeathState = isProcessDeath
@@ -71,7 +78,18 @@ class AppViewModel : ViewModel() {
             clearTransientNavState()
         }
 
-        if (initialPage != null && initialPage != "home") {
+        if (initialBookId != null) {
+            val target = AllItems.books.firstOrNull { it.id == initialBookId }
+                ?: AllItems.notes.firstOrNull { it.id == initialBookId }
+            if (target != null) {
+                selectedItem = target
+                pdfInitialPage = com.Nightjar.Th3GradeLibraryKMP.network.SyncEngine.lastReadPages.value[target.id]
+                com.Nightjar.Th3GradeLibraryKMP.network.SyncEngine.saveSelectedCategory(if (target.isNote) "notes" else "books")
+                pageHistory.value = listOf("home", "list", "pdf")
+                page = "pdf"
+                persistState()
+            }
+        } else if (initialPage != null && initialPage != "home") {
             pageHistory.value = listOf("home", initialPage)
             page = initialPage
             persistState()
@@ -171,7 +189,15 @@ class AppViewModel : ViewModel() {
             pageHistory.value = updated
             page = updated.last()
             persistState()
+            viewModelScope.launch {
+                delay(400)
+                isNavigatingBack = false
+            }
             return true
+        }
+        viewModelScope.launch {
+            delay(400)
+            isNavigatingBack = false
         }
         return false
     }
@@ -201,27 +227,30 @@ class AppViewModel : ViewModel() {
     /**
      * Safely selects an item for viewing and navigates to "pdf", canceling any pending clear job.
      */
-    fun selectItem(item: BookItem, initialPage: Int? = null) {
+    fun selectItem(item: BookItem, initialPage: Int? = null, fromBookmarks: Boolean = false) {
         clearSelectedItemJob?.cancel()
         clearSelectedItemJob = null
         selectedItem = item
         pdfInitialPage = initialPage
+        isFromBookmarks = fromBookmarks
         navigateTo("pdf")
     }
 
     /**
-     * Clears selected item with 270ms delay for open cover animation, protected against race conditions.
+     * Clears selected item with 380ms delay for close cover spring animation, protected against race conditions.
      */
     fun clearSelectedItem() {
         clearSelectedItemJob?.cancel()
         popPage()
         clearSelectedItemJob = viewModelScope.launch {
-            delay(270)
+            delay(380)
             if (page != "pdf") {
                 selectedItem = null
                 pdfInitialPage = null
+                isFromBookmarks = false
                 persistState()
             }
+            isNavigatingBack = false
         }
     }
 }

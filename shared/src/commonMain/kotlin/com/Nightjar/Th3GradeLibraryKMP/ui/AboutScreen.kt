@@ -140,7 +140,7 @@ fun AppMessageCard(modifier: Modifier = Modifier, isDark: Boolean) {
                 text = "تم تطوير هذا التطبيق لطلاب وطالبات الصف الثالث متوسط، ليكون الرفيق الدائم في رحلتهم الدراسية وتسهيل الوصول للمنهج العراقي بكل يسر وسهولة.",
                 fontSize = 14.sp,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
-                textAlign = TextAlign.Center,
+                textAlign = TextAlign.Justify,
                 lineHeight = 22.sp
             )
         }
@@ -208,7 +208,7 @@ fun DeveloperCard(modifier: Modifier = Modifier, onOpenUrl: (String) -> Unit) {
                         text = "للاتصال بنا، أو للإبلاغ عن خطأ راسلنا على تليغرام:",
                         fontSize = 13.sp,
                         color = Color(0xFFCBD5E1),
-                        textAlign = TextAlign.Center
+                        textAlign = TextAlign.Justify
                     )
 
                     Spacer(modifier = Modifier.height(16.dp))
@@ -292,7 +292,7 @@ fun GoldenSpiritualCard(modifier: Modifier = Modifier, isDark: Boolean = false) 
                 lineHeight = 23.sp,
                 brush = goldenShimmerBrush
             ),
-            textAlign = TextAlign.Center
+            textAlign = TextAlign.Justify
         )
     }
 }

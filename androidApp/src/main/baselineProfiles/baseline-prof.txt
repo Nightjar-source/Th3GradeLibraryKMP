@@ -1,0 +1,11 @@
+Lcom/Nightjar/Th3GradeLibraryKMP/**;
+HSPLcom/Nightjar/Th3GradeLibraryKMP/**;->**(**)**
+
+LTh3GradeLibraryKMP/shared/generated/**;
+HSPLTh3GradeLibraryKMP/shared/generated/**;->**(**)**
+
+Landroidx/compose/animation/**;
+HSPLandroidx/compose/animation/**;->**(**)**
+
+Landroidx/compose/foundation/**;
+HSPLandroidx/compose/foundation/**;->**(**)**

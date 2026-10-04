@@ -79,6 +79,7 @@ object SyncEngine {
         loadGridView()
         loadSelectedCategory()
         loadReadNews()
+        _isDataLoaded.value = true
     }
 
     fun reloadFromPersistence() {

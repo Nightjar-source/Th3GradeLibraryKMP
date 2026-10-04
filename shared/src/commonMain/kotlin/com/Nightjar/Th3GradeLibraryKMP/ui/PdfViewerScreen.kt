@@ -10,5 +10,6 @@ expect fun PdfViewerScreen(
     onToggleSave: (Int) -> Unit,
     onClose: () -> Unit,
     initialPage: Int? = null,
-    isDark: Boolean = false
+    isDark: Boolean = false,
+    isFromBookmarks: Boolean = false
 )

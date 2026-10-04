@@ -30,7 +30,8 @@ actual fun PdfViewerScreen(
     onToggleSave: (Int) -> Unit,
     onClose: () -> Unit,
     initialPage: Int?,
-    isDark: Boolean
+    isDark: Boolean,
+    isFromBookmarks: Boolean
 ) {
     // Construct the relative path to the asset resource served by Wasm dev/prod server
     val resourcePath = "composeResources/com.Nightjar.Th3GradeLibraryKMP.generated.resources.Res/" + item.pdfPath

@@ -18,8 +18,8 @@ android {
         applicationId = "com.Nightjar.Th3GradeLibraryKMP"
         minSdk = libs.versions.android.minSdk.get().toInt()
         targetSdk = libs.versions.android.targetSdk.get().toInt()
-        versionCode = 3
-        versionName = "1.32.2"
+        versionCode = 16
+        versionName = "1.39.0"
     }
     
     signingConfigs {

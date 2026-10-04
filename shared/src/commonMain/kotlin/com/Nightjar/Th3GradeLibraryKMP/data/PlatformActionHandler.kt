@@ -7,6 +7,7 @@ interface PlatformActionHandler {
     fun openCustomTab(url: String, colorHex: String) {}
     fun playNotificationSound()
     fun startVoiceSearch(onResult: (String) -> Unit, onEnd: () -> Unit)
+    fun stopVoiceSearch() {}
     /** Called whenever syncInterval setting changes so WorkManager can be rescheduled. */
     fun rescheduleBackgroundSync() {}
     fun areNotificationsEnabled(): Boolean { return true }

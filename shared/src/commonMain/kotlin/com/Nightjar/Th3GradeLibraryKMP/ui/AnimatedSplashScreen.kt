@@ -73,8 +73,12 @@ fun AnimatedSplashScreen(onAnimationFinished: () -> Unit) {
     )
 
     val textAlpha by animateFloatAsState(
-        targetValue = if (startAnimation) 1f else 0f,
-        animationSpec = tween(durationMillis = 400, delayMillis = 150)
+        targetValue = when {
+            isExiting -> 0f
+            startAnimation -> 1f
+            else -> 0f
+        },
+        animationSpec = tween(durationMillis = if (isExiting) 250 else 400, delayMillis = if (isExiting) 0 else 150)
     )
 
     LaunchedEffect(Unit) {

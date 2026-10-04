@@ -2,6 +2,7 @@
 package com.Nightjar.Th3GradeLibraryKMP.ui
 
 import com.Nightjar.Th3GradeLibraryKMP.theme.bounceClick
+import com.Nightjar.Th3GradeLibraryKMP.theme.expressiveButtonMorph
 
 import android.os.Build
 import android.graphics.Bitmap
@@ -80,7 +81,8 @@ actual fun PdfViewerScreen(
     onToggleSave: (Int) -> Unit,
     onClose: () -> Unit,
     initialPage: Int?,
-    isDark: Boolean
+    isDark: Boolean,
+    isFromBookmarks: Boolean
 ) {
     val context = LocalContext.current
     val appSettings by com.Nightjar.Th3GradeLibraryKMP.network.SyncEngine.appSettings.collectAsState()
@@ -233,10 +235,12 @@ actual fun PdfViewerScreen(
                 pdfRenderer = null
                 val fileToDelete = tempFile
                 
-                // Asynchronously close PdfRenderer inside pdfMutex on Dispatchers.IO
-                // This guarantees any active page.close() finishes first, preventing SIGSEGV in libpdfium.so
+                // Delay cleanup until the reader closing / shrink transition finishes completely (450ms).
+                // This ensures the sharedBounds exit transition has access to the page bitmap and temp file,
+                // completely preventing blank screens, premature cache eviction, or SIGSEGV.
                 CoroutineScope(Dispatchers.IO).launch {
                     try {
+                        kotlinx.coroutines.delay(450)
                         pdfMutex.withLock {
                             try {
                                 rendererToClose?.close()
@@ -247,12 +251,12 @@ actual fun PdfViewerScreen(
                                 fileToDelete?.delete()
                             } catch (_: Exception) {}
                         }
+                        PdfBitmapCache.cache.evictAll()
                     } catch (e: Exception) {
                         e.printStackTrace()
                     }
                 }
 
-                PdfBitmapCache.cache.evictAll()
                 activity?.let { act ->
                     val window = act.window
                     window.statusBarColor = android.graphics.Color.TRANSPARENT
@@ -283,6 +287,8 @@ actual fun PdfViewerScreen(
         )
     } else remember { mutableStateOf(0.dp) }
 
+    val sharedKey = if (isFromBookmarks && initialPage != null) "bookmark_${item.id}_$initialPage" else "card_${item.id}"
+
     val rootModifier = Modifier
         .fillMaxSize()
         .clip(androidx.compose.foundation.shape.RoundedCornerShape(cornerRadius))
@@ -290,27 +296,26 @@ actual fun PdfViewerScreen(
             if (sharedTransitionScope != null && animatedVisibilityScope != null) {
                 with(sharedTransitionScope) {
                     Modifier.sharedBounds(
-                        sharedContentState = rememberSharedContentState(key = "card_${item.id}"),
+                        sharedContentState = rememberSharedContentState(key = sharedKey),
                         animatedVisibilityScope = animatedVisibilityScope,
-                        enter = androidx.compose.animation.fadeIn(animationSpec = androidx.compose.animation.core.tween(240, easing = androidx.compose.animation.core.LinearOutSlowInEasing)),
-                        exit = androidx.compose.animation.fadeOut(animationSpec = androidx.compose.animation.core.tween(200, easing = androidx.compose.animation.core.FastOutLinearInEasing)),
+                        enter = androidx.compose.animation.fadeIn(
+                            animationSpec = androidx.compose.animation.core.tween(
+                                durationMillis = 90,
+                                easing = androidx.compose.animation.core.LinearEasing
+                            )
+                        ),
+                        exit = androidx.compose.animation.fadeOut(
+                            animationSpec = androidx.compose.animation.core.tween(
+                                durationMillis = 90,
+                                delayMillis = 270,
+                                easing = androidx.compose.animation.core.LinearEasing
+                            )
+                        ),
                         renderInOverlayDuringTransition = false,
-                        boundsTransform = { initialBounds, targetBounds ->
-                            val isExpanding = targetBounds.width > initialBounds.width
-                            if (isExpanding) {
-                                // Open physics: fast, responsive, fluid expansion
-                                spring(
-                                    dampingRatio = 0.82f,
-                                    stiffness = 380f
-                                )
-                            } else {
-                                // Close physics: soft, cushioned, elegant contraction
-                                spring(
-                                    dampingRatio = 0.88f,
-                                    stiffness = 320f
-                                )
-                            }
-                        }
+                        boundsTransform = { _, _ ->
+                            spring(dampingRatio = 0.76f, stiffness = 220f)
+                        },
+                        resizeMode = SharedTransitionScope.ResizeMode.scaleToBounds(androidx.compose.ui.layout.ContentScale.Crop)
                     )
                 }
             } else Modifier
@@ -337,10 +342,16 @@ actual fun PdfViewerScreen(
             }
         } else {
             if (pdfRenderer != null) {
-                androidx.compose.runtime.key(item.id) {
-                    val pageCount = pdfRenderer!!.pageCount
-                    val targetInitialPage = initialPage ?: if (pageCount > 0) savedPage.coerceAtMost(pageCount - 1) else 0
+                val pageCount = pdfRenderer!!.pageCount
+                val targetInitialPage = initialPage ?: if (pageCount > 0) savedPage.coerceAtMost(pageCount - 1) else 0
+                androidx.compose.runtime.key(item.id, targetInitialPage) {
                     val pagerState = rememberPagerState(initialPage = targetInitialPage.coerceAtMost(maxOf(0, pageCount - 1))) { pageCount }
+
+                    LaunchedEffect(targetInitialPage) {
+                        if (pagerState.currentPage != targetInitialPage && targetInitialPage in 0 until pageCount) {
+                            pagerState.scrollToPage(targetInitialPage)
+                        }
+                    }
 
                     LaunchedEffect(pagerState.currentPage) {
                         if (pageCount > 0) {
@@ -371,6 +382,7 @@ actual fun PdfViewerScreen(
                             if (orientation == "vertical") {
                                 VerticalPager(
                                     state = pagerState,
+                                    beyondViewportPageCount = 1,
                                     modifier = Modifier.fillMaxSize(),
                                     contentPadding = PaddingValues(0.dp),
                                     pageSpacing = 0.dp
@@ -406,6 +418,7 @@ actual fun PdfViewerScreen(
                             } else {
                                 HorizontalPager(
                                     state = pagerState,
+                                    beyondViewportPageCount = 1,
                                     modifier = Modifier.fillMaxSize(),
                                     contentPadding = PaddingValues(0.dp),
                                     pageSpacing = 0.dp
@@ -615,12 +628,15 @@ actual fun PdfViewerScreen(
                                 },
                             contentAlignment = Alignment.Center
                         ) {
-                            Box(
+                            androidx.compose.material3.Surface(
+                                shape = RoundedCornerShape(28.dp),
+                                color = MaterialTheme.colorScheme.surface,
+                                tonalElevation = 6.dp,
                                 modifier = Modifier
+                                    .widthIn(max = 400.dp)
                                     .fillMaxWidth(0.85f)
                                     .clickable(enabled = false) {}
-                                    .shadow(24.dp, RoundedCornerShape(24.dp))
-                                    .background(MaterialTheme.colorScheme.surface.copy(alpha = 0.95f), RoundedCornerShape(24.dp))
+                                    .shadow(24.dp, RoundedCornerShape(28.dp))
                                     .animateEnterExit(
                                         enter = androidx.compose.animation.scaleIn(
                                             initialScale = 0.8f,
@@ -628,19 +644,20 @@ actual fun PdfViewerScreen(
                                         ) + androidx.compose.animation.fadeIn(),
                                         exit = androidx.compose.animation.scaleOut(
                                             targetScale = 0.9f,
-                                            animationSpec = spring(dampingRatio = 0.9f, stiffness = Spring.StiffnessMedium)
+                                            animationSpec = spring(dampingRatio = 0.75f, stiffness = Spring.StiffnessLow)
                                         ) + androidx.compose.animation.fadeOut()
                                     )
-                                    .padding(24.dp)
                             ) {
                                 Column(
+                                    modifier = Modifier.padding(24.dp),
                                     horizontalAlignment = Alignment.CenterHorizontally
                                 ) {
                                     Text(
                                         text = "إلى أي صفحة تريد الانتقال؟",
                                         color = MaterialTheme.colorScheme.onSurface,
                                         fontSize = 18.sp,
-                                        fontWeight = FontWeight.Bold
+                                        fontWeight = FontWeight.Bold,
+                                        textAlign = TextAlign.Justify
                                     )
                                     Spacer(modifier = Modifier.height(16.dp))
                                     OutlinedTextField(
@@ -676,14 +693,31 @@ actual fun PdfViewerScreen(
                                     Spacer(modifier = Modifier.height(24.dp))
                                     Row(
                                         modifier = Modifier.fillMaxWidth(),
-                                        horizontalArrangement = Arrangement.SpaceEvenly
+                                        horizontalArrangement = Arrangement.spacedBy(12.dp)
                                     ) {
-                                        TextButton(onClick = { 
-                                            showJumpDialog = false 
-                                            jumpPageInput = ""
-                                        }) {
-                                            Text("إلغاء", color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f))
+                                        val cancelJumpSource = remember { MutableInteractionSource() }
+                                        OutlinedButton(
+                                            onClick = { 
+                                                showJumpDialog = false 
+                                                jumpPageInput = ""
+                                            },
+                                            modifier = Modifier
+                                                .weight(1f)
+                                                .expressiveButtonMorph(
+                                                    restRadius = 24.dp,
+                                                    pressedRadius = 8.dp,
+                                                    interactionSource = cancelJumpSource
+                                                ),
+                                            shape = RoundedCornerShape(24.dp),
+                                            interactionSource = cancelJumpSource
+                                        ) {
+                                            Text(
+                                                "إلغاء",
+                                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                                textAlign = TextAlign.Justify
+                                            )
                                         }
+                                        val jumpActionSource = remember { MutableInteractionSource() }
                                         Button(
                                             onClick = {
                                                 val p = jumpPageInput.toIntOrNull()
@@ -698,10 +732,23 @@ actual fun PdfViewerScreen(
                                                     jumpErrorText = null
                                                 }
                                             },
+                                            modifier = Modifier
+                                                .weight(1f)
+                                                .expressiveButtonMorph(
+                                                    restRadius = 24.dp,
+                                                    pressedRadius = 8.dp,
+                                                    interactionSource = jumpActionSource
+                                                ),
+                                            shape = RoundedCornerShape(24.dp),
                                             colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary),
-                                            shape = RoundedCornerShape(12.dp)
+                                            interactionSource = jumpActionSource
                                         ) {
-                                            Text("انتقال سريع", color = MaterialTheme.colorScheme.onPrimary, fontWeight = FontWeight.Bold)
+                                            Text(
+                                                "انتقال سريع",
+                                                color = MaterialTheme.colorScheme.onPrimary,
+                                                fontWeight = FontWeight.Bold,
+                                                textAlign = TextAlign.Justify
+                                            )
                                         }
                                     }
                                 }
@@ -709,7 +756,6 @@ actual fun PdfViewerScreen(
                         }
                     }
                     }
-                }
             }
         }
 
@@ -753,6 +799,7 @@ actual fun PdfViewerScreen(
                 }
         }
     }
+}
 }
 
 // Singleton Cache for PDF Pages to prevent lag during scrolling

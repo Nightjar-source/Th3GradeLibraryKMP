@@ -3,10 +3,12 @@ package com.Nightjar.Th3GradeLibraryKMP.ui
 
 import com.Nightjar.Th3GradeLibraryKMP.LocalSharedTransitionScope
 import com.Nightjar.Th3GradeLibraryKMP.LocalAnimatedVisibilityScope
-import androidx.compose.animation.ExperimentalSharedTransitionApi
+import androidx.compose.animation.*
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.tween
 import com.Nightjar.Th3GradeLibraryKMP.theme.popInOnInitialLoad
+import com.Nightjar.Th3GradeLibraryKMP.theme.expressiveButtonMorph
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
@@ -21,7 +23,7 @@ import androidx.compose.material.icons.filled.Bookmark
 import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material.icons.filled.ExpandLess
 import androidx.compose.material.icons.filled.Info
-import androidx.compose.material3.Divider
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -40,6 +42,7 @@ import coil3.request.crossfade
 
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.stopScroll
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.getValue
@@ -117,10 +120,18 @@ fun BookmarksScreen(
                  .groupBy({ it.first }, { it.second!! })
             }
 
+            val isNavigatingBack = com.Nightjar.Th3GradeLibraryKMP.theme.LocalIsNavigatingBack.current
+            LaunchedEffect(isNavigatingBack) {
+                if (isNavigatingBack) {
+                    lazyGridState.stopScroll()
+                }
+            }
+
             val screenWidthDp = with(androidx.compose.ui.platform.LocalDensity.current) { androidx.compose.ui.platform.LocalWindowInfo.current.containerSize.width.toDp() }
             val isMedium = screenWidthDp >= 600.dp
             LazyVerticalGrid(
                 state = lazyGridState,
+                userScrollEnabled = !isNavigatingBack,
                 columns = if (isMedium) GridCells.Fixed(2) else GridCells.Adaptive(minSize = 340.dp),
                 modifier = Modifier
                     .fillMaxWidth()
@@ -157,7 +168,7 @@ fun BookmarksScreen(
 
 @OptIn(ExperimentalSharedTransitionApi::class)
 @Composable
-fun BookAccordionItem(
+fun androidx.compose.foundation.lazy.grid.LazyGridItemScope.BookAccordionItem(
     item: BookItem,
     pages: List<Int>,
     isDark: Boolean,
@@ -167,25 +178,16 @@ fun BookAccordionItem(
     val expandedSet by com.Nightjar.Th3GradeLibraryKMP.network.SyncEngine.expandedBookmarks.collectAsState()
     val isExpanded = expandedSet.contains(item.id)
 
-    val sharedTransitionScope = LocalSharedTransitionScope.current
-    val animatedVisibilityScope = LocalAnimatedVisibilityScope.current
-    val imageModifier = Modifier.fillMaxSize()
-
-    var columnModifier = Modifier
+    val columnModifier = Modifier
+        .animateItem(
+            fadeInSpec = null,
+            fadeOutSpec = null,
+            placementSpec = spring(dampingRatio = 0.72f, stiffness = Spring.StiffnessMediumLow)
+        )
+        .popInOnInitialLoad(index)
         .fillMaxWidth()
         .liquidGlass(isDark, borderRadius = 20.dp, alpha = 0.5f)
         .clip(RoundedCornerShape(20.dp))
-
-    if (sharedTransitionScope != null && animatedVisibilityScope != null) {
-        with(sharedTransitionScope) {
-            columnModifier = columnModifier.sharedBounds(
-                sharedContentState = rememberSharedContentState(key = "card_${item.id}"),
-                animatedVisibilityScope = animatedVisibilityScope,
-                renderInOverlayDuringTransition = false,
-                boundsTransform = { _, _ -> spring(stiffness = Spring.StiffnessMediumLow, dampingRatio = Spring.DampingRatioNoBouncy) }
-            )
-        }
-    }
 
     Column(
         modifier = columnModifier
@@ -208,15 +210,15 @@ fun BookAccordionItem(
                 coil3.compose.AsyncImage(
                     model = coil3.request.ImageRequest.Builder(coil3.compose.LocalPlatformContext.current)
                         .data(com.Nightjar.Th3GradeLibraryKMP.generated.resources.Res.getUri("drawable/${item.coverResName}." + if (item.coverResName in listOf("ayajaaa", "english", "englishactivity", "kss1")) "jpg" else "png"))
-                        .crossfade(true)
-                        .build(),
-                    contentDescription = item.title,
-                    contentScale = ContentScale.Crop,
-                    modifier = imageModifier
-                )
-            }
+                    .crossfade(true)
+                    .build(),
+                contentDescription = item.title,
+                contentScale = ContentScale.Crop,
+                modifier = Modifier.fillMaxSize()
+            )
+        }
 
-            Spacer(modifier = Modifier.width(16.dp))
+        Spacer(modifier = Modifier.width(16.dp))
 
             Column(modifier = Modifier.weight(1f)) {
                 Text(
@@ -250,7 +252,15 @@ fun BookAccordionItem(
         }
 
         // Expanded content
-        androidx.compose.animation.AnimatedVisibility(visible = isExpanded) {
+        androidx.compose.animation.AnimatedVisibility(
+            visible = isExpanded,
+            enter = androidx.compose.animation.expandVertically(
+                animationSpec = spring(dampingRatio = 0.76f, stiffness = 300f)
+            ) + androidx.compose.animation.fadeIn(animationSpec = androidx.compose.animation.core.tween(220)),
+            exit = androidx.compose.animation.shrinkVertically(
+                animationSpec = spring(dampingRatio = 0.76f, stiffness = 300f)
+            ) + androidx.compose.animation.fadeOut(animationSpec = androidx.compose.animation.core.tween(180))
+        ) {
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -258,15 +268,38 @@ fun BookAccordionItem(
                     .padding(bottom = 12.dp),
                 verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                Divider(color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.2f))
+                HorizontalDivider(color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.2f))
                 Spacer(modifier = Modifier.height(4.dp))
+                val sharedTransitionScope = LocalSharedTransitionScope.current
+                val animatedVisibilityScope = LocalAnimatedVisibilityScope.current
+
                 pages.sorted().forEach { pageIndex ->
+                    val rowInteractionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() }
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .clip(RoundedCornerShape(12.dp))
+                            .then(
+                                if (sharedTransitionScope != null && animatedVisibilityScope != null) {
+                                    with(sharedTransitionScope) {
+                                        Modifier.sharedBounds(
+                                            sharedContentState = rememberSharedContentState(key = "bookmark_${item.id}_$pageIndex"),
+                                            animatedVisibilityScope = animatedVisibilityScope,
+                                            renderInOverlayDuringTransition = false,
+                                            boundsTransform = { _, _ ->
+                                                spring(dampingRatio = 0.76f, stiffness = 220f)
+                                            },
+                                            resizeMode = SharedTransitionScope.ResizeMode.scaleToBounds(androidx.compose.ui.layout.ContentScale.Crop)
+                                        )
+                                    }
+                                } else Modifier
+                            )
+                            .expressiveButtonMorph(
+                                restRadius = 14.dp,
+                                pressedRadius = 8.dp,
+                                interactionSource = rowInteractionSource
+                            )
                             .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
-                            .clickable { onNavigateToPdf(pageIndex) }
+                            .clickable(interactionSource = rowInteractionSource, indication = androidx.compose.foundation.LocalIndication.current) { onNavigateToPdf(pageIndex) }
                             .padding(12.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {

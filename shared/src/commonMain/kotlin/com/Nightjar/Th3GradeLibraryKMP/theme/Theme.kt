@@ -14,6 +14,8 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.compositionLocalOf
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.blur
+import androidx.compose.ui.draw.scale
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.composed
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
@@ -55,6 +57,7 @@ fun parseHexColor(hex: String): Color {
 }
 
 val LocalIsLowEndDevice = compositionLocalOf { false }
+val LocalIsNavigatingBack = compositionLocalOf { false }
 
 // Glassmorphism modifier optimized with drawWithCache
 fun Modifier.liquidGlass(
@@ -121,27 +124,57 @@ fun Modifier.bounceClick(
 }
 
 /**
- * Staggered pop-in animation on initial screen load (from caliq5).
+ * Universal Material 3 Expressive Button Shape Morphing on Press (from caliq5)
+ * Dynamically morphs shape from rounded pill (24.dp) to squircle/square (8.dp) with scale bounce on press.
+ */
+fun Modifier.expressiveButtonMorph(
+    restRadius: androidx.compose.ui.unit.Dp = 24.dp,
+    pressedRadius: androidx.compose.ui.unit.Dp = 8.dp,
+    pressedScale: Float = 0.92f,
+    interactionSource: androidx.compose.foundation.interaction.MutableInteractionSource
+): Modifier = composed {
+    val isPressed by interactionSource.collectIsPressedAsState()
+    val cornerRadius by androidx.compose.animation.core.animateDpAsState(
+        targetValue = if (isPressed) pressedRadius else restRadius,
+        animationSpec = androidx.compose.animation.core.spring(dampingRatio = 0.52f, stiffness = 420f),
+        label = "expressive_corner_morph"
+    )
+    val scale by androidx.compose.animation.core.animateFloatAsState(
+        targetValue = if (isPressed) pressedScale else 1.0f,
+        animationSpec = androidx.compose.animation.core.spring(dampingRatio = 0.52f, stiffness = 420f),
+        label = "expressive_scale_morph"
+    )
+    this
+        .scale(scale)
+        .clip(RoundedCornerShape(cornerRadius))
+}
+
+/**
+ * Staggered pop-in animation on screen load (from caliq5).
+ * Guaranteed never to flash an empty/blank screen: initial alpha is 0.70f and fluidly rises to 1.0f.
  */
 fun Modifier.popInOnInitialLoad(index: Int = 0): Modifier = composed {
-    var isLoaded by androidx.compose.runtime.saveable.rememberSaveable { androidx.compose.runtime.mutableStateOf(false) }
+    var isLoaded by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf(false) }
     androidx.compose.runtime.LaunchedEffect(Unit) {
         isLoaded = true
     }
     val animProgress by androidx.compose.animation.core.animateFloatAsState(
         targetValue = if (isLoaded) 1f else 0f,
         animationSpec = androidx.compose.animation.core.tween(
-            durationMillis = 400,
-            delayMillis = (index.coerceAtMost(8) * 40),
-            easing = androidx.compose.animation.core.CubicBezierEasing(0.2f, 0f, 0f, 1f)
+            durationMillis = 320,
+            delayMillis = (index.coerceAtMost(6) * 30),
+            easing = androidx.compose.animation.core.CubicBezierEasing(0.16f, 1f, 0.3f, 1f)
         ),
         label = "popIn_$index"
     )
+    val density = androidx.compose.ui.platform.LocalDensity.current
+    val offsetYPx = androidx.compose.runtime.remember(density) { with(density) { 16.dp.toPx() } }
     this.graphicsLayer {
-        this.alpha = animProgress
-        this.translationY = (1f - animProgress) * 30f // dp is not available directly without LocalDensity, but float is fine for translationY (pixels)
-        this.scaleX = 0.95f + 0.05f * animProgress
-        this.scaleY = 0.95f + 0.05f * animProgress
+        this.alpha = 0.85f + 0.15f * animProgress
+        this.translationY = (1f - animProgress) * offsetYPx
+        this.scaleX = 0.99f + 0.01f * animProgress
+        this.scaleY = 0.99f + 0.01f * animProgress
+        this.clip = false
     }
 }
 
