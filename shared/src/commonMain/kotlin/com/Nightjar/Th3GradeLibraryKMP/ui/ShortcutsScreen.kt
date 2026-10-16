@@ -1,3 +1,4 @@
+@file:OptIn(androidx.compose.material3.adaptive.ExperimentalMaterial3AdaptiveApi::class)
 package com.Nightjar.Th3GradeLibraryKMP.ui
 
 import com.Nightjar.Th3GradeLibraryKMP.LocalSharedTransitionScope

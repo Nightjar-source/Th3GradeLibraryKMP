@@ -1,4 +1,7 @@
-@file:OptIn(androidx.compose.foundation.ExperimentalFoundationApi::class)
+@file:OptIn(
+    androidx.compose.foundation.ExperimentalFoundationApi::class,
+    androidx.compose.material3.adaptive.ExperimentalMaterial3AdaptiveApi::class
+)
 package com.Nightjar.Th3GradeLibraryKMP.ui
 
 import com.Nightjar.Th3GradeLibraryKMP.LocalSharedTransitionScope

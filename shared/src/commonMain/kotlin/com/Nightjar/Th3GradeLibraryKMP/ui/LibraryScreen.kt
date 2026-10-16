@@ -1,8 +1,12 @@
-@file:OptIn(org.jetbrains.compose.resources.ExperimentalResourceApi::class)
+@file:OptIn(
+    org.jetbrains.compose.resources.ExperimentalResourceApi::class,
+    androidx.compose.material3.adaptive.ExperimentalMaterial3AdaptiveApi::class
+)
 package com.Nightjar.Th3GradeLibraryKMP.ui
 
 import androidx.compose.foundation.lazy.grid.LazyGridItemScope
 import androidx.compose.animation.*
+import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.material3.adaptive.currentWindowAdaptiveInfo
 import androidx.window.core.layout.WindowWidthSizeClass
 import androidx.window.core.layout.WindowHeightSizeClass
@@ -111,6 +115,7 @@ fun LibraryScreen(
             .padding(horizontal = 16.dp)
     ) {
         val isWide = widthClass != WindowWidthSizeClass.COMPACT
+        val statusBarHeight = WindowInsets.statusBars.add(WindowInsets.captionBar).asPaddingValues().calculateTopPadding()
         Column(modifier = Modifier.fillMaxSize()) {
             if (category == null) {
                 // Home/Categories view
@@ -124,8 +129,7 @@ fun LibraryScreen(
                     onScrollableStateChanged(canScroll)
                 }
 
-                    val statusBarHeight = WindowInsets.statusBars.add(WindowInsets.captionBar).asPaddingValues().calculateTopPadding()
-                    val dynamicTopPadding = if (isWide) statusBarHeight + 64.dp else statusBarHeight + 76.dp
+                val dynamicTopPadding = if (isWide) statusBarHeight + 64.dp else statusBarHeight + 76.dp
                     
                 Box(
                     modifier = Modifier.fillMaxSize(),

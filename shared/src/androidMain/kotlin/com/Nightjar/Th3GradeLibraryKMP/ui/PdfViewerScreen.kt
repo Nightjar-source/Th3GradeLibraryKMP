@@ -908,11 +908,10 @@ actual fun PdfViewerScreen(
                             }
                         }
                     }
-                    }
+                }
             }
         }
     }
-}
 }
 
 // Singleton Cache for PDF Pages to prevent lag during scrolling

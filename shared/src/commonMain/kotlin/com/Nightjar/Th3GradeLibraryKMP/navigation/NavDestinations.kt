@@ -6,7 +6,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.unit.Dp
 import com.Nightjar.Th3GradeLibraryKMP.data.BookItem
-import com.Nightjar.Th3GradeLibraryKMP.platform.PlatformActionHandler
+import com.Nightjar.Th3GradeLibraryKMP.data.PlatformActionHandler
 import com.Nightjar.Th3GradeLibraryKMP.ui.*
 
 /**
@@ -19,7 +19,7 @@ fun RenderHomeDestination(
     isGridView: Boolean,
     searchQuery: String,
     onSearchQueryChange: (String) -> Unit,
-    onNavigateToCategory: (String) -> Unit,
+    onNavigateToCategory: (String?) -> Unit,
     onNavigateToPdf: (BookItem) -> Unit,
     isDark: Boolean,
     onToggleViewMode: () -> Unit,
@@ -54,7 +54,7 @@ fun RenderListDestination(
     isGridView: Boolean,
     searchQuery: String,
     onSearchQueryChange: (String) -> Unit,
-    onNavigateToCategory: (String) -> Unit,
+    onNavigateToCategory: (String?) -> Unit,
     onNavigateToPdf: (BookItem) -> Unit,
     isDark: Boolean,
     onToggleViewMode: () -> Unit,
