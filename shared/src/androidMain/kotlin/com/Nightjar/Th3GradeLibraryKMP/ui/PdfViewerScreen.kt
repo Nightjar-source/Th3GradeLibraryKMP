@@ -345,20 +345,19 @@ actual fun PdfViewerScreen(
                 animatedVisibilityScope = animatedVisibilityScope,
                 enter = androidx.compose.animation.fadeIn(
                     animationSpec = androidx.compose.animation.core.tween(
-                        durationMillis = 90,
+                        durationMillis = 120,
                         easing = androidx.compose.animation.core.LinearEasing
                     )
                 ),
                 exit = androidx.compose.animation.fadeOut(
                     animationSpec = androidx.compose.animation.core.tween(
-                        durationMillis = 180,
-                        delayMillis = 60,
-                        easing = androidx.compose.animation.core.FastOutSlowInEasing
+                        durationMillis = 280,
+                        easing = androidx.compose.animation.core.LinearEasing
                     )
                 ),
                 renderInOverlayDuringTransition = true,
                 boundsTransform = { _, _ ->
-                    spring(dampingRatio = 0.78f, stiffness = 320f)
+                    spring(dampingRatio = 0.80f, stiffness = 300f)
                 },
                 resizeMode = SharedTransitionScope.ResizeMode.scaleToBounds(androidx.compose.ui.layout.ContentScale.Crop)
             )

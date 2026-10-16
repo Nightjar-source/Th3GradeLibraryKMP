@@ -283,7 +283,14 @@ fun LibraryScreen(
                 ) {
                     itemsIndexed(items = filteredList, key = { _, item -> item.id }, contentType = { _, _ -> "library_item" }) { index, item ->
                         ContentCard(
-                            modifier = Modifier.adaptiveItemEntrance(index, itemId = item.id),
+                            modifier = Modifier
+                                .animateItem(
+                                    placementSpec = spring(
+                                        dampingRatio = 0.80f,
+                                        stiffness = 300f
+                                    )
+                                )
+                                .adaptiveItemEntrance(index, itemId = item.id),
                             item = item,
                             isGridView = isGridView,
                             isDark = isDark,
@@ -494,7 +501,11 @@ fun LazyGridItemScope.ContentCard(
     index: Int = 0,
     onClick: () -> Unit
 ) {
-    val cardCornerRadius = if (isGridView) 20.dp else 24.dp
+    val cardCornerRadius by animateDpAsState(
+        targetValue = if (isGridView) 20.dp else 24.dp,
+        animationSpec = spring(dampingRatio = 0.80f, stiffness = 300f),
+        label = "cardCornerRadius"
+    )
     val sharedTransitionScope = LocalSharedTransitionScope.current
     val animatedVisibilityScope = LocalAnimatedVisibilityScope.current
     val isReturningFromPdf = com.Nightjar.Th3GradeLibraryKMP.theme.LocalIsReturningFromPdf.current
@@ -507,18 +518,18 @@ fun LazyGridItemScope.ContentCard(
                 animatedVisibilityScope = animatedVisibilityScope,
                 enter = androidx.compose.animation.fadeIn(
                     animationSpec = androidx.compose.animation.core.tween(
-                        durationMillis = 90,
+                        durationMillis = 200,
                         easing = androidx.compose.animation.core.LinearEasing
                     )
                 ),
                 exit = androidx.compose.animation.fadeOut(
                     animationSpec = androidx.compose.animation.core.tween(
-                        durationMillis = 90,
+                        durationMillis = 100,
                         easing = androidx.compose.animation.core.LinearEasing
                     )
                 ),
                 renderInOverlayDuringTransition = true,
-                boundsTransform = { _, _ -> spring(dampingRatio = 0.78f, stiffness = 320f) },
+                boundsTransform = { _, _ -> spring(dampingRatio = 0.80f, stiffness = 300f) },
                 resizeMode = SharedTransitionScope.ResizeMode.scaleToBounds(androidx.compose.ui.layout.ContentScale.Crop)
             )
         }
