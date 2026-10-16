@@ -52,6 +52,7 @@ import com.Nightjar.Th3GradeLibraryKMP.data.BookItem
 import com.Nightjar.Th3GradeLibraryKMP.generated.resources.Res
 import com.Nightjar.Th3GradeLibraryKMP.network.SyncEngine
 import com.Nightjar.Th3GradeLibraryKMP.theme.LocalIsNavigatingBack
+import com.Nightjar.Th3GradeLibraryKMP.theme.LocalIsReturningFromPdf
 import com.Nightjar.Th3GradeLibraryKMP.theme.expressiveButtonMorph
 import com.Nightjar.Th3GradeLibraryKMP.theme.liquidGlass
 
