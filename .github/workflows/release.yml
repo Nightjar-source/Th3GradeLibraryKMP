@@ -9,7 +9,7 @@ on:
       tag_name:
         description: 'Tag name for release'
         required: false
-        default: 'v1.51.23'
+        default: 'v1.51.24'
 
 permissions:
   contents: write
@@ -55,15 +55,17 @@ jobs:
           KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
           KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
 
-      - name: Prepare APK with Official Arabic Name
+      - name: Prepare APK Release Files
         run: |
+          cp androidApp/build/outputs/apk/release/androidApp-release.apk "androidApp/build/outputs/apk/release/Th3GradeLibrary_${{ steps.release_info.outputs.tag }}.apk"
           cp androidApp/build/outputs/apk/release/androidApp-release.apk "androidApp/build/outputs/apk/release/كتب_وملازم_الثالث_متوسط_${{ steps.release_info.outputs.tag }}.apk"
 
       - name: Upload Release APK Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: كتب_وملازم_الثالث_متوسط_${{ steps.release_info.outputs.tag }}
+          name: Th3GradeLibrary_${{ steps.release_info.outputs.tag }}
           path: |
+            androidApp/build/outputs/apk/release/Th3GradeLibrary_${{ steps.release_info.outputs.tag }}.apk
             androidApp/build/outputs/apk/release/كتب_وملازم_الثالث_متوسط_${{ steps.release_info.outputs.tag }}.apk
             androidApp/build/outputs/apk/release/androidApp-release.apk
 
@@ -77,13 +79,15 @@ jobs:
             تطبيق «كتب وملازم الثالث متوسط 2027 العراق» - الإصدار ${{ steps.release_info.outputs.tag }}
 
             التحديثات والمميزات:
-            - دعم كامل لأحدث معايير Android Jetpack Compose 2026/2027.
-            - حركات وانتقالات سلسة فائقة الرطوبة (Fluid Spring Transitions) للشاشات والأغلفة وصفحات المحفوظات بمعدل 120 إطاراً في الثانية.
-            - فتح وغلق المنسدلات بانسيابية تامة ودوران الأيقونة 360 درجة بدون أي وميض أو قفزات.
-            - شريط تنقل سفلي وجانبي سائل (Liquid Frosted Glass) بتصميم بيضاوي مع زر قائمة جانبي مستقل.
-            - انتقال فوري وعائم إلى قارئ الكتب والـ PDF بدون تكرار مؤشرات التحميل.
-            - تنظيف ذكي وفوري للذاكرة المؤقتة وحذف الملفات المستخرجة عند إغلاق التطبيق.
+            - دعم كامل لأحدث معايير Android Jetpack Compose 2026/2027 ومبادئ Navigation 3.
+            - إصلاح وتفعيل التوسع والتقلص العائم لقارئ الـ PDF (Shared Element Transitions) بدقة وانسيابية كاملة من الغلاف أو مستطيل الصفحة المحفوظة بدون أي وميض أو قفزات مفاجئة.
+            - شاشة المحفوظات: دوران دقيق لسهم المنسدلة بين 0 و 180 درجة فقط، ظهور فوري لخط التقسيم عند التوسع (t=0)، حركات توسع وتقلص سائلة ورطبة، وعزل مستطيلات الصفحات داخل الكارت لمنع القفز لليمين.
+            - انسيابية الحذف والإضافة: انكماش القارئ أولاً لمستطيل الصفحة ثم اختفائها بانسيابية، والتوسع التلقائي للصفحات المضافة حديثاً.
+            - شاشة المكتبة: تنقل فوري وسلس بين وضعي القائمة والشبكة مع ثبات الأغلفة ومنع التمرير التلقائي أو قفزات الكتب عند إغلاق القارئ.
+            - فتح القارئ مباشرة وبدون أي وميض عبر الاختصارات الخارجية وروابط التطبيق.
+            - تنظيف فوري وشامل لملفات الـ PDF المؤقتة عبر خدمة Cleanup المستقلة بمجرد إغلاق التطبيق من قائمة التطبيقات الحديثة.
           files: |
+            androidApp/build/outputs/apk/release/Th3GradeLibrary_${{ steps.release_info.outputs.tag }}.apk
             androidApp/build/outputs/apk/release/كتب_وملازم_الثالث_متوسط_${{ steps.release_info.outputs.tag }}.apk
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

@@ -508,7 +508,6 @@ fun LazyGridItemScope.ContentCard(
                 enter = androidx.compose.animation.fadeIn(
                     animationSpec = androidx.compose.animation.core.tween(
                         durationMillis = 90,
-                        delayMillis = 240,
                         easing = androidx.compose.animation.core.LinearEasing
                     )
                 ),
@@ -545,15 +544,7 @@ fun LazyGridItemScope.ContentCard(
             }
             .padding(12.dp)
     ) {
-        AnimatedContent(
-            targetState = isGridView,
-            transitionSpec = {
-                (fadeIn(tween(200, easing = LinearOutSlowInEasing)) + scaleIn(initialScale = 0.94f, animationSpec = spring(dampingRatio = 0.80f, stiffness = 340f)))
-                    .togetherWith(fadeOut(tween(140, easing = FastOutSlowInEasing)) + scaleOut(targetScale = 0.94f))
-            },
-            label = "card_mode_morph_${item.id}"
-        ) { gridMode ->
-            if (gridMode) {
+        if (isGridView) {
                 Column(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalAlignment = Alignment.Start
@@ -688,6 +679,5 @@ fun LazyGridItemScope.ContentCard(
             }
         }
     }
-}
 
 

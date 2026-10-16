@@ -217,6 +217,7 @@ fun BookAccordionItem(
     Column(
         modifier = modifier
             .fillMaxWidth()
+            .animateContentSize(spring(dampingRatio = 0.82f, stiffness = 280f))
             .liquidGlass(isDark, borderRadius = 20.dp, alpha = 0.96f)
             .clip(RoundedCornerShape(20.dp))
     ) {
@@ -275,9 +276,9 @@ fun BookAccordionItem(
 
             val arrowRotation by animateFloatAsState(
                 targetValue = if (isExpanded) 180f else 0f,
-                animationSpec = spring(
-                    dampingRatio = 0.80f,
-                    stiffness = 340f
+                animationSpec = tween(
+                    durationMillis = 220,
+                    easing = androidx.compose.animation.core.FastOutSlowInEasing
                 ),
                 label = "arrow_rotation"
             )
@@ -293,44 +294,52 @@ fun BookAccordionItem(
             )
         }
 
-        // Expanded Bookmark Rows with Ultra-Moist Fluid Organic Spring (كالجبنة السائلة)
+        // Instant synchronized divider line directly under Header (t=0, smoothly blends with expand)
+        val dividerAlpha by animateFloatAsState(
+            targetValue = if (isExpanded) 1f else 0f,
+            animationSpec = tween(durationMillis = 150, easing = androidx.compose.animation.core.FastOutSlowInEasing),
+            label = "divider_alpha"
+        )
+        if (dividerAlpha > 0.01f) {
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp)
+                    .height(1.dp)
+                    .graphicsLayer { alpha = dividerAlpha }
+                    .background(
+                        MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.16f),
+                        CircleShape
+                    )
+            )
+        }
+
+        // Expanded Bookmark Rows with Ultra-Moist Fluid Organic Spring (سائل رطب كالحرير)
         AnimatedVisibility(
             visible = isExpanded,
             enter = expandVertically(
                 animationSpec = spring(
-                    dampingRatio = 0.80f,
-                    stiffness = 320f
+                    dampingRatio = 0.82f,
+                    stiffness = 280f
                 ),
                 expandFrom = Alignment.Top
-            ) + fadeIn(tween(160, easing = LinearEasing)),
+            ) + fadeIn(tween(200, easing = androidx.compose.animation.core.FastOutSlowInEasing)),
             exit = shrinkVertically(
                 animationSpec = spring(
-                    dampingRatio = 0.80f,
-                    stiffness = 320f
+                    dampingRatio = 0.82f,
+                    stiffness = 280f
                 ),
                 shrinkTowards = Alignment.Top
-            ) + fadeOut(tween(130, easing = LinearEasing))
+            ) + fadeOut(tween(180, easing = androidx.compose.animation.core.FastOutSlowInEasing))
         ) {
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
                     .clipToBounds()
                     .padding(horizontal = 16.dp)
-                    .padding(bottom = 12.dp),
+                    .padding(top = 8.dp, bottom = 12.dp),
                 verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                // Instant synchronized divider line at the top boundary (t=0)
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(1.dp)
-                        .background(
-                            MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.16f),
-                            CircleShape
-                        )
-                )
-                Spacer(modifier = Modifier.height(2.dp))
-
                 val sharedTransitionScope = LocalSharedTransitionScope.current
 
                 // Render all tracked pages sorted
@@ -346,15 +355,9 @@ fun BookAccordionItem(
                             Modifier.sharedBounds(
                                 sharedContentState = rememberSharedContentState(key = rowTargetKey),
                                 animatedVisibilityScope = screenVisibilityScope,
-                                enter = fadeIn(
-                                    animationSpec = tween(
-                                        durationMillis = 90,
-                                        delayMillis = 240,
-                                        easing = LinearEasing
-                                    )
-                                ),
-                                exit = fadeOut(tween(90, easing = LinearEasing)),
-                                renderInOverlayDuringTransition = true,
+                                enter = fadeIn(animationSpec = tween(durationMillis = 90, easing = LinearEasing)),
+                                exit = fadeOut(animationSpec = tween(durationMillis = 90, easing = LinearEasing)),
+                                renderInOverlayDuringTransition = false,
                                 boundsTransform = { _, _ ->
                                     spring(dampingRatio = 0.78f, stiffness = 320f)
                                 },
@@ -379,13 +382,13 @@ fun BookAccordionItem(
                     AnimatedVisibility(
                         visible = isVisible,
                         enter = expandVertically(
-                            animationSpec = spring(dampingRatio = 0.80f, stiffness = 320f),
+                            animationSpec = spring(dampingRatio = 0.82f, stiffness = 280f),
                             expandFrom = Alignment.Top
-                        ) + fadeIn(tween(160)),
+                        ) + fadeIn(tween(180)),
                         exit = shrinkVertically(
-                            animationSpec = spring(dampingRatio = 0.80f, stiffness = 320f),
+                            animationSpec = spring(dampingRatio = 0.82f, stiffness = 280f),
                             shrinkTowards = Alignment.Top
-                        ) + fadeOut(tween(130))
+                        ) + fadeOut(tween(140))
                     ) {
                         Row(
                             modifier = Modifier
