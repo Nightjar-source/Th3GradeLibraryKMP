@@ -529,6 +529,7 @@ fun LazyGridItemScope.ContentCard(
                     )
                 ),
                 renderInOverlayDuringTransition = true,
+                clipInOverlayDuringTransition = OverlayClip(RoundedCornerShape(cardCornerRadius)),
                 boundsTransform = { _, _ -> spring(dampingRatio = 0.80f, stiffness = 300f) },
                 resizeMode = SharedTransitionScope.ResizeMode.scaleToBounds(androidx.compose.ui.layout.ContentScale.Crop)
             )
