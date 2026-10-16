@@ -1,6 +1,7 @@
 package com.Nightjar.Th3GradeLibraryKMP
 
 import android.app.Service
+import android.content.Context
 import android.content.Intent
 import android.os.IBinder
 
@@ -13,17 +14,22 @@ class AppCleanupService : Service() {
 
     override fun onTaskRemoved(rootIntent: Intent?) {
         super.onTaskRemoved(rootIntent)
-        try {
-            // Immediately clean extracted PDFs and memory/bitmap cache when swiped from Recents
-            com.Nightjar.Th3GradeLibraryKMP.ui.clearPdfCache(cacheDir)
-            filesDir?.let { com.Nightjar.Th3GradeLibraryKMP.ui.clearPdfCache(it) }
-            com.Nightjar.Th3GradeLibraryKMP.ui.PdfBitmapCache.cache.evictAll()
-            try {
-                coil3.SingletonImageLoader.get(this).memoryCache?.clear()
-            } catch (_: Exception) {}
-        } catch (e: Exception) {
-            e.printStackTrace()
-        }
+        cleanAllTemporaryPdfFiles(this)
         stopSelf()
+    }
+
+    companion object {
+        fun cleanAllTemporaryPdfFiles(context: Context) {
+            try {
+                com.Nightjar.Th3GradeLibraryKMP.ui.clearPdfCache(context.cacheDir)
+                context.filesDir?.let { com.Nightjar.Th3GradeLibraryKMP.ui.clearPdfCache(it) }
+                com.Nightjar.Th3GradeLibraryKMP.ui.PdfBitmapCache.cache.evictAll()
+                try {
+                    coil3.SingletonImageLoader.get(context).memoryCache?.clear()
+                } catch (_: Exception) {}
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
+        }
     }
 }
