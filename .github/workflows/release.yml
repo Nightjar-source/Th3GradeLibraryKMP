@@ -85,6 +85,5 @@ jobs:
             - تنظيف ذكي وفوري للذاكرة المؤقتة وحذف الملفات المستخرجة عند إغلاق التطبيق.
           files: |
             androidApp/build/outputs/apk/release/كتب_وملازم_الثالث_متوسط_${{ steps.release_info.outputs.tag }}.apk
-            androidApp/build/outputs/apk/release/androidApp-release.apk
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

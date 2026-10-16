@@ -46,6 +46,8 @@ import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.core.LinearOutSlowInEasing
 import androidx.compose.material3.ColorScheme
+import androidx.compose.material3.darkColorScheme
+import androidx.compose.material3.lightColorScheme
 
 fun parseHexColor(hex: String): Color {
     return try {
@@ -327,7 +329,7 @@ fun Th3GradeTheme(
 
     val colorScheme = if (isMonochrome) {
         if (darkTheme) {
-            ColorScheme(
+            darkColorScheme(
                 primary = Color.White,
                 onPrimary = Color.Black,
                 primaryContainer = Color(0xFF262626),
@@ -359,7 +361,7 @@ fun Th3GradeTheme(
                 scrim = Color.Black
             )
         } else {
-            ColorScheme(
+            lightColorScheme(
                 primary = Color.Black,
                 onPrimary = Color.White,
                 primaryContainer = Color(0xFFF5F5F5),

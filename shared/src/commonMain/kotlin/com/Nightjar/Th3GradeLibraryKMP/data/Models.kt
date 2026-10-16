@@ -1,9 +1,6 @@
 package com.Nightjar.Th3GradeLibraryKMP.data
 
 import kotlinx.serialization.Serializable
-import org.jetbrains.compose.resources.DrawableResource
-import com.Nightjar.Th3GradeLibraryKMP.generated.resources.Res
-import com.Nightjar.Th3GradeLibraryKMP.generated.resources.*
 
 @Serializable
 data class BookItem(
@@ -48,53 +45,6 @@ object AllItems {
         return (books + notes).firstOrNull { it.id == id }
     }
 
-    fun getDrawableResource(coverResName: String): DrawableResource {
-        return when (coverResName) {
-            "ajh" -> Res.drawable.ajh
-            "ahya" -> Res.drawable.ahya
-            "englishactivity" -> Res.drawable.englishactivity
-            "english" -> Res.drawable.english
-            "aslm" -> Res.drawable.aslm
-            "math" -> Res.drawable.math
-            "fizya" -> Res.drawable.fizya
-            "kimai" -> Res.drawable.kimai
-            "arbi" -> Res.drawable.arbi
-            "arabi2" -> Res.drawable.arabi2
-            "aaaaaaaaen" -> Res.drawable.aaaaaaaaen
-            "aj" -> Res.drawable.aj
-            "ahyaaa" -> Res.drawable.ahyaaa
-            "ajjj" -> Res.drawable.ajjj
-            "arabrrrr" -> Res.drawable.arabrrrr
-            "arrrr" -> Res.drawable.arrrr
-            "am" -> Res.drawable.am
-            "eem" -> Res.drawable.eem
-            "emns" -> Res.drawable.emns
-            "enk" -> Res.drawable.enk
-            "enn" -> Res.drawable.enn
-            "nnns" -> Res.drawable.nnns
-            "fffk" -> Res.drawable.fffk
-            "fhhh" -> Res.drawable.fhhh
-            "fiiii" -> Res.drawable.fiiii
-            "kss1" -> Res.drawable.kss1
-            "kss" -> Res.drawable.kss
-            "m" -> Res.drawable.m
-            "mam" -> Res.drawable.mam
-            "mam2" -> Res.drawable.mam2
-            "wnn" -> Res.drawable.wnn
-            "sammam" -> Res.drawable.sammam
-            "ksk" -> Res.drawable.ksk
-            "kaa" -> Res.drawable.kaa
-            "kki" -> Res.drawable.kki
-            "kkak" -> Res.drawable.kkak
-            "kio" -> Res.drawable.kio
-            "marrahiied" -> Res.drawable.marrahiied
-            "marrahiied2" -> Res.drawable.marrahiied2
-            "ayajaaa" -> Res.drawable.ayajaaa
-            "mathkhal" -> Res.drawable.mathkhal
-            "mathkhal2" -> Res.drawable.mathkhal2
-            else -> Res.drawable.app_icon
-        }
-    }
 
     val books = listOf(
         BookItem("b1", "كتاب الاجتماعيات", "ajh", "files/books/ajtmaa.pdf", false, "المنهج الوزاري المعتمد 2027", "#f59e0b", "#d97706"),
