@@ -9,3 +9,13 @@ HSPLandroidx/compose/animation/**;->**(**)**
 
 Landroidx/compose/foundation/**;
 HSPLandroidx/compose/foundation/**;->**(**)**
+
+Landroidx/compose/material3/**;
+HSPLandroidx/compose/material3/**;->**(**)**
+
+Landroidx/compose/ui/**;
+HSPLandroidx/compose/ui/**;->**(**)**
+
+Landroidx/compose/runtime/**;
+HSPLandroidx/compose/runtime/**;->**(**)**
+

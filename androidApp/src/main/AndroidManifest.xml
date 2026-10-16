@@ -15,7 +15,8 @@
     <application
         android:name=".MainApplication"
         android:allowBackup="true"
-        android:icon="@drawable/app_icon"
+        android:icon="@drawable/ic_launcher"
+        android:roundIcon="@drawable/ic_launcher"
         android:label="مكتبة الثالث متوسط"
         android:supportsRtl="true"
         android:largeHeap="true"
@@ -27,7 +28,9 @@
         <activity
             android:name=".MainActivity"
             android:exported="true"
-            android:configChanges="orientation|screenSize|screenLayout|keyboardHidden|smallestScreenSize|density|uiMode"
+            android:resizeableActivity="true"
+            android:supportsPictureInPicture="true"
+            android:configChanges="orientation|screenSize|screenLayout|keyboardHidden|smallestScreenSize|density|uiMode|keyboard|navigation"
             android:launchMode="singleTop"
             android:theme="@style/Theme.App.Starting">
             <intent-filter>
@@ -43,6 +46,8 @@
                 <data android:scheme="th3books" android:host="library" />
             </intent-filter>
 
+            <meta-data android:name="com.samsung.android.keepalive.density" android:value="true" />
+            <meta-data android:name="com.samsung.android.multidisplay.keep_process_alive" android:value="true" />
             <meta-data android:name="android.app.shortcuts" android:resource="@xml/shortcuts" />
         </activity>
         
@@ -60,6 +65,20 @@
             android:name="androidx.work.impl.foreground.SystemForegroundService"
             android:foregroundServiceType="dataSync"
             tools:node="merge" />
+
+        <service
+            android:name=".AppCleanupService"
+            android:stopWithTask="false" />
+
+        <!-- AI Assistant / Agent Integration (October 2026 Standards) -->
+        <service
+            android:name=".LibraryAppFunctionService"
+            android:exported="true"
+            android:permission="android.permission.BIND_APP_FUNCTION_SERVICE">
+            <intent-filter>
+                <action android:name="androidx.appfunctions.AppFunctionService" />
+            </intent-filter>
+        </service>
     </application>
 
 </manifest>

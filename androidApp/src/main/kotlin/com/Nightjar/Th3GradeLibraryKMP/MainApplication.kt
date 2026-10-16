@@ -8,6 +8,7 @@ import coil3.memory.MemoryCache
 import coil3.request.crossfade
 import okio.Path.Companion.toPath
 import java.io.File
+import kotlinx.coroutines.launch
 
 class MainApplication : LibraryApplication(), SingletonImageLoader.Factory {
 
@@ -41,15 +42,29 @@ class MainApplication : LibraryApplication(), SingletonImageLoader.Factory {
         super.onCreate()
         instance = this
         
-        // Clean up old temporary PDF files from cacheDir on startup to keep app size minimal
+        // Clean up old temporary PDF and tmp files on startup
+        AppCleanupService.cleanAllTemporaryPdfFiles(this)
+
         try {
-            cacheDir.listFiles()?.forEach { file ->
-                if (file.name.startsWith("pdf_") && file.name.endsWith(".pdf")) {
-                    file.delete()
-                }
-            }
+            startService(android.content.Intent(this, AppCleanupService::class.java))
         } catch (e: Exception) {
             e.printStackTrace()
+        }
+
+        // Pre-warm Coil ImageLoader asynchronously on IO thread to eliminate first-screen image pipeline delay
+        kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.IO).launch {
+            try {
+                coil3.SingletonImageLoader.get(this@MainApplication)
+            } catch (_: Exception) {}
+        }
+    }
+
+    override fun onTrimMemory(level: Int) {
+        super.onTrimMemory(level)
+        if (level >= android.content.ComponentCallbacks2.TRIM_MEMORY_UI_HIDDEN) {
+            // التطبيق في الخلفية (Cached State)، نفرغ الرام فوراً
+            SingletonImageLoader.get(this).memoryCache?.clear()
+            com.Nightjar.Th3GradeLibraryKMP.ui.PdfBitmapCache.cache.evictAll()
         }
     }
 }

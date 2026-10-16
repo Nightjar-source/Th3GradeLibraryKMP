@@ -11,5 +11,6 @@ expect fun PdfViewerScreen(
     onClose: () -> Unit,
     initialPage: Int? = null,
     isDark: Boolean = false,
-    isFromBookmarks: Boolean = false
+    isFromBookmarks: Boolean = false,
+    sourcePage: String = "home"
 )

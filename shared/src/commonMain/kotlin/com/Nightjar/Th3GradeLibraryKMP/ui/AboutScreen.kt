@@ -28,6 +28,7 @@ import com.Nightjar.Th3GradeLibraryKMP.theme.liquidGlass
 import com.Nightjar.Th3GradeLibraryKMP.theme.KufiReemFontFamily
 import com.Nightjar.Th3GradeLibraryKMP.theme.LocalIsLowEndDevice
 import com.Nightjar.Th3GradeLibraryKMP.theme.popInOnInitialLoad
+import com.Nightjar.Th3GradeLibraryKMP.theme.screenEntranceCascade
 import org.jetbrains.compose.resources.painterResource
 import com.Nightjar.Th3GradeLibraryKMP.generated.resources.Res
 import com.Nightjar.Th3GradeLibraryKMP.generated.resources.app_icon
@@ -56,7 +57,7 @@ fun AboutScreen(
         val screenWidthDp = with(androidx.compose.ui.platform.LocalDensity.current) { androidx.compose.ui.platform.LocalWindowInfo.current.containerSize.width.toDp() }
         val isWide = screenWidthDp >= 600.dp
         
-        val statusBarHeight = WindowInsets.statusBars.asPaddingValues().calculateTopPadding()
+        val statusBarHeight = WindowInsets.statusBars.add(WindowInsets.captionBar).asPaddingValues().calculateTopPadding()
         val dynamicTopPadding = if (isWide) statusBarHeight + 64.dp else statusBarHeight + 76.dp
 
         Column(
@@ -75,23 +76,23 @@ fun AboutScreen(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(24.dp)
                 ) {
-                    AppMessageCard(modifier = Modifier.weight(1f).popInOnInitialLoad(0), isDark = isDark)
-                    DeveloperCard(modifier = Modifier.weight(1f).popInOnInitialLoad(1), onOpenUrl = onOpenUrl)
+                    AppMessageCard(modifier = Modifier.weight(1f).screenEntranceCascade(0), isDark = isDark)
+                    DeveloperCard(modifier = Modifier.weight(1f).screenEntranceCascade(1), onOpenUrl = onOpenUrl)
                 }
             } else {
                 Column(
                     modifier = Modifier.fillMaxWidth(),
                     verticalArrangement = Arrangement.spacedBy(24.dp)
                 ) {
-                    AppMessageCard(modifier = Modifier.fillMaxWidth().popInOnInitialLoad(0), isDark = isDark)
-                    DeveloperCard(modifier = Modifier.fillMaxWidth().popInOnInitialLoad(1), onOpenUrl = onOpenUrl)
+                    AppMessageCard(modifier = Modifier.fillMaxWidth().screenEntranceCascade(0), isDark = isDark)
+                    DeveloperCard(modifier = Modifier.fillMaxWidth().screenEntranceCascade(1), onOpenUrl = onOpenUrl)
                 }
             }
 
             Spacer(modifier = Modifier.height(24.dp))
 
             // Golden Spiritual Card
-            GoldenSpiritualCard(modifier = Modifier.fillMaxWidth().popInOnInitialLoad(2), isDark = isDark)
+            GoldenSpiritualCard(modifier = Modifier.fillMaxWidth().screenEntranceCascade(2), isDark = isDark)
 
             Spacer(modifier = Modifier.height(bottomPadding))
         }
@@ -284,7 +285,7 @@ fun GoldenSpiritualCard(modifier: Modifier = Modifier, isDark: Boolean = false) 
         contentAlignment = Alignment.Center
     ) {
         Text(
-            text = "بِاسْمِ عَلِيٍّ الْعَظِيمِ، وَقُلْ هُوَ اللَّهُ أَحَدٌ، وَلَا حَوْلَ وَلَا قُوَّةَ إِلَّا بِاللَّهِ الْعَلِيِّ الْعَظِيمِ",
+            text = "بِاسْمِ الْعَلِيِّ الْعَظِيمِ، وَقُلْ هُوَ اللَّهُ أَحَدٌ، وَلَا حَوْلَ وَلَا قُوَّةَ إِلَّا بِاللَّهِ الْعَلِيِّ الْعَظِيمِ",
             style = MaterialTheme.typography.titleSmall.copy(
                 fontWeight = FontWeight.Bold,
                 fontFamily = KufiReemFontFamily,

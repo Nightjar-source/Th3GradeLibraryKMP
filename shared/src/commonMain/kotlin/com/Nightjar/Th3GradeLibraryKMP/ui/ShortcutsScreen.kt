@@ -4,6 +4,8 @@ import com.Nightjar.Th3GradeLibraryKMP.LocalSharedTransitionScope
 import com.Nightjar.Th3GradeLibraryKMP.LocalAnimatedVisibilityScope
 import androidx.compose.animation.ExperimentalSharedTransitionApi
 import com.Nightjar.Th3GradeLibraryKMP.theme.popInOnInitialLoad
+import com.Nightjar.Th3GradeLibraryKMP.theme.screenEntranceCascade
+import com.Nightjar.Th3GradeLibraryKMP.theme.adaptiveItemEntrance
 
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -65,7 +67,7 @@ fun ShortcutsScreen(
             modifier = Modifier
                 .fillMaxSize()
         ) {
-            val statusBarHeight = WindowInsets.statusBars.asPaddingValues().calculateTopPadding()
+            val statusBarHeight = WindowInsets.statusBars.add(WindowInsets.captionBar).asPaddingValues().calculateTopPadding()
             val dynamicTopPadding = if (isWide) statusBarHeight + 64.dp else statusBarHeight + 76.dp
 
             val isNavigatingBack = com.Nightjar.Th3GradeLibraryKMP.theme.LocalIsNavigatingBack.current
@@ -96,7 +98,7 @@ fun ShortcutsScreen(
                         text = "أضف اختصارات للشاشة الرئيسية",
                         fontSize = 18.sp,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.padding(bottom = 16.dp).popInOnInitialLoad(0)
+                        modifier = Modifier.padding(bottom = 16.dp).screenEntranceCascade(0)
                     )
                 }
                 itemsIndexed(
@@ -131,7 +133,7 @@ fun ShortcutItemCard(
     Column(
         modifier = modifier
             .fillMaxWidth()
-            .popInOnInitialLoad(index)
+            .adaptiveItemEntrance(index, itemId = item.id)
             .clip(RoundedCornerShape(28.dp))
             .background(if (isDark) Color.White.copy(alpha = 0.05f) else Color.Black.copy(alpha = 0.03f))
             .clickable { onClick() }

@@ -34,6 +34,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.animateDp
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.draw.clipToBounds
@@ -70,8 +71,18 @@ import android.util.LruCache
 import kotlin.math.abs
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
+import com.Nightjar.Th3GradeLibraryKMP.theme.contrastingTextColor
 
 val pdfMutex = Mutex()
+private val pendingCacheCleanups = java.util.concurrent.ConcurrentHashMap<String, kotlinx.coroutines.Job>()
+private var activeViewingBookId: String? = null
+
+fun cancelAllPendingCacheCleanups() {
+    try {
+        pendingCacheCleanups.values.forEach { it.cancel() }
+        pendingCacheCleanups.clear()
+    } catch (_: Exception) {}
+}
 
 @OptIn(ExperimentalFoundationApi::class, ExperimentalSharedTransitionApi::class)
 @Composable
@@ -82,7 +93,8 @@ actual fun PdfViewerScreen(
     onClose: () -> Unit,
     initialPage: Int?,
     isDark: Boolean,
-    isFromBookmarks: Boolean
+    isFromBookmarks: Boolean,
+    sourcePage: String
 ) {
     val context = LocalContext.current
     val appSettings by com.Nightjar.Th3GradeLibraryKMP.network.SyncEngine.appSettings.collectAsState()
@@ -170,12 +182,14 @@ actual fun PdfViewerScreen(
 
     // Load file and instantiate PdfRenderer
     LaunchedEffect(item) {
+        activeViewingBookId = item.id
+        pendingCacheCleanups.remove("pdf_${item.id}.pdf")?.cancel()
         try {
             val file = File(context.cacheDir, "pdf_${item.id}.pdf")
-            if (!file.exists()) {
+            if (!file.exists() || file.length() == 0L) {
                 withContext(Dispatchers.IO) {
+                    val tempTarget = File(context.cacheDir, "pdf_${item.id}_${System.currentTimeMillis()}.tmp")
                     val assetManager = context.assets
-                    // نبحث عن مسار الملف الدقيق داخل الأصول
                     val possiblePaths = listOf(
                         "composeResources/com.Nightjar.Th3GradeLibraryKMP.generated.resources/${item.pdfPath}",
                         "composeResources/shared.generated.resources/${item.pdfPath}",
@@ -192,18 +206,18 @@ actual fun PdfViewerScreen(
                     }
 
                     if (inputStream != null) {
-                        // النسخ المتدفق (Streaming): هذا هو الحل السحري! 
-                        // نقرأ الملف كأجزاء صغيرة (32 كيلوبايت) ونكتبها في الذاكرة المؤقتة.
-                        // هذا يمنع امتلاء الرام (OOM) مهما كان حجم الملف، حتى لو كان 1 غيغابايت!
                         inputStream.use { input ->
-                            java.io.FileOutputStream(file).use { output ->
+                            java.io.FileOutputStream(tempTarget).use { output ->
                                 input.copyTo(output, 32 * 1024)
                             }
                         }
                     } else {
-                        // كحل احتياطي أخير في حال عدم العثور على المسار المباشر
                         val bytes = Res.readBytes(item.pdfPath)
-                        file.writeBytes(bytes)
+                        tempTarget.writeBytes(bytes)
+                    }
+
+                    if (tempTarget.exists() && tempTarget.length() > 0L) {
+                        tempTarget.renameTo(file)
                     }
                 }
             }
@@ -230,14 +244,17 @@ actual fun PdfViewerScreen(
 
     DisposableEffect(item, activity) {
         onDispose {
+            if (activeViewingBookId == item.id) {
+                activeViewingBookId = null
+            }
             try {
                 val rendererToClose = pdfRenderer
                 pdfRenderer = null
                 val fileToDelete = tempFile
                 
-                // Delay cleanup until the reader closing / shrink transition finishes completely (450ms).
-                // This ensures the sharedBounds exit transition has access to the page bitmap and temp file,
-                // completely preventing blank screens, premature cache eviction, or SIGSEGV.
+                // Delayed cleanup: RAM is purely a transient pipeline (أنبوب تحويل).
+                // At 450ms (shrink complete), the renderer is closed and RAM bitmap cache is 100% evicted to 0 MB.
+                // The extracted file itself remains in Phone Storage (Data User / cacheDir) under the 2-minute timer.
                 CoroutineScope(Dispatchers.IO).launch {
                     try {
                         kotlinx.coroutines.delay(450)
@@ -247,14 +264,32 @@ actual fun PdfViewerScreen(
                             } catch (e: Exception) {
                                 e.printStackTrace()
                             }
-                            try {
-                                fileToDelete?.delete()
-                            } catch (_: Exception) {}
                         }
                         PdfBitmapCache.cache.evictAll()
                     } catch (e: Exception) {
                         e.printStackTrace()
                     }
+                }
+
+                // 2-minute inactivity disk and memory cache cleanup (lightweight background timer)
+                fileToDelete?.let { currentFile ->
+                    val job = CoroutineScope(Dispatchers.IO).launch {
+                        try {
+                            kotlinx.coroutines.delay(120_000) // 2 minutes
+                            // NEVER delete if user still has this book active/open
+                            if (activeViewingBookId != item.id) {
+                                if (currentFile.exists()) {
+                                    currentFile.delete()
+                                }
+                                PdfBitmapCache.evictBook(item.id)
+                            }
+                        } catch (e: Exception) {
+                            e.printStackTrace()
+                        } finally {
+                            pendingCacheCleanups.remove(currentFile.name)
+                        }
+                    }
+                    pendingCacheCleanups[currentFile.name] = job
                 }
 
                 activity?.let { act ->
@@ -278,52 +313,98 @@ actual fun PdfViewerScreen(
 
     val sharedTransitionScope = LocalSharedTransitionScope.current
     val animatedVisibilityScope = LocalAnimatedVisibilityScope.current
-    var isFirstPageReady by remember { mutableStateOf(false) }
+    val targetInitialPage = initialPage ?: if (savedPage > 0) savedPage else 0
+    val isInitiallyCached = remember(item.id, targetInitialPage) {
+        PdfBitmapCache.cache.get("pdf_${item.id}_page_$targetInitialPage") != null
+    }
+    var isFirstPageReady by remember(item.id) { mutableStateOf(isInitiallyCached) }
 
+    val isGridMode = com.Nightjar.Th3GradeLibraryKMP.network.SyncEngine.isGridView.collectAsState().value
+    val isNavigatingOut = animatedVisibilityScope?.transition?.targetState != androidx.compose.animation.EnterExitState.Visible
+    val isFromBookmarksEffective = isFromBookmarks || sourcePage == "bookmarks"
+    val isBookmarkStillPresent = initialPage?.let { isSaved(it) } ?: false
+    val isBookmarkDeletedOnExit = isFromBookmarksEffective && !isBookmarkStillPresent
+
+    val dynamicTargetCornerRadius = when {
+        isBookmarkDeletedOnExit -> 40.dp // Smooth Egg/Pill Capsule Morph on Deletion
+        isFromBookmarksEffective -> 14.dp
+        isGridMode -> 20.dp
+        else -> 28.dp
+    }
     val cornerRadius by if (animatedVisibilityScope != null) {
-        androidx.compose.animation.core.animateDpAsState(
-            targetValue = if (animatedVisibilityScope.transition.targetState == androidx.compose.animation.EnterExitState.Visible) 0.dp else 28.dp,
+        animatedVisibilityScope.transition.animateDp(
+            transitionSpec = { spring(dampingRatio = 0.76f, stiffness = 220f) },
+            targetValueByState = { state ->
+                when (state) {
+                    androidx.compose.animation.EnterExitState.Visible -> 0.dp
+                    else -> dynamicTargetCornerRadius
+                }
+            },
             label = "corner"
         )
     } else remember { mutableStateOf(0.dp) }
+    val safeCornerRadius = cornerRadius.coerceAtLeast(0.dp)
 
-    val sharedKey = if (isFromBookmarks && initialPage != null) "bookmark_${item.id}_$initialPage" else "card_${item.id}"
+    val hasValidTarget = when {
+        isFromBookmarksEffective -> (initialPage != null)
+        else -> true
+    }
+
+    val sharedKey = when {
+        isFromBookmarksEffective && initialPage != null -> "bookmark_${item.id}_$initialPage"
+        else -> "card_${item.id}"
+    }
+
+    val sharedBoundsModifier = if (sharedTransitionScope != null && animatedVisibilityScope != null && hasValidTarget) {
+        with(sharedTransitionScope) {
+            Modifier.sharedBounds(
+                sharedContentState = rememberSharedContentState(key = sharedKey),
+                animatedVisibilityScope = animatedVisibilityScope,
+                enter = androidx.compose.animation.fadeIn(
+                    animationSpec = androidx.compose.animation.core.tween(
+                        durationMillis = 90,
+                        easing = androidx.compose.animation.core.LinearEasing
+                    )
+                ),
+                exit = androidx.compose.animation.fadeOut(
+                    animationSpec = androidx.compose.animation.core.tween(
+                        durationMillis = 90,
+                        delayMillis = 270,
+                        easing = androidx.compose.animation.core.LinearEasing
+                    )
+                ),
+                renderInOverlayDuringTransition = true,
+                boundsTransform = { _, _ ->
+                    spring(dampingRatio = 0.78f, stiffness = 320f)
+                },
+                resizeMode = SharedTransitionScope.ResizeMode.scaleToBounds(androidx.compose.ui.layout.ContentScale.Crop)
+            )
+        }
+    } else if (animatedVisibilityScope != null) {
+        // Liquid Dynamic Island sink-down exit ONLY when bookmark is deleted or when opening from a shortcut/news
+        with(animatedVisibilityScope) {
+            Modifier.animateEnterExit(
+                enter = androidx.compose.animation.fadeIn(androidx.compose.animation.core.tween(220)) + androidx.compose.animation.scaleIn(initialScale = 0.92f),
+                exit = androidx.compose.animation.fadeOut(androidx.compose.animation.core.tween(220, delayMillis = 60)) + 
+                       androidx.compose.animation.scaleOut(
+                           targetScale = 0.28f, 
+                           animationSpec = spring(dampingRatio = 0.78f, stiffness = Spring.StiffnessMediumLow)
+                       ) + 
+                       androidx.compose.animation.slideOutVertically(
+                           targetOffsetY = { it },
+                           animationSpec = spring(dampingRatio = 0.78f, stiffness = Spring.StiffnessMediumLow)
+                       )
+            )
+        }
+    } else Modifier
 
     val rootModifier = Modifier
         .fillMaxSize()
-        .clip(androidx.compose.foundation.shape.RoundedCornerShape(cornerRadius))
-        .then(
-            if (sharedTransitionScope != null && animatedVisibilityScope != null) {
-                with(sharedTransitionScope) {
-                    Modifier.sharedBounds(
-                        sharedContentState = rememberSharedContentState(key = sharedKey),
-                        animatedVisibilityScope = animatedVisibilityScope,
-                        enter = androidx.compose.animation.fadeIn(
-                            animationSpec = androidx.compose.animation.core.tween(
-                                durationMillis = 90,
-                                easing = androidx.compose.animation.core.LinearEasing
-                            )
-                        ),
-                        exit = androidx.compose.animation.fadeOut(
-                            animationSpec = androidx.compose.animation.core.tween(
-                                durationMillis = 90,
-                                delayMillis = 270,
-                                easing = androidx.compose.animation.core.LinearEasing
-                            )
-                        ),
-                        renderInOverlayDuringTransition = false,
-                        boundsTransform = { _, _ ->
-                            spring(dampingRatio = 0.76f, stiffness = 220f)
-                        },
-                        resizeMode = SharedTransitionScope.ResizeMode.scaleToBounds(androidx.compose.ui.layout.ContentScale.Crop)
-                    )
-                }
-            } else Modifier
-        )
+        .then(sharedBoundsModifier)
+        .clip(androidx.compose.foundation.shape.RoundedCornerShape(safeCornerRadius))
         .background(MaterialTheme.colorScheme.background)
 
     Box(modifier = rootModifier) {
-
         if (loadingError != null) {
             Column(
                 modifier = Modifier
@@ -396,6 +477,7 @@ actual fun PdfViewerScreen(
                                             AndroidPdfPage(
                                                 renderer = currentRenderer,
                                                 pageIndex = pageIndex,
+                                                bookId = item.id,
                                                 scrollDirection = orientation,
                                                 isAppDark = isAppDark,
                                                 onZoomChanged = { isZoomed = it },
@@ -432,6 +514,7 @@ actual fun PdfViewerScreen(
                                             AndroidPdfPage(
                                                 renderer = currentRenderer,
                                                 pageIndex = pageIndex,
+                                                bookId = item.id,
                                                 scrollDirection = orientation,
                                                 isAppDark = isAppDark,
                                                 onZoomChanged = { isZoomed = it },
@@ -465,7 +548,7 @@ actual fun PdfViewerScreen(
                         Row(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .statusBarsPadding()
+                                .windowInsetsPadding(WindowInsets.statusBars.add(WindowInsets.captionBar))
                                 .clickable(interactionSource = remember { MutableInteractionSource() }, indication = null) {}
                                 .padding(horizontal = 16.dp, vertical = 12.dp),
                             horizontalArrangement = Arrangement.SpaceBetween,
@@ -570,8 +653,9 @@ actual fun PdfViewerScreen(
                                 IconButton(
                                     onClick = {
                                         scope.launch {
-                                            if (pagerState.currentPage > 0) {
-                                                pagerState.animateScrollToPage(pagerState.currentPage - 1)
+                                            val target = pagerState.targetPage
+                                            if (target > 0) {
+                                                pagerState.animateScrollToPage(target - 1)
                                             }
                                         }
                                     },
@@ -580,22 +664,45 @@ actual fun PdfViewerScreen(
                                     Icon(Icons.Default.ChevronLeft, contentDescription = "Previous Page", tint = MaterialTheme.colorScheme.onSurfaceVariant)
                                 }
 
-                                Text(
-                                    text = "$currentPage / $pageCount",
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                    fontWeight = FontWeight.Bold,
-                                    fontSize = 14.sp,
+                                Box(
                                     modifier = Modifier
+                                        .animateContentSize(
+                                            animationSpec = spring(dampingRatio = 0.82f, stiffness = 320f)
+                                        )
                                         .clip(CircleShape)
                                         .clickable { showJumpDialog = true }
                                         .padding(horizontal = 12.dp, vertical = 6.dp)
-                                )
+                                ) {
+                                    Row(verticalAlignment = Alignment.CenterVertically) {
+                                        androidx.compose.animation.AnimatedContent(
+                                            targetState = currentPage,
+                                            transitionSpec = {
+                                                (androidx.compose.animation.slideInVertically { it / 2 } + androidx.compose.animation.fadeIn()) togetherWith
+                                                (androidx.compose.animation.slideOutVertically { -it / 2 } + androidx.compose.animation.fadeOut())
+                                            }
+                                        ) { page ->
+                                            Text(
+                                                text = "$page",
+                                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                                fontWeight = FontWeight.Bold,
+                                                fontSize = 14.sp
+                                            )
+                                        }
+                                        Text(
+                                            text = " / $pageCount",
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                            fontWeight = FontWeight.Bold,
+                                            fontSize = 14.sp
+                                        )
+                                    }
+                                }
 
                                 IconButton(
                                     onClick = {
                                         scope.launch {
-                                            if (pagerState.currentPage < pageCount - 1) {
-                                                pagerState.animateScrollToPage(pagerState.currentPage + 1)
+                                            val target = pagerState.targetPage
+                                            if (target < pageCount - 1) {
+                                                pagerState.animateScrollToPage(target + 1)
                                             }
                                         }
                                     },
@@ -695,30 +802,24 @@ actual fun PdfViewerScreen(
                                         modifier = Modifier.fillMaxWidth(),
                                         horizontalArrangement = Arrangement.spacedBy(12.dp)
                                     ) {
-                                        val cancelJumpSource = remember { MutableInteractionSource() }
-                                        OutlinedButton(
+                                        com.Nightjar.Th3GradeLibraryKMP.theme.MorphingButton(
                                             onClick = { 
                                                 showJumpDialog = false 
                                                 jumpPageInput = ""
                                             },
-                                            modifier = Modifier
-                                                .weight(1f)
-                                                .expressiveButtonMorph(
-                                                    restRadius = 24.dp,
-                                                    pressedRadius = 8.dp,
-                                                    interactionSource = cancelJumpSource
-                                                ),
-                                            shape = RoundedCornerShape(24.dp),
-                                            interactionSource = cancelJumpSource
+                                            modifier = Modifier.weight(1f),
+                                            restRadius = 24.dp,
+                                            pressedRadius = 8.dp,
+                                            containerColor = Color.Transparent,
+                                            contentColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                                            border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f))
                                         ) {
                                             Text(
                                                 "إلغاء",
-                                                color = MaterialTheme.colorScheme.onSurfaceVariant,
                                                 textAlign = TextAlign.Justify
                                             )
                                         }
-                                        val jumpActionSource = remember { MutableInteractionSource() }
-                                        Button(
+                                        com.Nightjar.Th3GradeLibraryKMP.theme.MorphingButton(
                                             onClick = {
                                                 val p = jumpPageInput.toIntOrNull()
                                                 if (p == null) {
@@ -732,20 +833,14 @@ actual fun PdfViewerScreen(
                                                     jumpErrorText = null
                                                 }
                                             },
-                                            modifier = Modifier
-                                                .weight(1f)
-                                                .expressiveButtonMorph(
-                                                    restRadius = 24.dp,
-                                                    pressedRadius = 8.dp,
-                                                    interactionSource = jumpActionSource
-                                                ),
-                                            shape = RoundedCornerShape(24.dp),
-                                            colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary),
-                                            interactionSource = jumpActionSource
+                                            modifier = Modifier.weight(1f),
+                                            restRadius = 24.dp,
+                                            pressedRadius = 8.dp,
+                                            containerColor = MaterialTheme.colorScheme.primary,
+                                            contentColor = MaterialTheme.colorScheme.primary.contrastingTextColor()
                                         ) {
                                             Text(
                                                 "انتقال سريع",
-                                                color = MaterialTheme.colorScheme.onPrimary,
                                                 fontWeight = FontWeight.Bold,
                                                 textAlign = TextAlign.Justify
                                             )
@@ -759,21 +854,8 @@ actual fun PdfViewerScreen(
             }
         }
 
-            // 2. Loading overlay (rendered ONLY while PDF is initializing from disk)
-            var showLoading by remember { mutableStateOf(false) }
-            LaunchedEffect(pdfRenderer) {
-                if (pdfRenderer == null) {
-                    kotlinx.coroutines.delay(250)
-                    showLoading = true
-                } else {
-                    showLoading = false
-                }
-            }
-            androidx.compose.animation.AnimatedVisibility(
-                visible = showLoading,
-                enter = fadeIn(),
-                exit = fadeOut(animationSpec = tween(150))
-            ) {
+            // 2. Loading overlay (rendered while loading, disappears immediately the moment first page is ready)
+            if (!isFirstPageReady && loadingError == null) {
                 Box(
                     modifier = Modifier
                         .fillMaxSize()
@@ -797,7 +879,7 @@ actual fun PdfViewerScreen(
                         )
                     }
                 }
-        }
+            }
     }
 }
 }
@@ -811,12 +893,26 @@ object PdfBitmapCache {
             return bitmap.byteCount / 1024
         }
     }
+
+    fun evictBook(bookId: String) {
+        try {
+            val prefix = "pdf_${bookId}_"
+            val snapshot = cache.snapshot()
+            for (key in snapshot.keys) {
+                if (key.startsWith(prefix)) {
+                    cache.remove(key)
+                }
+            }
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
+    }
 }
 
 fun clearPdfCache(cacheDir: File) {
     try {
         cacheDir.listFiles()?.forEach { file ->
-            if (file.name.startsWith("pdf_") && file.name.endsWith(".pdf")) {
+            if (file.name.startsWith("pdf_") && (file.name.endsWith(".pdf") || file.name.endsWith(".tmp"))) {
                 file.delete()
             }
         }
@@ -902,6 +998,7 @@ fun sampleBitmapLuminance(bitmap: Bitmap): Pair<Boolean, Boolean> {
 fun AndroidPdfPage(
     renderer: PdfRenderer,
     pageIndex: Int,
+    bookId: String = "",
     scrollDirection: String = "vertical",
     isAppDark: Boolean = false,
     onZoomChanged: (Boolean) -> Unit = {},
@@ -909,8 +1006,8 @@ fun AndroidPdfPage(
     onLuminanceCalculated: (isTopLight: Boolean, isBottomLight: Boolean) -> Unit = { _, _ -> },
     modifier: Modifier = Modifier
 ) {
-    val cacheKey = "pdf_${renderer.hashCode()}_page_$pageIndex"
-    var bitmap by remember(pageIndex) { mutableStateOf<Bitmap?>(PdfBitmapCache.cache.get(cacheKey)) }
+    val cacheKey = "pdf_${if (bookId.isNotEmpty()) bookId else renderer.hashCode().toString()}_page_$pageIndex"
+    var bitmap by remember(pageIndex, bookId) { mutableStateOf<Bitmap?>(PdfBitmapCache.cache.get(cacheKey)) }
     
     // Zoom and pan states - reset when page changes
     var scale by remember(pageIndex) { mutableStateOf(1f) }
@@ -936,16 +1033,20 @@ fun AndroidPdfPage(
                         currentCoroutineContext().ensureActive()
                         val page = renderer.openPage(pageIndex)
                         try {
-                            // Dynamic RAM-based scaling to prevent OutOfMemoryError
+                            // Dynamic RAM-based scaling:
+                            // Android's native PdfRenderer.render() strictly mandates Bitmap.Config.ARGB_8888.
+                            // Passing RGB_565 throws IllegalArgumentException: Unsupported pixel format.
+                            // To protect low-end devices (Galaxy J7, etc.) and save RAM, we scale resolution dynamically:
                             val maxMemoryMb = (Runtime.getRuntime().maxMemory() / (1024 * 1024)).toInt()
                             val scaleFactor = when {
                                 maxMemoryMb >= 512 -> 1.5 // High-end devices with large heap
                                 maxMemoryMb >= 256 -> 1.2 // Mid-range
-                                else -> 1.0 // Low-end or tight memory
+                                else -> 1.0 // Low-end devices (Galaxy J7, RAM < 3GB, small heap)
                             }
                             
                             val width = (page.width * scaleFactor).toInt()
                             val height = (page.height * scaleFactor).toInt()
+                            
                             val bmp = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
                             
                             val canvas = android.graphics.Canvas(bmp)
@@ -998,10 +1099,11 @@ fun AndroidPdfPage(
                 w = containerHeight * imageRatio
             }
 
+            val touchesEdges = (scrollDirection == "vertical") || (scale > 1.05f) || (h >= containerHeight - 80f)
+
             LaunchedEffect(currentBitmap, scale, scrollDirection, isAppDark, h, containerHeight) {
                 try {
                     val (bmpTopLight, bmpBotLight) = sampleBitmapLuminance(currentBitmap)
-                    val touchesEdges = (scrollDirection == "vertical") || (scale > 1.05f) || (h >= containerHeight - 80f)
                     val effectiveTopLight = if (touchesEdges) bmpTopLight else !isAppDark
                     val effectiveBottomLight = if (touchesEdges) bmpBotLight else !isAppDark
                     onLuminanceCalculated(effectiveTopLight, effectiveBottomLight)
@@ -1074,15 +1176,11 @@ fun AndroidPdfPage(
         }
     } else {
         Box(
-            modifier = modifier
-                .widthIn(max = 560.dp)
-                .fillMaxWidth()
-                .aspectRatio(0.7f)
-                .background(Color.White.copy(alpha = 0.05f), RoundedCornerShape(16.dp)),
+            modifier = modifier.fillMaxSize(),
             contentAlignment = Alignment.Center
         ) {
             com.Nightjar.Th3GradeLibraryKMP.ui.ExpressiveLoadingIndicator(
-                modifier = Modifier.size(56.dp),
+                modifier = Modifier.size(40.dp),
                 color = MaterialTheme.colorScheme.primary
             )
         }

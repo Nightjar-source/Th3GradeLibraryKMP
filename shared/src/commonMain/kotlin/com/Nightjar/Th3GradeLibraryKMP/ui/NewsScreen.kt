@@ -8,6 +8,7 @@ import androidx.compose.ui.zIndex
 import androidx.compose.animation.*
 import androidx.compose.animation.core.*
 import com.Nightjar.Th3GradeLibraryKMP.theme.popInOnInitialLoad
+import com.Nightjar.Th3GradeLibraryKMP.theme.adaptiveItemEntrance
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -232,7 +233,7 @@ fun NewsScreen(
                         contentPadding = PaddingValues(top = 0.dp, bottom = bottomPadding)
                     ) {
                         item(key = "top_spacer", contentType = "spacer", span = { androidx.compose.foundation.lazy.grid.GridItemSpan(maxLineSpan) }) {
-                            val statusBarHeight = WindowInsets.statusBars.asPaddingValues().calculateTopPadding()
+                            val statusBarHeight = WindowInsets.statusBars.add(WindowInsets.captionBar).asPaddingValues().calculateTopPadding()
                             val dynamicTopPadding = if (isMedium) statusBarHeight + 64.dp else statusBarHeight + 76.dp
                             Spacer(modifier = Modifier.height(dynamicTopPadding))
                         }
@@ -292,7 +293,7 @@ fun NewsScreen(
                                             placementSpec = spring(stiffness = Spring.StiffnessMediumLow),
                                             fadeOutSpec = tween(200)
                                         )
-                                        .popInOnInitialLoad(index),
+                                        .adaptiveItemEntrance(index, itemId = newsItem.id),
                                     news = newsItem,
                                     isDark = isDark,
                                     isRead = readNewsIds.contains(newsItem.id) || (newsItem.link.isNotEmpty() && readNewsIds.contains(newsItem.link)),
@@ -327,7 +328,7 @@ fun NewsScreen(
                 targetOffsetY = { -it }
             ) + androidx.compose.animation.fadeOut(),
             modifier = Modifier
-                .statusBarsPadding()
+                .windowInsetsPadding(WindowInsets.statusBars.add(WindowInsets.captionBar))
                 .padding(top = 64.dp) // Starts below the compact Top App Bar
                 .align(Alignment.TopCenter)
                 .fillMaxWidth()
@@ -775,19 +776,31 @@ fun NetworkStatusBanner(
     androidx.compose.animation.AnimatedVisibility(
         visible = state != null,
         enter = (androidx.compose.animation.slideInVertically(
-            initialOffsetY = { (it * 0.7f).toInt() },
-            animationSpec = androidx.compose.animation.core.spring(dampingRatio = 0.72f, stiffness = androidx.compose.animation.core.Spring.StiffnessMediumLow)
+            initialOffsetY = { (it * 0.5f).toInt() },
+            animationSpec = androidx.compose.animation.core.spring(dampingRatio = 0.65f, stiffness = 300f)
         ) + androidx.compose.animation.scaleIn(
-            initialScale = 0.88f,
-            animationSpec = androidx.compose.animation.core.spring(dampingRatio = 0.72f, stiffness = androidx.compose.animation.core.Spring.StiffnessMediumLow)
+            initialScale = 0.6f,
+            animationSpec = androidx.compose.animation.core.spring(dampingRatio = 0.65f, stiffness = 300f)
+        ) + androidx.compose.animation.expandVertically(
+            expandFrom = Alignment.Bottom,
+            animationSpec = androidx.compose.animation.core.spring(dampingRatio = 0.65f, stiffness = 300f)
+        ) + androidx.compose.animation.expandHorizontally(
+            expandFrom = Alignment.CenterHorizontally,
+            animationSpec = androidx.compose.animation.core.spring(dampingRatio = 0.65f, stiffness = 300f)
         ) + androidx.compose.animation.fadeIn(androidx.compose.animation.core.tween(200))),
         exit = (androidx.compose.animation.slideOutVertically(
-            targetOffsetY = { (it * 1.3f).toInt() },
-            animationSpec = androidx.compose.animation.core.tween(170, easing = androidx.compose.animation.core.FastOutLinearInEasing)
+            targetOffsetY = { (it * 0.8f).toInt() },
+            animationSpec = androidx.compose.animation.core.spring(dampingRatio = 0.8f, stiffness = 400f)
         ) + androidx.compose.animation.scaleOut(
-            targetScale = 0.80f,
-            animationSpec = androidx.compose.animation.core.tween(170, easing = androidx.compose.animation.core.FastOutLinearInEasing)
-        ) + androidx.compose.animation.fadeOut(androidx.compose.animation.core.tween(130))),
+            targetScale = 0.4f,
+            animationSpec = androidx.compose.animation.core.spring(dampingRatio = 0.8f, stiffness = 400f)
+        ) + androidx.compose.animation.shrinkVertically(
+            shrinkTowards = Alignment.Bottom,
+            animationSpec = androidx.compose.animation.core.spring(dampingRatio = 0.8f, stiffness = 400f)
+        ) + androidx.compose.animation.shrinkHorizontally(
+            shrinkTowards = Alignment.CenterHorizontally,
+            animationSpec = androidx.compose.animation.core.spring(dampingRatio = 0.8f, stiffness = 400f)
+        ) + androidx.compose.animation.fadeOut(androidx.compose.animation.core.tween(150))),
         modifier = modifier
     ) {
         val safeState = state ?: NetworkBannerState.OFFLINE

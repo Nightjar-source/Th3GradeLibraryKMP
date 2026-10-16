@@ -1,5 +1,10 @@
 package com.Nightjar.Th3GradeLibraryKMP.theme
 
+import androidx.compose.foundation.layout.*
+import androidx.compose.material3.Surface
+import androidx.compose.runtime.remember
+import androidx.compose.ui.Alignment
+
 import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.setValue
@@ -58,8 +63,11 @@ fun parseHexColor(hex: String): Color {
 
 val LocalIsLowEndDevice = compositionLocalOf { false }
 val LocalIsNavigatingBack = compositionLocalOf { false }
+val LocalSeenEntranceItems = compositionLocalOf<androidx.compose.runtime.snapshots.SnapshotStateMap<String, Boolean>?> { null }
+val LocalScreenEntranceKey = compositionLocalOf { "default_screen" }
+val LocalIsReturningFromPdf = compositionLocalOf { false }
 
-// Glassmorphism modifier optimized with drawWithCache
+// Glassmorphism modifier optimized with hardware-accelerated drawWithCache
 fun Modifier.liquidGlass(
     isDark: Boolean,
     borderRadius: Dp = 24.dp,
@@ -81,19 +89,13 @@ fun Modifier.liquidGlass(
         MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.15f)
     }
     this.drawWithCache {
-        val roundedRect = RoundRect(
-            rect = size.toRect(),
-            cornerRadius = CornerRadius(borderRadius.toPx())
-        )
-        val path = Path().apply { addRoundRect(roundedRect) }
+        val radiusPx = CornerRadius(borderRadius.coerceAtLeast(0.dp).toPx())
+        val strokeWidth = 1.dp.toPx()
+        val strokeStyle = Stroke(width = strokeWidth)
         
         onDrawBehind {
-            drawPath(path, color = bg)
-            drawPath(
-                path, 
-                color = border, 
-                style = Stroke(width = 1.dp.toPx())
-            )
+            drawRoundRect(color = bg, cornerRadius = radiusPx)
+            drawRoundRect(color = border, cornerRadius = radiusPx, style = strokeStyle)
         }
     }
 }
@@ -131,7 +133,10 @@ fun Modifier.expressiveButtonMorph(
     restRadius: androidx.compose.ui.unit.Dp = 24.dp,
     pressedRadius: androidx.compose.ui.unit.Dp = 8.dp,
     pressedScale: Float = 0.92f,
-    interactionSource: androidx.compose.foundation.interaction.MutableInteractionSource
+    interactionSource: androidx.compose.foundation.interaction.MutableInteractionSource,
+    backgroundColor: Color? = null,
+    borderWidth: androidx.compose.ui.unit.Dp? = null,
+    borderColor: Color? = null
 ): Modifier = composed {
     val isPressed by interactionSource.collectIsPressedAsState()
     val cornerRadius by androidx.compose.animation.core.animateDpAsState(
@@ -144,37 +149,126 @@ fun Modifier.expressiveButtonMorph(
         animationSpec = androidx.compose.animation.core.spring(dampingRatio = 0.52f, stiffness = 420f),
         label = "expressive_scale_morph"
     )
+    val shape = RoundedCornerShape(cornerRadius.coerceAtLeast(0.dp))
     this
-        .scale(scale)
-        .clip(RoundedCornerShape(cornerRadius))
+        .graphicsLayer {
+            scaleX = scale
+            scaleY = scale
+        }
+        .clip(shape)
+        .then(if (backgroundColor != null) Modifier.background(backgroundColor, shape) else Modifier)
+        .then(if (borderWidth != null && borderColor != null) Modifier.border(borderWidth, borderColor, shape) else Modifier)
 }
 
 /**
- * Staggered pop-in animation on screen load (from caliq5).
- * Guaranteed never to flash an empty/blank screen: initial alpha is 0.70f and fluidly rises to 1.0f.
+ * Fluid staggered sliding animation on screen load and quick navigations (matching caliq5 exactly).
+ * Replays smoothly on every screen entrance or tab switch with an elegant, moist (Fluid) spring motion.
+ * Protected by LocalSeenEntranceItems session cache to never re-trigger or flash during list scrolling or accordion toggles.
  */
-fun Modifier.popInOnInitialLoad(index: Int = 0): Modifier = composed {
-    var isLoaded by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf(false) }
-    androidx.compose.runtime.LaunchedEffect(Unit) {
+fun Modifier.screenEntranceStagger(index: Int = 0, itemId: String? = null): Modifier = composed {
+    val isLowEnd = LocalIsLowEndDevice.current
+    if (isLowEnd || index > 10) return@composed this
+
+    val isReturningFromPdf = LocalIsReturningFromPdf.current
+    val screenKey = LocalScreenEntranceKey.current
+    val seenMap = LocalSeenEntranceItems.current
+    val itemKey = itemId ?: index.toString()
+    val alreadySeen = seenMap?.get(itemKey) == true
+    val isActiveSharedTarget = com.Nightjar.Th3GradeLibraryKMP.ui.TransitionTargetTracker.isTransitionActive &&
+            (com.Nightjar.Th3GradeLibraryKMP.ui.TransitionTargetTracker.activeTargetId == "card_$itemKey" || com.Nightjar.Th3GradeLibraryKMP.ui.TransitionTargetTracker.activeTargetId == itemKey)
+
+    if (isReturningFromPdf || alreadySeen || isActiveSharedTarget) return@composed this
+
+    val animProgress = androidx.compose.runtime.remember(screenKey) { androidx.compose.animation.core.Animatable(0f) }
+    val density = androidx.compose.ui.platform.LocalDensity.current
+    val offsetYPx = androidx.compose.runtime.remember(density) { with(density) { 12.dp.toPx() } }
+
+    androidx.compose.runtime.LaunchedEffect(screenKey) {
+        val staggerDelay = (index.coerceIn(0, 6) * 16L)
+        if (staggerDelay > 0) kotlinx.coroutines.delay(staggerDelay)
+        animProgress.animateTo(
+            targetValue = 1f,
+            animationSpec = androidx.compose.animation.core.spring(
+                dampingRatio = 0.82f, // Ultra-buttery moist curve
+                stiffness = 420f
+            )
+        )
+        seenMap?.put(itemKey, true)
+    }
+
+    this.graphicsLayer {
+        val p = animProgress.value
+        this.alpha = p.coerceIn(0f, 1f)
+        this.translationY = (1f - p) * offsetYPx
+        this.scaleX = 0.985f + 0.015f * p
+        this.scaleY = 0.985f + 0.015f * p
+        this.clip = false
+    }
+}
+
+/**
+ * Screen entrance cascade alias with item ID support.
+ */
+fun Modifier.screenEntranceCascade(index: Int = 0, itemId: String? = null): Modifier = this.screenEntranceStagger(index, itemId)
+
+/**
+ * Pop-in animation on initial load (caliq5 standard).
+ */
+fun Modifier.popInOnInitialLoad(index: Int = 0, itemId: String? = null): Modifier = this.screenEntranceStagger(index, itemId)
+
+/**
+ * Snappy Scroll-Driven Lazy Loading for items entering viewport during list scrolling (> 6).
+ * Instant 0ms delay, smooth 160ms duration, never flickers or jumps.
+ */
+fun Modifier.scrollLazyLoading(index: Int = 0, itemId: String? = null): Modifier = composed {
+    val isLowEnd = LocalIsLowEndDevice.current
+    if (isLowEnd) return@composed this
+
+    val isReturningFromPdf = LocalIsReturningFromPdf.current
+    val itemKey = itemId ?: index.toString()
+    var isLoaded by androidx.compose.runtime.remember(itemKey) { 
+        androidx.compose.runtime.mutableStateOf(isReturningFromPdf) 
+    }
+
+    androidx.compose.runtime.LaunchedEffect(itemKey) {
         isLoaded = true
     }
+
     val animProgress by androidx.compose.animation.core.animateFloatAsState(
-        targetValue = if (isLoaded) 1f else 0f,
+        targetValue = if (isLoaded || isReturningFromPdf) 1f else 0f,
         animationSpec = androidx.compose.animation.core.tween(
-            durationMillis = 320,
-            delayMillis = (index.coerceAtMost(6) * 30),
-            easing = androidx.compose.animation.core.CubicBezierEasing(0.16f, 1f, 0.3f, 1f)
+            durationMillis = 160,
+            delayMillis = 0,
+            easing = androidx.compose.animation.core.FastOutSlowInEasing
         ),
-        label = "popIn_$index"
+        label = "scrollLazy_$itemKey"
     )
+
     val density = androidx.compose.ui.platform.LocalDensity.current
     val offsetYPx = androidx.compose.runtime.remember(density) { with(density) { 16.dp.toPx() } }
+
     this.graphicsLayer {
-        this.alpha = 0.85f + 0.15f * animProgress
-        this.translationY = (1f - animProgress) * offsetYPx
-        this.scaleX = 0.99f + 0.01f * animProgress
-        this.scaleY = 0.99f + 0.01f * animProgress
+        val p = if (isReturningFromPdf) 1f else animProgress
+        this.alpha = 0.85f + 0.15f * p
+        this.translationY = (1f - p) * offsetYPx
+        this.scaleX = 0.98f + 0.02f * p
+        this.scaleY = 0.98f + 0.02f * p
         this.clip = false
+    }
+}
+
+fun Modifier.lazyFastLoading(index: Int = 0, itemId: String? = null): Modifier = this.scrollLazyLoading(index, itemId)
+
+/**
+ * Unified adaptive entrance: Screen Entrance Cascade for initial visible items (0..6),
+ * and Snappy Scroll Lazy Loading for subsequent scrolled items (> 6).
+ * Ensures every tab re-entry smoothly cascades, while list scrolling remains snappy and lag-free.
+ */
+fun Modifier.adaptiveItemEntrance(index: Int = 0, itemId: String? = null): Modifier = composed {
+    if (index <= 6) {
+        this.screenEntranceCascade(index, itemId)
+    } else {
+        this
     }
 }
 
@@ -372,3 +466,78 @@ fun Th3GradeTheme(
         content = content
     )
 }
+
+fun Color.contrastingTextColor(): Color {
+    // Relative luminance calculation according to WCAG 2.1
+    val lum = 0.2126f * red + 0.7152f * green + 0.0722f * blue
+    return if (lum > 0.45f) Color(0xFF1E293B) else Color.White
+}
+
+@Composable
+fun MorphingButton(
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    restRadius: androidx.compose.ui.unit.Dp = 24.dp,
+    pressedRadius: androidx.compose.ui.unit.Dp = 8.dp,
+    pressedScale: Float = 0.92f,
+    containerColor: Color = MaterialTheme.colorScheme.primary,
+    contentColor: Color = MaterialTheme.colorScheme.onPrimary,
+    border: androidx.compose.foundation.BorderStroke? = null,
+    content: @Composable RowScope.() -> Unit
+) {
+    val coroutineScope = androidx.compose.runtime.rememberCoroutineScope()
+    var isImpulseActive by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf(false) }
+    val interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() }
+    val isPressed by interactionSource.collectIsPressedAsState()
+    val isMorphActive = isPressed || isImpulseActive
+
+    val cornerRadius by androidx.compose.animation.core.animateDpAsState(
+        targetValue = if (isMorphActive) pressedRadius else restRadius,
+        animationSpec = androidx.compose.animation.core.spring(dampingRatio = 0.52f, stiffness = 420f),
+        label = "expressive_corner_morph"
+    )
+    val scale by androidx.compose.animation.core.animateFloatAsState(
+        targetValue = if (isMorphActive) pressedScale else 1.0f,
+        animationSpec = androidx.compose.animation.core.spring(dampingRatio = 0.52f, stiffness = 420f),
+        label = "expressive_scale_morph"
+    )
+
+    val shape = androidx.compose.foundation.shape.RoundedCornerShape(cornerRadius.coerceAtLeast(0.dp))
+    Box(
+        modifier = modifier
+            .graphicsLayer {
+                scaleX = scale
+                scaleY = scale
+            }
+            .clip(shape)
+            .background(containerColor)
+            .then(if (border != null) Modifier.border(border, shape) else Modifier)
+            .clickable(
+                interactionSource = interactionSource,
+                indication = null,
+                onClick = {
+                    coroutineScope.launch {
+                        isImpulseActive = true
+                        kotlinx.coroutines.delay(130)
+                        isImpulseActive = false
+                    }
+                    onClick()
+                }
+            ),
+        contentAlignment = Alignment.Center
+    ) {
+        androidx.compose.runtime.CompositionLocalProvider(
+            androidx.compose.material3.LocalContentColor provides contentColor
+        ) {
+            Row(
+                Modifier
+                    .defaultMinSize(minWidth = 64.dp, minHeight = 40.dp)
+                    .padding(horizontal = 24.dp, vertical = 8.dp),
+                horizontalArrangement = Arrangement.Center,
+                verticalAlignment = Alignment.CenterVertically,
+                content = content
+            )
+        }
+    }
+}
+

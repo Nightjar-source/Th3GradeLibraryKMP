@@ -1,6 +1,8 @@
 package com.Nightjar.Th3GradeLibraryKMP.ui
 
 import androidx.compose.animation.core.*
+import androidx.compose.foundation.layout.offset
+import kotlin.math.roundToInt
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.composed
@@ -90,10 +92,14 @@ fun Modifier.elasticOverscroll(
         }
     }
 
+    LaunchedEffect(overscrollOffset.value) {
+        TransitionTargetTracker.currentOverscrollY = overscrollOffset.value
+    }
+
     this
         .onSizeChanged { componentHeight = it.height.toFloat() }
         .nestedScroll(nestedScrollConnection)
-        .graphicsLayer {
-            translationY = overscrollOffset.value
+        .offset {
+            androidx.compose.ui.unit.IntOffset(0, overscrollOffset.value.roundToInt())
         }
 }

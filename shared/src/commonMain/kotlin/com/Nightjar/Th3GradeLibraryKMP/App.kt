@@ -102,7 +102,8 @@ fun App(
             LocalLayoutDirection provides LayoutDirection.Rtl,
             com.Nightjar.Th3GradeLibraryKMP.theme.LocalIsLowEndDevice provides (platformActionHandler?.isLowEndDevice() ?: false)
         ) {
-            var showSplash by androidx.compose.runtime.saveable.rememberSaveable { mutableStateOf(true) }
+            val isDirectShortcutLaunch = initialBookId != null || (initialPage != null && initialPage != "home")
+            var showSplash by androidx.compose.runtime.saveable.rememberSaveable { mutableStateOf(!isDirectShortcutLaunch) }
 
             androidx.compose.animation.AnimatedContent(
                 targetState = showSplash,
@@ -171,8 +172,18 @@ fun AppContent(
     // Hoisted scroll/list states for preserving positions across navigation
     val newsLazyGridState = androidx.compose.foundation.lazy.grid.rememberLazyGridState()
     val libraryHomeScrollState = androidx.compose.foundation.rememberScrollState()
-    val libraryBooksLazyGridState = androidx.compose.foundation.lazy.grid.rememberLazyGridState()
-    val libraryNotesLazyGridState = androidx.compose.foundation.lazy.grid.rememberLazyGridState()
+    val initialBookIndex = remember(initialBookId, initialIsNote) {
+        if (initialBookId != null && !initialIsNote) {
+            AllItems.books.indexOfFirst { it.id == initialBookId }.takeIf { it >= 0 } ?: 0
+        } else 0
+    }
+    val initialNoteIndex = remember(initialBookId, initialIsNote) {
+        if (initialBookId != null && initialIsNote) {
+            AllItems.notes.indexOfFirst { it.id == initialBookId }.takeIf { it >= 0 } ?: 0
+        } else 0
+    }
+    val libraryBooksLazyGridState = androidx.compose.foundation.lazy.grid.rememberLazyGridState(initialFirstVisibleItemIndex = initialBookIndex)
+    val libraryNotesLazyGridState = androidx.compose.foundation.lazy.grid.rememberLazyGridState(initialFirstVisibleItemIndex = initialNoteIndex)
     val bookmarksLazyGridState = androidx.compose.foundation.lazy.grid.rememberLazyGridState()
     val shortcutsLazyGridState = androidx.compose.foundation.lazy.grid.rememberLazyGridState()
     val aboutScrollState = androidx.compose.foundation.rememberScrollState()
@@ -187,10 +198,13 @@ fun AppContent(
             initialBookId = initialBookId,
             initialIsNote = initialIsNote
         )
+        onIntentConsumed()
     }
 
     val pageHistory = viewModel.pageHistory
     var page by viewModel::page
+    val screenNavCounter by viewModel::screenNavCounter
+    var isReturningFromPdf by viewModel::isReturningFromPdf
 
     val density = androidx.compose.ui.platform.LocalDensity.current
     val bottomBarHeightPx = with(density) { 200.dp.toPx() } // Safety height to slide completely off screen under nav bars
@@ -283,8 +297,15 @@ fun AppContent(
 
     // Bookmarks list from SyncEngine (Persistent Cache)
     val savedItemIds by SyncEngine.savedBookmarks.collectAsState()
-    val savedItems = remember(savedItemIds) {
-        val savedBookIds = savedItemIds.map { it.split(":")[0] }.toSet()
+    val isTransitionActive = com.Nightjar.Th3GradeLibraryKMP.ui.TransitionTargetTracker.isTransitionActive
+    val activeTargetId = com.Nightjar.Th3GradeLibraryKMP.ui.TransitionTargetTracker.activeTargetId
+
+    val savedItems = remember(savedItemIds, isTransitionActive, activeTargetId) {
+        val savedBookIds = savedItemIds.map { it.split(":")[0] }.toMutableSet()
+        if (isTransitionActive && activeTargetId != null && activeTargetId.startsWith("bookmark_")) {
+            val activeBookId = activeTargetId.substringAfter("bookmark_").substringBeforeLast("_")
+            if (activeBookId.isNotEmpty()) savedBookIds.add(activeBookId)
+        }
         (AllItems.books + AllItems.notes).filter { it.id in savedBookIds }
     }
     var pdfInitialPage by viewModel::pdfInitialPage
@@ -338,12 +359,15 @@ fun AppContent(
                     val state = if (target.isNote) libraryNotesLazyGridState else libraryBooksLazyGridState
                     scope.launch {
                         try {
-                            state.scrollToItem(targetIdx)
+                            state.scrollToItem(targetIdx + 1)
                         } catch (_: Exception) {}
                     }
                 }
                 
-                // Open directly without list screen flash
+                // Open directly without list screen flash, arming TransitionTargetTracker
+                com.Nightjar.Th3GradeLibraryKMP.ui.TransitionTargetTracker.activeTargetId = "card_${target.id}"
+                com.Nightjar.Th3GradeLibraryKMP.ui.TransitionTargetTracker.isTransitionActive = true
+                viewModel.pdfSourcePage = "list"
                 viewModel.selectItem(target, SyncEngine.lastReadPages.value[target.id])
                 consumed = true
             }
@@ -393,7 +417,7 @@ fun AppContent(
         val isWide = screenWidthDp >= 600.dp
         
         val currentNavBar = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
-        val currentStatusBar = WindowInsets.statusBars.asPaddingValues().calculateTopPadding()
+        val currentStatusBar = WindowInsets.statusBars.add(WindowInsets.captionBar).asPaddingValues().calculateTopPadding()
         
         val listBottomPadding = if (isWide) 24.dp + currentNavBar else 110.dp + currentNavBar
 
@@ -402,9 +426,9 @@ fun AppContent(
             modifier = Modifier
                 .fillMaxSize()
         ) {
-                // Background Orbs (Premium Liquid M3 Aesthetics)
+                // Background Orbs (Premium Liquid M3 Aesthetics) - Layer 0
                 if (platformActionHandler?.isLowEndDevice() != true) {
-                    Box(modifier = Modifier.fillMaxSize()) {
+                    Box(modifier = Modifier.fillMaxSize().zIndex(0f)) {
                     val orbSize = if (isWide) 200.dp else 300.dp
                     Box(
                         modifier = Modifier
@@ -447,6 +471,7 @@ fun AppContent(
                     Box(
                         modifier = Modifier
                             .fillMaxSize()
+                            .zIndex(10f)
                     ) {
                         AnimatedContent(
                             targetState = page,
@@ -457,13 +482,33 @@ fun AppContent(
                                 val targetIndex = pageOrder.indexOf(targetState).takeIf { it >= 0 } ?: 0
                                 
                                 if (targetState == "pdf") {
-                                    fadeIn(tween(260, easing = androidx.compose.animation.core.CubicBezierEasing(0.2f, 0f, 0f, 1f))).togetherWith(
-                                        fadeOut(tween(180))
-                                    )
+                                    fadeIn(tween(320, easing = androidx.compose.animation.core.LinearEasing)).togetherWith(
+                                        fadeOut(tween(320, easing = androidx.compose.animation.core.LinearEasing))
+                                    ).apply {
+                                        targetContentZIndex = 1f
+                                    }
                                 } else if (initialState == "pdf") {
-                                    fadeIn(tween(200)).togetherWith(
-                                        fadeOut(tween(260, easing = androidx.compose.animation.core.FastOutLinearInEasing))
-                                    )
+                                    val returnSource = viewModel.pdfSourcePage
+                                    val isSharedSource = returnSource in listOf("home", "list", "bookmarks")
+                                    val enterTransition = if (isSharedSource) {
+                                        androidx.compose.animation.EnterTransition.None
+                                    } else {
+                                        fadeIn(tween(260, easing = androidx.compose.animation.core.LinearEasing)) + slideInVertically(
+                                            initialOffsetY = { -it / 12 },
+                                            animationSpec = spring(dampingRatio = 0.82f, stiffness = Spring.StiffnessMediumLow)
+                                        )
+                                    }
+                                    val exitTransition = if (isSharedSource) {
+                                        fadeOut(tween(280, easing = androidx.compose.animation.core.LinearEasing))
+                                    } else {
+                                        fadeOut(tween(260, easing = androidx.compose.animation.core.LinearEasing)) + slideOutVertically(
+                                            targetOffsetY = { it },
+                                            animationSpec = spring(dampingRatio = 0.82f, stiffness = Spring.StiffnessMediumLow)
+                                        )
+                                    }
+                                    enterTransition.togetherWith(exitTransition).apply {
+                                        targetContentZIndex = 0f
+                                    }
                                 } else {
                                     val fluidEasing = androidx.compose.animation.core.CubicBezierEasing(0.16f, 1f, 0.3f, 1f)
                                     val slideSpec = androidx.compose.animation.core.tween<androidx.compose.ui.unit.IntOffset>(
@@ -472,7 +517,7 @@ fun AppContent(
                                     )
                                     val fadeSpec = androidx.compose.animation.core.tween<Float>(
                                         durationMillis = 260,
-                                        easing = androidx.compose.animation.core.LinearOutSlowInEasing
+                                        easing = androidx.compose.animation.core.FastOutSlowInEasing
                                     )
                                     val direction = if (isNavigatingBack || targetIndex < initialIndex) 1 else -1 // RTL: Forward is -1 (from left), Backward is 1 (from right)
 
@@ -488,6 +533,16 @@ fun AppContent(
                                 }
                             }
                         ) { targetPage ->
+                            val currentTransition = this@AnimatedContent.transition
+                            LaunchedEffect(currentTransition.currentState, currentTransition.targetState, targetPage) {
+                                if (currentTransition.currentState == androidx.compose.animation.EnterExitState.Visible &&
+                                    currentTransition.targetState == androidx.compose.animation.EnterExitState.Visible &&
+                                    targetPage != "pdf"
+                                ) {
+                                    com.Nightjar.Th3GradeLibraryKMP.ui.TransitionTargetTracker.isTransitionActive = false
+                                    com.Nightjar.Th3GradeLibraryKMP.ui.TransitionTargetTracker.activeTargetId = null
+                                }
+                            }
                             val pageContentPadding = PaddingValues(
                                 end = if (isWide && targetPage in listOf("home", "list", "news", "bookmarks", "shortcuts", "about")) 90.dp else 0.dp
                             )
@@ -499,9 +554,13 @@ fun AppContent(
                                     .padding(pageContentPadding),
                                 contentAlignment = Alignment.TopCenter
                             ) {
+                                val seenKeysForScreen = remember(targetPage, screenNavCounter) { androidx.compose.runtime.mutableStateMapOf<String, Boolean>() }
                                 CompositionLocalProvider(
                                     LocalAnimatedVisibilityScope provides this@AnimatedContent,
-                                    com.Nightjar.Th3GradeLibraryKMP.theme.LocalIsNavigatingBack provides isNavigatingBack
+                                    com.Nightjar.Th3GradeLibraryKMP.theme.LocalIsNavigatingBack provides isNavigatingBack,
+                                    com.Nightjar.Th3GradeLibraryKMP.theme.LocalSeenEntranceItems provides seenKeysForScreen,
+                                    com.Nightjar.Th3GradeLibraryKMP.theme.LocalScreenEntranceKey provides "${targetPage}_$screenNavCounter",
+                                    com.Nightjar.Th3GradeLibraryKMP.theme.LocalIsReturningFromPdf provides isReturningFromPdf
                                 ) { saveableStateHolder.SaveableStateProvider(targetPage) {
                                 when (targetPage) {
                                     "home" -> LibraryScreen(
@@ -607,7 +666,8 @@ fun AppContent(
                                                 },
                                                 initialPage = pdfInitialPage,
                                                 isDark = isDark,
-                                                isFromBookmarks = viewModel.isFromBookmarks
+                                                isFromBookmarks = viewModel.isFromBookmarks,
+                                                sourcePage = viewModel.pdfSourcePage
                                             )
                                         }
                                     }
@@ -628,7 +688,7 @@ fun AppContent(
                     modifier = Modifier.align(Alignment.TopCenter).fillMaxWidth().zIndex(200f).then(
                         if (LocalSharedTransitionScope.current != null) {
                             with(LocalSharedTransitionScope.current!!) {
-                                Modifier.renderInSharedTransitionScopeOverlay(zIndexInOverlay = 20f)
+                                Modifier.renderInSharedTransitionScopeOverlay(zIndexInOverlay = 50f)
                             }
                         } else Modifier
                     )
@@ -637,7 +697,7 @@ fun AppContent(
                     val topBarPaddingV = if (isWide) 4.dp else 8.dp
                     Box(
                         modifier = Modifier
-                            .statusBarsPadding()
+                            .windowInsetsPadding(WindowInsets.statusBars.add(WindowInsets.captionBar))
                             .windowInsetsPadding(WindowInsets.safeDrawing.only(WindowInsetsSides.Horizontal))
                             .padding(
                                 start = 16.dp,
@@ -818,7 +878,7 @@ fun AppContent(
                     modifier = Modifier.align(Alignment.TopCenter).zIndex(200f).then(
                         if (LocalSharedTransitionScope.current != null) {
                             with(LocalSharedTransitionScope.current!!) {
-                                Modifier.renderInSharedTransitionScopeOverlay(zIndexInOverlay = 20f)
+                                Modifier.renderInSharedTransitionScopeOverlay(zIndexInOverlay = 50f)
                             }
                         } else Modifier
                     )
@@ -900,7 +960,11 @@ fun AppContent(
                                             modifier = Modifier.fillMaxWidth(),
                                             contentAlignment = Alignment.CenterStart
                                         ) {
-                                            if (searchQuery.isEmpty() && !isListening && !isClearingAnimation) {
+                                            androidx.compose.animation.AnimatedVisibility(
+                                                visible = searchQuery.isEmpty() && !isListening && !isClearingAnimation,
+                                                enter = androidx.compose.animation.fadeIn(animationSpec = tween(220, delayMillis = 150)),
+                                                exit = androidx.compose.animation.fadeOut(animationSpec = tween(120))
+                                            ) {
                                                 Text(
                                                     text = "ابحث عن ملزمة أو كتاب...",
                                                     style = LocalTextStyle.current.copy(
@@ -929,6 +993,8 @@ fun AppContent(
                                         modifier = Modifier.graphicsLayer {
                                             translationX = clearTextSlideOffset.value
                                             alpha = clearTextSlideAlpha.value
+                                            scaleX = clearTextSlideAlpha.value
+                                            scaleY = clearTextSlideAlpha.value
                                         }
                                     )
                                 }
@@ -981,8 +1047,13 @@ fun AppContent(
 
                             androidx.compose.animation.AnimatedVisibility(
                                 visible = (searchQuery.isNotEmpty() || isClearingAnimation) && !isListening,
-                                enter = androidx.compose.animation.expandHorizontally() + androidx.compose.animation.fadeIn(),
-                                exit = androidx.compose.animation.shrinkHorizontally() + androidx.compose.animation.fadeOut()
+                                enter = androidx.compose.animation.fadeIn(animationSpec = tween(220)) + 
+                                        androidx.compose.animation.scaleIn(initialScale = 0.8f, animationSpec = spring(dampingRatio = 0.7f, stiffness = 200f)) +
+                                        androidx.compose.animation.expandHorizontally(expandFrom = Alignment.End, animationSpec = spring(dampingRatio = 0.8f, stiffness = 250f)),
+                                exit = androidx.compose.animation.fadeOut(animationSpec = tween(200)) + 
+                                       androidx.compose.animation.scaleOut(targetScale = 0.5f, animationSpec = tween(200)) + 
+                                       androidx.compose.animation.slideOutVertically(targetOffsetY = { it / 2 }, animationSpec = tween(200)) +
+                                       androidx.compose.animation.shrinkHorizontally(shrinkTowards = Alignment.End, animationSpec = tween(200))
                             ) {
                                 val clearSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() }
                                 IconButton(
@@ -1046,7 +1117,7 @@ fun AppContent(
             modifier = Modifier.align(Alignment.BottomCenter).fillMaxWidth().zIndex(200f).then(
                 if (LocalSharedTransitionScope.current != null) {
                     with(LocalSharedTransitionScope.current!!) {
-                        Modifier.renderInSharedTransitionScopeOverlay(zIndexInOverlay = 20f)
+                        Modifier.renderInSharedTransitionScopeOverlay(zIndexInOverlay = 50f)
                     }
                 } else Modifier
             )
@@ -1187,7 +1258,7 @@ fun AppContent(
             modifier = Modifier.align(Alignment.CenterEnd).fillMaxHeight().zIndex(200f).then(
                 if (LocalSharedTransitionScope.current != null) {
                     with(LocalSharedTransitionScope.current!!) {
-                        Modifier.renderInSharedTransitionScopeOverlay(zIndexInOverlay = 20f)
+                        Modifier.renderInSharedTransitionScopeOverlay(zIndexInOverlay = 50f)
                     }
                 } else Modifier
             )
@@ -1485,6 +1556,8 @@ fun AppContent(
                 modifier = Modifier
                     .fillMaxSize()
                     .background(Color.Black.copy(alpha = 0.5f))
+                    .windowInsetsPadding(WindowInsets.statusBars.add(WindowInsets.captionBar))
+                    .windowInsetsPadding(WindowInsets.safeDrawing.only(WindowInsetsSides.Horizontal + WindowInsetsSides.Bottom))
                     .clickable(
                         interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() },
                         indication = null
@@ -1540,49 +1613,35 @@ fun AppContent(
                             modifier = Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.spacedBy(12.dp)
                         ) {
-                            val cancelSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() }
-                            androidx.compose.material3.OutlinedButton(
+                            com.Nightjar.Th3GradeLibraryKMP.theme.MorphingButton(
                                 onClick = { showClearCacheDialog = false },
-                                modifier = Modifier
-                                    .weight(1f)
-                                    .expressiveButtonMorph(
-                                        restRadius = 24.dp,
-                                        pressedRadius = 8.dp,
-                                        interactionSource = cancelSource
-                                    ),
-                                shape = RoundedCornerShape(24.dp),
-                                interactionSource = cancelSource
+                                modifier = Modifier.weight(1f),
+                                restRadius = 24.dp,
+                                pressedRadius = 8.dp,
+                                containerColor = Color.Transparent,
+                                contentColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                                border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f))
                             ) {
                                 Text(
                                     text = "إلغاء",
-                                    textAlign = androidx.compose.ui.text.style.TextAlign.Justify,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    textAlign = androidx.compose.ui.text.style.TextAlign.Justify
                                 )
                             }
-                            val deleteSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() }
-                            androidx.compose.material3.Button(
+                            com.Nightjar.Th3GradeLibraryKMP.theme.MorphingButton(
                                 onClick = {
                                     showClearCacheDialog = false
                                     SyncEngine.clearNewsCache()
                                     platformActionHandler.clearDiskCache()
                                     platformActionHandler.showToast("تم مسح كاش التطبيق والملفات المؤقتة بنجاح ✓")
                                 },
-                                modifier = Modifier
-                                    .weight(1f)
-                                    .expressiveButtonMorph(
-                                        restRadius = 24.dp,
-                                        pressedRadius = 8.dp,
-                                        interactionSource = deleteSource
-                                    ),
-                                shape = RoundedCornerShape(24.dp),
-                                colors = androidx.compose.material3.ButtonDefaults.buttonColors(
-                                    containerColor = Color(0xFFDC2626)
-                                ),
-                                interactionSource = deleteSource
+                                modifier = Modifier.weight(1f),
+                                restRadius = 24.dp,
+                                pressedRadius = 8.dp,
+                                containerColor = Color(0xFFDC2626),
+                                contentColor = Color.White
                             ) {
                                 Text(
                                     text = "حذف الآن",
-                                    color = Color.White,
                                     fontWeight = FontWeight.Bold,
                                     textAlign = androidx.compose.ui.text.style.TextAlign.Justify
                                 )
@@ -1638,23 +1697,35 @@ fun AppContent(
         androidx.compose.animation.AnimatedVisibility(
             visible = toastMessage != null,
             enter = (androidx.compose.animation.slideInVertically(
-                initialOffsetY = { (it * 0.7f).toInt() },
-                animationSpec = spring(dampingRatio = 0.72f, stiffness = Spring.StiffnessMediumLow)
+                initialOffsetY = { (it * 0.5f).toInt() },
+                animationSpec = spring(dampingRatio = 0.65f, stiffness = 300f)
             ) + androidx.compose.animation.scaleIn(
-                initialScale = 0.88f,
-                animationSpec = spring(dampingRatio = 0.72f, stiffness = Spring.StiffnessMediumLow)
+                initialScale = 0.6f,
+                animationSpec = spring(dampingRatio = 0.65f, stiffness = 300f)
+            ) + androidx.compose.animation.expandVertically(
+                expandFrom = Alignment.Bottom,
+                animationSpec = spring(dampingRatio = 0.65f, stiffness = 300f)
+            ) + androidx.compose.animation.expandHorizontally(
+                expandFrom = Alignment.CenterHorizontally,
+                animationSpec = spring(dampingRatio = 0.65f, stiffness = 300f)
             ) + androidx.compose.animation.fadeIn(tween(200))),
             exit = (androidx.compose.animation.slideOutVertically(
-                targetOffsetY = { (it * 1.3f).toInt() },
-                animationSpec = tween(170, easing = androidx.compose.animation.core.FastOutLinearInEasing)
+                targetOffsetY = { (it * 0.8f).toInt() },
+                animationSpec = spring(dampingRatio = 0.8f, stiffness = 400f)
             ) + androidx.compose.animation.scaleOut(
-                targetScale = 0.80f,
-                animationSpec = tween(170, easing = androidx.compose.animation.core.FastOutLinearInEasing)
-            ) + androidx.compose.animation.fadeOut(tween(130))),
+                targetScale = 0.4f,
+                animationSpec = spring(dampingRatio = 0.8f, stiffness = 400f)
+            ) + androidx.compose.animation.shrinkVertically(
+                shrinkTowards = Alignment.Bottom,
+                animationSpec = spring(dampingRatio = 0.8f, stiffness = 400f)
+            ) + androidx.compose.animation.shrinkHorizontally(
+                shrinkTowards = Alignment.CenterHorizontally,
+                animationSpec = spring(dampingRatio = 0.8f, stiffness = 400f)
+            ) + androidx.compose.animation.fadeOut(tween(150))),
             modifier = Modifier
                 .align(Alignment.BottomCenter)
-                .windowInsetsPadding(WindowInsets.safeDrawing.only(WindowInsetsSides.Horizontal))
-                .padding(bottom = if (isWide) 24.dp else 110.dp) // above bottom nav
+                .windowInsetsPadding(WindowInsets.safeDrawing.only(WindowInsetsSides.Horizontal + WindowInsetsSides.Bottom))
+                .padding(bottom = if (page == "pdf") 96.dp else if (page == "web") 24.dp else if (isWide) 24.dp else 100.dp)
                 .zIndex(250f)
         ) {
             lastNonNullToastMessage?.let { msg ->

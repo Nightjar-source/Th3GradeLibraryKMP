@@ -250,11 +250,30 @@ class MainActivity : ComponentActivity() {
         // Schedule background operations asynchronously to keep main thread 100% free and eliminate startup delay
         CoroutineScope(Dispatchers.IO + SupervisorJob()).launch {
             try {
-                com.Nightjar.Th3GradeLibraryKMP.ui.clearPdfCache(cacheDir)
+                AppCleanupService.cleanAllTemporaryPdfFiles(applicationContext)
                 androidx.browser.customtabs.CustomTabsClient.connectAndInitialize(applicationContext, "com.android.chrome")
             } catch (_: Exception) {}
             scheduleBackgroundSync(applicationContext)
         }
+
+        try {
+            startService(Intent(this, AppCleanupService::class.java))
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
+
+        // On Android 12+, root launcher back press moves task to back without finishing or calling onDestroy.
+        // We explicitly intercept back press at the root level to clear cache and finish activity completely.
+        onBackPressedDispatcher.addCallback(this, object : androidx.activity.OnBackPressedCallback(true) {
+            override fun handleOnBackPressed() {
+                try {
+                    AppCleanupService.cleanAllTemporaryPdfFiles(applicationContext)
+                } catch (e: Exception) {
+                    e.printStackTrace()
+                }
+                finish()
+            }
+        })
 
         // Sequence is handled by hasCompletedInitialSetup above, so we remove the duplicate check here
 
@@ -557,8 +576,9 @@ class MainActivity : ComponentActivity() {
             override fun clearDiskCache() {
                 CoroutineScope(Dispatchers.IO).launch {
                     try {
-                        // 1. Delete all temporary PDF files via unified cache manager
+                        // 1. Delete all temporary PDF files via unified cache manager from both cacheDir and filesDir
                         com.Nightjar.Th3GradeLibraryKMP.ui.clearPdfCache(cacheDir)
+                        filesDir?.let { com.Nightjar.Th3GradeLibraryKMP.ui.clearPdfCache(it) }
                         // 2. Clear Coil Image disk & memory cache
                         coil3.SingletonImageLoader.get(this@MainActivity).let { loader ->
                             loader.diskCache?.clear()
@@ -681,7 +701,6 @@ class MainActivity : ComponentActivity() {
             }
         } else if (level >= TRIM_MEMORY_BACKGROUND) {
             try {
-                com.Nightjar.Th3GradeLibraryKMP.ui.clearPdfCache(cacheDir)
                 com.Nightjar.Th3GradeLibraryKMP.ui.PdfBitmapCache.cache.evictAll()
                 coil3.SingletonImageLoader.get(this).let { loader ->
                     loader.memoryCache?.clear()
@@ -696,7 +715,6 @@ class MainActivity : ComponentActivity() {
     override fun onLowMemory() {
         super.onLowMemory()
         try {
-            com.Nightjar.Th3GradeLibraryKMP.ui.clearPdfCache(cacheDir)
             com.Nightjar.Th3GradeLibraryKMP.ui.PdfBitmapCache.cache.evictAll()
             coil3.SingletonImageLoader.get(this).let { loader ->
                 loader.memoryCache?.clear()
@@ -711,7 +729,7 @@ class MainActivity : ComponentActivity() {
         super.onDestroy()
         // Delete all temporary PDF cache files upon exiting the app to ensure zero storage footprint
         try {
-            com.Nightjar.Th3GradeLibraryKMP.ui.clearPdfCache(cacheDir)
+            AppCleanupService.cleanAllTemporaryPdfFiles(applicationContext)
         } catch (e: Exception) {
             e.printStackTrace()
         }
@@ -725,6 +743,11 @@ class MainActivity : ComponentActivity() {
     override fun onResume() {
         super.onResume()
         SyncEngine.checkNotificationPermission()
+    }
+
+    override fun onConfigurationChanged(newConfig: android.content.res.Configuration) {
+        super.onConfigurationChanged(newConfig)
+        // Handled smoothly by Compose without Activity recreation or black borders (Googlebook OS & Foldables)
     }
 
     private fun handleIntent(intent: Intent?) {

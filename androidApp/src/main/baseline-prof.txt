@@ -1,0 +1,2 @@
+# Baseline profile rules
+# Generates automatically via Macrobenchmark in a separate CI step.

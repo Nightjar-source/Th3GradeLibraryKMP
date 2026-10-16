@@ -39,7 +39,7 @@ fun OnboardingScreen(
                 .elasticOverscroll()
                 .verticalScroll(rememberScrollState())
                 .padding(horizontal = 24.dp)
-                .statusBarsPadding()
+                .windowInsetsPadding(WindowInsets.statusBars.add(WindowInsets.captionBar))
                 .windowInsetsPadding(WindowInsets.safeDrawing.only(WindowInsetsSides.Horizontal)),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {

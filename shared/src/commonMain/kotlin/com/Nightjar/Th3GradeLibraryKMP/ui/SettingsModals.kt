@@ -1,6 +1,7 @@
 package com.Nightjar.Th3GradeLibraryKMP.ui
 
 import com.Nightjar.Th3GradeLibraryKMP.theme.expressiveButtonMorph
+import com.Nightjar.Th3GradeLibraryKMP.theme.contrastingTextColor
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.fadeIn
@@ -170,7 +171,7 @@ fun AppSettingsModal(
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .statusBarsPadding(), // Prevent overlap with status bar
+                            .windowInsetsPadding(WindowInsets.statusBars.add(WindowInsets.captionBar)), // Prevent overlap with status bar and caption bar
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
@@ -365,26 +366,28 @@ fun AppSettingsModal(
                         visible = !settings.useMaterialYou,
                         enter = expandVertically(
                             animationSpec = spring(
-                                dampingRatio = 0.75f,
-                                stiffness = 220f
+                                dampingRatio = 0.82f,
+                                stiffness = androidx.compose.animation.core.Spring.StiffnessLow
                             ),
                             clip = false
-                        ) + fadeIn(androidx.compose.animation.core.tween(260)),
+                        ) + fadeIn(androidx.compose.animation.core.tween(300)),
                         exit = shrinkVertically(
                             animationSpec = spring(
-                                dampingRatio = 0.75f,
-                                stiffness = 220f
+                                dampingRatio = 0.85f,
+                                stiffness = androidx.compose.animation.core.Spring.StiffnessLow
                             ),
                             clip = false
-                        ) + fadeOut(androidx.compose.animation.core.tween(200))
+                        ) + fadeOut(androidx.compose.animation.core.tween(220))
                     ) {
                         Column {
                             Text("اختر لونك المفضل يدوياً:", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(horizontal = 20.dp))
                             Spacer(modifier = Modifier.height(8.dp))
+                            val colorScrollState = rememberScrollState()
                             Row(
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .horizontalScroll(rememberScrollState())
+                                    .horizontalFadingEdges(colorScrollState, 24.dp)
+                                    .horizontalScroll(colorScrollState)
                                     .padding(vertical = 4.dp),
                                 horizontalArrangement = Arrangement.spacedBy(14.dp),
                                 verticalAlignment = Alignment.CenterVertically
@@ -411,7 +414,7 @@ fun AppSettingsModal(
                                             )
                                             .clickable(
                                                 interactionSource = colorInteractionSource,
-                                                indication = androidx.compose.foundation.LocalIndication.current
+                                                indication = null
                                             ) { onUpdateSettings(settings.copy(primaryColor = colorHex)) }
                                     )
                                 }
@@ -480,7 +483,7 @@ fun NewsSettingsModal(
                         modifier = Modifier
                             .fillMaxWidth()
                             .padding(horizontal = 20.dp)
-                            .statusBarsPadding(), // Prevent overlap with status bar
+                            .windowInsetsPadding(WindowInsets.statusBars.add(WindowInsets.captionBar)), // Prevent overlap with status bar and caption bar
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
@@ -696,14 +699,15 @@ fun NewsSettingsModal(
                         }
                         Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                             OptionGridButton("أبداً (لا تحذف)", settings.cacheClearInterval == "never", { onUpdateSettings(settings.copy(cacheClearInterval = "never")) }, Modifier.weight(1f))
-                            Button(
+                            com.Nightjar.Th3GradeLibraryKMP.theme.MorphingButton(
                                 onClick = { onRequestClearCache() },
-                                colors = ButtonDefaults.buttonColors(
-                                    containerColor = MaterialTheme.colorScheme.errorContainer,
-                                    contentColor = MaterialTheme.colorScheme.onErrorContainer
-                                ),
-                                shape = RoundedCornerShape(12.dp),
-                                modifier = Modifier.weight(1f).height(46.dp) // Compact button height
+                                modifier = Modifier.weight(1f).height(46.dp),
+                                restRadius = 14.dp,
+                                pressedRadius = 6.dp,
+                                pressedScale = 0.94f,
+                                containerColor = MaterialTheme.colorScheme.errorContainer,
+                                contentColor = MaterialTheme.colorScheme.errorContainer.contrastingTextColor(),
+                                border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.error.copy(alpha = 0.3f))
                             ) {
                                 Icon(Icons.Default.Delete, contentDescription = null, modifier = Modifier.size(16.dp))
                                 Spacer(modifier = Modifier.width(4.dp))
@@ -730,23 +734,25 @@ fun ThemeOptionButton(
     modifier: Modifier = Modifier
 ) {
     val textColor by androidx.compose.animation.animateColorAsState(
-        targetValue = if (isSelected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant,
+        targetValue = if (isSelected) MaterialTheme.colorScheme.primary.contrastingTextColor() else MaterialTheme.colorScheme.onSurfaceVariant,
         animationSpec = androidx.compose.animation.core.tween(durationMillis = 220),
         label = "theme_text_color"
     )
 
-    Box(
-        modifier = modifier
-            .padding(2.dp)
-            .clip(RoundedCornerShape(10.dp))
-            .clickable(onClick = onClick),
-        contentAlignment = Alignment.Center
+    com.Nightjar.Th3GradeLibraryKMP.theme.MorphingButton(
+        onClick = onClick,
+        modifier = modifier.padding(2.dp),
+        restRadius = 10.dp,
+        pressedRadius = 4.dp,
+        pressedScale = 0.95f,
+        containerColor = Color.Transparent,
+        contentColor = textColor,
+        border = null
     ) {
         Text(
             text = label,
             fontSize = 14.sp,
             fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
-            color = textColor,
             textAlign = TextAlign.Justify
         )
     }
@@ -761,22 +767,22 @@ fun OptionGridButton(
 ) {
     val bg = if (isSelected) MaterialTheme.colorScheme.primaryContainer else Color.Transparent
     val border = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline
-    val contentColor = if (isSelected) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurface
+    val contentColor = if (isSelected) MaterialTheme.colorScheme.primaryContainer.contrastingTextColor() else MaterialTheme.colorScheme.onSurface
 
-    Box(
-        modifier = modifier
-            .clip(RoundedCornerShape(16.dp))
-            .background(bg)
-            .border(1.dp, border, RoundedCornerShape(16.dp))
-            .clickable { onClick() }
-            .padding(14.dp),
-        contentAlignment = Alignment.Center
+    com.Nightjar.Th3GradeLibraryKMP.theme.MorphingButton(
+        onClick = onClick,
+        modifier = modifier,
+        restRadius = 16.dp,
+        pressedRadius = 6.dp,
+        pressedScale = 0.95f,
+        containerColor = bg,
+        contentColor = contentColor,
+        border = androidx.compose.foundation.BorderStroke(1.dp, border)
     ) {
         Text(
             text = label,
             fontSize = 13.sp,
             fontWeight = FontWeight.Bold,
-            color = contentColor,
             textAlign = TextAlign.Justify
         )
     }

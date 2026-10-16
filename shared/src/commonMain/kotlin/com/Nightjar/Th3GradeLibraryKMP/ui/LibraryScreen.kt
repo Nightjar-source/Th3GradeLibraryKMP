@@ -6,6 +6,8 @@ import androidx.compose.animation.*
 import androidx.compose.ui.graphics.drawscope.translate
 import kotlinx.coroutines.launch
 import androidx.compose.animation.core.tween
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.LinearOutSlowInEasing
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -23,8 +25,6 @@ import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.ui.draw.drawWithCache
-import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.zIndex
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -39,6 +39,8 @@ import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.layout.boundsInRoot
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -59,6 +61,8 @@ import com.Nightjar.Th3GradeLibraryKMP.theme.liquidGlass
 import com.Nightjar.Th3GradeLibraryKMP.theme.bounceClick
 import com.Nightjar.Th3GradeLibraryKMP.theme.parseHexColor
 import com.Nightjar.Th3GradeLibraryKMP.theme.popInOnInitialLoad
+import com.Nightjar.Th3GradeLibraryKMP.theme.screenEntranceStagger
+import com.Nightjar.Th3GradeLibraryKMP.theme.adaptiveItemEntrance
 import org.jetbrains.compose.resources.painterResource
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.layout.Layout
@@ -67,10 +71,12 @@ import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.CubicBezierEasing
 import androidx.compose.animation.core.spring
-import androidx.compose.animation.core.Spring
 import androidx.compose.ui.composed
 import androidx.compose.ui.unit.lerp
 import com.Nightjar.Th3GradeLibraryKMP.theme.LocalIsLowEndDevice
+import androidx.compose.ui.draw.drawBehind
+import com.Nightjar.Th3GradeLibraryKMP.theme.LocalScreenEntranceKey
+import com.Nightjar.Th3GradeLibraryKMP.theme.LocalIsReturningFromPdf
 
 @Composable
 fun LibraryScreen(
@@ -110,7 +116,7 @@ fun LibraryScreen(
                     onScrollableStateChanged(canScroll)
                 }
 
-                    val statusBarHeight = WindowInsets.statusBars.asPaddingValues().calculateTopPadding()
+                    val statusBarHeight = WindowInsets.statusBars.add(WindowInsets.captionBar).asPaddingValues().calculateTopPadding()
                     val dynamicTopPadding = if (isWide) statusBarHeight + 64.dp else statusBarHeight + 76.dp
                     
                 Box(
@@ -208,12 +214,36 @@ fun LibraryScreen(
                     onScrollableStateChanged(canScroll)
                 }
 
-                // Hoist fraction so it survives ContentCard recreation during GridCells swaps
+                LaunchedEffect(lazyGridState) {
+                    androidx.compose.runtime.snapshotFlow { lazyGridState.layoutInfo.visibleItemsInfo }.collect { visibleItems ->
+                        TransitionTargetTracker.visibleItemIds = visibleItems.mapNotNull { it.key as? String }.toSet()
+                    }
+                }
+
+                // Ensure target item is present for Hero shrink (ONLY if completely off-screen, e.g. cold start shortcut)
+                LaunchedEffect(TransitionTargetTracker.isTransitionActive, TransitionTargetTracker.activeTargetId) {
+                    if (TransitionTargetTracker.isTransitionActive) {
+                        val targetId = TransitionTargetTracker.activeTargetId
+                        if (targetId != null) {
+                            val cleanId = targetId.removePrefix("card_")
+                            val isAlreadyVisible = lazyGridState.layoutInfo.visibleItemsInfo.any { it.key == cleanId || it.key == targetId }
+                            if (!isAlreadyVisible) {
+                                val targetIndex = filteredList.indexOfFirst { it.id == cleanId }
+                                if (targetIndex != -1) {
+                                    val screenHeight = lazyGridState.layoutInfo.viewportSize.height
+                                    val naturalOffset = if (screenHeight > 0) -screenHeight / 4 else 0
+                                    lazyGridState.scrollToItem(targetIndex, naturalOffset)
+                                }
+                            }
+                        }
+                    }
+                }
+
                 val gridListFraction by animateFloatAsState(
                     targetValue = if (isGridView) 1f else 0f,
                     animationSpec = spring(
-                        dampingRatio = 0.72f,
-                        stiffness = 240f
+                        dampingRatio = 0.78f, // Fluid moist curve
+                        stiffness = 320f
                     ),
                     label = "global_grid_list_fraction"
                 )
@@ -240,7 +270,7 @@ fun LibraryScreen(
                         }
                     }
                 } else {
-                    val statusBarHeight = WindowInsets.statusBars.asPaddingValues().calculateTopPadding()
+                    val statusBarHeight = WindowInsets.statusBars.add(WindowInsets.captionBar).asPaddingValues().calculateTopPadding()
                     val screenWidthDp = with(androidx.compose.ui.platform.LocalDensity.current) { androidx.compose.ui.platform.LocalWindowInfo.current.containerSize.width.toDp() }
                     val isMedium = screenWidthDp >= 600.dp
                     val dynamicTopPadding = if (isMedium) {
@@ -248,19 +278,13 @@ fun LibraryScreen(
                     } else {
                         statusBarHeight + 76.dp
                     }
-                    val isNavigatingBack = com.Nightjar.Th3GradeLibraryKMP.theme.LocalIsNavigatingBack.current
-                    LaunchedEffect(isNavigatingBack) {
-                        if (isNavigatingBack) {
-                            lazyGridState.stopScroll()
-                        }
-                    }
                     LazyVerticalGrid(
                         state = lazyGridState,
-                        userScrollEnabled = !isNavigatingBack,
+                        userScrollEnabled = true,
                         columns = if (isGridView) {
-                            GridCells.Adaptive(minSize = 140.dp) // Shows at least 2 on phones, expands dynamically on tablets/foldables
+                            GridCells.Adaptive(minSize = 140.dp)
                         } else {
-                            if (isMedium) GridCells.Fixed(2) else GridCells.Adaptive(minSize = 350.dp)
+                            GridCells.Adaptive(minSize = 340.dp)
                         },
                         modifier = Modifier
                             .weight(1f)
@@ -275,11 +299,8 @@ fun LibraryScreen(
                     ) {
                         itemsIndexed(items = filteredList, key = { _, item -> item.id }, contentType = { _, _ -> "library_item" }) { index, item ->
                             ContentCard(
-                                modifier = Modifier.animateItem(
-                                    fadeInSpec = null,
-                                    fadeOutSpec = null,
-                                    placementSpec = spring(dampingRatio = 0.72f, stiffness = 200f)
-                                ),
+                                modifier = Modifier
+                                    .adaptiveItemEntrance(index, itemId = item.id),
                                 item = item,
                                 fraction = gridListFraction,
                                 isDark = isDark,
@@ -306,17 +327,19 @@ fun CategoryMenuCard(
 ) {
     val screenWidthDp = with(androidx.compose.ui.platform.LocalDensity.current) { androidx.compose.ui.platform.LocalWindowInfo.current.containerSize.width.toDp() }
     val isWide = screenWidthDp >= 600.dp
-
     val isLowEnd = LocalIsLowEndDevice.current
-    var isCardVisible by remember { mutableStateOf(false) }
-    LaunchedEffect(Unit) {
+    val isReturningFromPdf = LocalIsReturningFromPdf.current
+    val screenKey = LocalScreenEntranceKey.current
+
+    var isCardVisible by remember(screenKey) { mutableStateOf(isReturningFromPdf) }
+    LaunchedEffect(screenKey) {
         isCardVisible = true
     }
     val cardProgress by animateFloatAsState(
         targetValue = if (isCardVisible) 1f else 0f,
         animationSpec = tween(
             durationMillis = 500,
-            delayMillis = index * 90,
+            delayMillis = if (isReturningFromPdf) 0 else index * 90,
             easing = androidx.compose.animation.core.CubicBezierEasing(0.16f, 1f, 0.3f, 1f)
         ),
         label = "categoryCardProgress_$index"
@@ -328,12 +351,15 @@ fun CategoryMenuCard(
     val orb2Brush = remember { Brush.radialGradient(listOf(Color.Black.copy(alpha = 0.12f), Color.Transparent)) }
     val borderBrush = remember { Brush.linearGradient(listOf(Color.White.copy(alpha = 0.4f), Color.White.copy(alpha = 0.05f))) }
 
-    // Background animation calculated efficiently and disabled on low-end devices
-    val anim1: Float
-    val anim2: Float
+    val p48 = remember(density) { with(density) { 48.dp.toPx() } }
+    val p96 = remember(density) { with(density) { 96.dp.toPx() } }
+    val p80 = remember(density) { with(density) { 80.dp.toPx() } }
+
+    val animOrb1: State<Float>?
+    val animOrb2: State<Float>?
     if (!isLowEnd) {
         val infiniteTransition = rememberInfiniteTransition(label = "LiquidAnimation_$index")
-        val a1 by infiniteTransition.animateFloat(
+        animOrb1 = infiniteTransition.animateFloat(
             initialValue = -25f,
             targetValue = 25f,
             animationSpec = infiniteRepeatable(
@@ -342,7 +368,7 @@ fun CategoryMenuCard(
             ),
             label = "LiquidOrb1Anim"
         )
-        val a2 by infiniteTransition.animateFloat(
+        animOrb2 = infiniteTransition.animateFloat(
             initialValue = 0f,
             targetValue = -20f,
             animationSpec = infiniteRepeatable(
@@ -351,11 +377,9 @@ fun CategoryMenuCard(
             ),
             label = "LiquidOrb2Anim"
         )
-        anim1 = a1
-        anim2 = a2
     } else {
-        anim1 = 0f
-        anim2 = 0f
+        animOrb1 = null
+        animOrb2 = null
     }
 
     Card(
@@ -364,8 +388,8 @@ fun CategoryMenuCard(
             .then(if (isWide) Modifier.aspectRatio(1.6f) else Modifier.height(190.dp))
             .graphicsLayer {
                 translationY = (1f - cardProgress) * slideOffsetPx
-                alpha = cardProgress
-                val s = 0.96f + 0.04f * cardProgress
+                alpha = if (isReturningFromPdf) 1f else (0.85f + 0.15f * cardProgress)
+                val s = 0.98f + 0.02f * cardProgress
                 scaleX = s
                 scaleY = s
                 ambientShadowColor = Color.Black.copy(alpha = 0.5f)
@@ -385,24 +409,23 @@ fun CategoryMenuCard(
                     shape = RoundedCornerShape(32.dp)
                 )
                 .drawBehind {
-                    if (!isLowEnd) {
-                        val o1Radius = 96.dp.toPx()
+                    if (!isLowEnd && animOrb1 != null && animOrb2 != null) {
+                        val offset1 = animOrb1.value
+                        val offset2 = animOrb2.value
                         drawCircle(
                             brush = orb1Brush,
-                            radius = o1Radius,
-                            center = Offset(anim1 + 48.dp.toPx(), anim1 + 48.dp.toPx())
+                            radius = p96,
+                            center = Offset(offset1 + p48, offset1 + p48)
                         )
-                        val o2Radius = 80.dp.toPx()
                         drawCircle(
                             brush = orb2Brush,
-                            radius = o2Radius,
-                            center = Offset(this.size.width - 48.dp.toPx() + anim2, this.size.height - 48.dp.toPx() + anim2)
+                            radius = p80,
+                            center = Offset(size.width - p48 + offset2, size.height - p48 + offset2)
                         )
                     }
                 }
                 .bounceClick { onClick() }
         ) {
-
             // Floating background icon
             Box(
                 modifier = Modifier
@@ -477,6 +500,7 @@ fun CategoryMenuCard(
     }
 }
 
+
 @OptIn(ExperimentalSharedTransitionApi::class)
 @Composable
 fun LazyGridItemScope.ContentCard(
@@ -488,10 +512,15 @@ fun LazyGridItemScope.ContentCard(
     onClick: () -> Unit
 ) {
 
+    val safeFraction = fraction.coerceIn(0f, 1f)
+    val coverCornerRadius = lerp(16.dp, 20.dp, safeFraction).coerceAtLeast(0.dp)
+    val cardCornerRadius = androidx.compose.ui.unit.lerp(28.dp, 20.dp, safeFraction).coerceAtLeast(0.dp)
+
     val imageModifier = Modifier.fillMaxSize()
 
     val sharedTransitionScope = LocalSharedTransitionScope.current
     val animatedVisibilityScope = LocalAnimatedVisibilityScope.current
+    val isThisCardTarget = (TransitionTargetTracker.activeTargetId == "card_${item.id}" || TransitionTargetTracker.activeTargetId == item.id)
 
     Layout(
         content = {
@@ -499,29 +528,15 @@ fun LazyGridItemScope.ContentCard(
             Box(modifier = imageModifier) {
                 Box(modifier = Modifier
                     .fillMaxSize()
-                    .clip(RoundedCornerShape(lerp(16.dp, 20.dp, fraction)))
+                    .clip(RoundedCornerShape(coverCornerRadius))
                     .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
-                ) {
-                    Box(
-                        modifier = Modifier
-                            .align(Alignment.TopStart)
-                            .offset(x = (-10).dp, y = (-20).dp)
-                            .size(80.dp)
-                            .background(Brush.radialGradient(listOf(parseHexColor(item.colorStart).copy(alpha=0.35f), Color.Transparent)), CircleShape)
-                    )
-                    Box(
-                        modifier = Modifier
-                            .align(Alignment.BottomEnd)
-                            .offset(x = 10.dp, y = 10.dp)
-                            .size(100.dp)
-                            .background(Brush.radialGradient(listOf(parseHexColor(item.colorEnd).copy(alpha=0.25f), Color.Transparent)), CircleShape)
-                    )
-                }
+                )
 
+                val isReturningFromPdf = com.Nightjar.Th3GradeLibraryKMP.theme.LocalIsReturningFromPdf.current
                 coil3.compose.AsyncImage(
                     model = coil3.request.ImageRequest.Builder(coil3.compose.LocalPlatformContext.current)
                         .data(com.Nightjar.Th3GradeLibraryKMP.generated.resources.Res.getUri("drawable/${item.coverResName}." + if (item.coverResName in listOf("ayajaaa", "english", "englishactivity", "kss1")) "jpg" else "png"))
-                        .crossfade(true)
+                        .crossfade(!isReturningFromPdf)
                         .memoryCachePolicy(coil3.request.CachePolicy.ENABLED)
                         .diskCachePolicy(coil3.request.CachePolicy.ENABLED)
                         .build(),
@@ -529,14 +544,14 @@ fun LazyGridItemScope.ContentCard(
                     contentScale = ContentScale.Crop,
                     placeholder = androidx.compose.ui.graphics.painter.ColorPainter(Color.Transparent),
                     error = androidx.compose.ui.graphics.painter.ColorPainter(Color.Transparent),
-                    modifier = Modifier.fillMaxSize().clip(RoundedCornerShape(lerp(16.dp, 20.dp, fraction)))
+                    modifier = Modifier.fillMaxSize().clip(RoundedCornerShape(coverCornerRadius))
                 )
             }
             // Child 1: Title & Details Column
             Column {
                 Text(
                     text = item.title,
-                    fontSize = (16 + (14 - 16) * fraction).sp,
+                    fontSize = (16 + (14 - 16) * safeFraction).sp,
                     fontWeight = FontWeight.Bold,
                     maxLines = 2,
                     overflow = TextOverflow.Ellipsis,
@@ -577,7 +592,7 @@ fun LazyGridItemScope.ContentCard(
             )
         },
         modifier = modifier
-            .zIndex(if (com.Nightjar.Th3GradeLibraryKMP.theme.LocalIsNavigatingBack.current) 1f else 0f)
+            .zIndex(if (isThisCardTarget) 15f else if (com.Nightjar.Th3GradeLibraryKMP.theme.LocalIsNavigatingBack.current) 1f else 0f)
             .fillMaxWidth()
             .then(
                 if (sharedTransitionScope != null && animatedVisibilityScope != null) {
@@ -585,29 +600,48 @@ fun LazyGridItemScope.ContentCard(
                         Modifier.sharedBounds(
                             sharedContentState = rememberSharedContentState(key = "card_${item.id}"),
                             animatedVisibilityScope = animatedVisibilityScope,
-                            renderInOverlayDuringTransition = false,
-                            boundsTransform = { _, _ -> spring(dampingRatio = 0.76f, stiffness = 220f) },
+                            enter = androidx.compose.animation.fadeIn(
+                                animationSpec = androidx.compose.animation.core.tween(
+                                    durationMillis = 90,
+                                    delayMillis = 270,
+                                    easing = androidx.compose.animation.core.LinearEasing
+                                )
+                            ),
+                            exit = androidx.compose.animation.fadeOut(
+                                animationSpec = androidx.compose.animation.core.tween(
+                                    durationMillis = 90,
+                                    easing = androidx.compose.animation.core.LinearEasing
+                                )
+                            ),
+                            renderInOverlayDuringTransition = true,
+                            boundsTransform = { _, _ -> spring(dampingRatio = 0.78f, stiffness = 320f) },
                             resizeMode = SharedTransitionScope.ResizeMode.scaleToBounds(androidx.compose.ui.layout.ContentScale.Crop)
                         )
                     }
                 } else Modifier
             )
-            .liquidGlass(isDark, borderRadius = 28.dp, alpha = 0.5f)
-            .clip(RoundedCornerShape(28.dp))
-            .clickable { onClick() }
+            .liquidGlass(isDark, borderRadius = cardCornerRadius, alpha = 0.5f)
+            .clip(RoundedCornerShape(cardCornerRadius))
+            .onGloballyPositioned { coordinates ->
+                if (TransitionTargetTracker.activeTargetId == item.id || TransitionTargetTracker.activeTargetId == "card_${item.id}") {
+                    TransitionTargetTracker.updateTargetBounds("card_${item.id}", coordinates.boundsInRoot())
+                }
+            }
+            .clickable {
+                TransitionTargetTracker.activeTargetId = "card_${item.id}"
+                TransitionTargetTracker.isTransitionActive = true
+                onClick()
+            }
             .padding(12.dp)
     ) { measurables, constraints ->
         val containerWidth = constraints.maxWidth
         val listWidthPx = 76.dp.toPx()
-        // In grid mode, the image width is containerWidth. In list mode, clamp expected grid width so it never explodes across full screen
-        val expectedGridWidthPx = (containerWidth.toFloat() / 2f - 8.dp.toPx()).coerceIn(130.dp.toPx(), 200.dp.toPx())
-        val gridWidthPx = if (containerWidth < 280.dp.toPx()) containerWidth.toFloat() else expectedGridWidthPx
-        val imgWidth = (listWidthPx + fraction * (gridWidthPx - listWidthPx)).toInt()
+        val gridWidthPx = containerWidth.toFloat()
+        val imgWidth = (listWidthPx + safeFraction * (gridWidthPx - listWidthPx)).toInt().coerceAtLeast(1)
 
         val listHeightPx = 96.dp.toPx()
-        // In grid mode, the aspect ratio is 0.8 (height = width * 1.25)
-        val gridHeightPx = gridWidthPx * 1.25f
-        val imgHeight = (listHeightPx + fraction * (gridHeightPx - listHeightPx)).toInt()
+        val gridHeightPx = gridWidthPx * 1.30f
+        val imgHeight = (listHeightPx + safeFraction * (gridHeightPx - listHeightPx)).toInt().coerceAtLeast(1)
 
         // Measure image
         val imagePlaceable = measurables[0].measure(
@@ -618,7 +652,7 @@ fun LazyGridItemScope.ContentCard(
         // In list mode: width is containerWidth - imageWidth - spacing - arrowWidth - padding
         val listTextWidth = (containerWidth - listWidthPx - 40.dp.toPx()).toInt()
         val gridTextWidth = containerWidth
-        val textWidth = (listTextWidth + fraction * (gridTextWidth - listTextWidth)).toInt()
+        val textWidth = (listTextWidth + safeFraction * (gridTextWidth - listTextWidth)).toInt().coerceAtLeast(0)
         val textPlaceable = measurables[1].measure(
             Constraints(
                 minWidth = 0,
@@ -634,7 +668,7 @@ fun LazyGridItemScope.ContentCard(
         // Calculate layout height
         val listLayoutHeight = 96.dp.toPx().toInt() // Fixed image height in list mode
         val gridLayoutHeight = imgHeight + 10.dp.toPx().toInt() + textPlaceable.height
-        val layoutHeight = (listLayoutHeight + fraction * (gridLayoutHeight - listLayoutHeight)).toInt()
+        val layoutHeight = (listLayoutHeight + safeFraction * (gridLayoutHeight - listLayoutHeight)).toInt().coerceAtLeast(1)
 
         layout(containerWidth, layoutHeight) {
             // Place cover image at (0, 0)
@@ -649,8 +683,8 @@ fun LazyGridItemScope.ContentCard(
             val gridTextX = 0
             val gridTextY = imgHeight + 10.dp.toPx().toInt()
 
-            val textX = (listTextX + fraction * (gridTextX - listTextX)).toInt()
-            val textY = (listTextY + fraction * (gridTextY - listTextY)).toInt()
+            val textX = (listTextX + safeFraction * (gridTextX - listTextX)).toInt()
+            val textY = (listTextY + safeFraction * (gridTextY - listTextY)).toInt()
             textPlaceable.placeRelative(textX, textY)
 
             // Place arrow icon (only visible in list mode, at the far right)
