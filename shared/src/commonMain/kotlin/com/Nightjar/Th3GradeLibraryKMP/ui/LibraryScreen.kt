@@ -269,7 +269,7 @@ fun LibraryScreen(
                                 screenWidthDp >= 1200.dp -> GridCells.Fixed(5) // Desktop / Large Tablets
                                 screenWidthDp >= 840.dp  -> GridCells.Fixed(4) // Tablets landscape / Foldable unfolded
                                 screenWidthDp >= 600.dp  -> GridCells.Fixed(3) // Tablets portrait
-                                else                     -> GridCells.Fixed(2) // Standard mobile
+                                else                     -> GridCells.Adaptive(minSize = 135.dp) // Mobile portrait: adaptive ensures refined proportions, never oversized
                             }
                         } else {
                             when {
@@ -574,11 +574,12 @@ fun LazyGridItemScope.ContentCard(
         if (isGridView) {
                 Column(
                     modifier = Modifier.fillMaxWidth(),
-                    horizontalAlignment = Alignment.Start
+                    horizontalAlignment = Alignment.CenterHorizontally
                 ) {
                     Box(
                         modifier = Modifier
                             .fillMaxWidth()
+                            .widthIn(max = 165.dp)
                             .aspectRatio(0.72f)
                             .clip(RoundedCornerShape(16.dp))
                             .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
@@ -598,16 +599,21 @@ fun LazyGridItemScope.ContentCard(
 
                     Spacer(modifier = Modifier.height(10.dp))
 
-                    Text(
-                        text = item.title,
-                        fontSize = 14.sp,
-                        fontWeight = FontWeight.Bold,
-                        maxLines = 2,
-                        overflow = TextOverflow.Ellipsis,
-                        color = MaterialTheme.colorScheme.onSurface,
-                        lineHeight = 18.sp
-                    )
-                    Spacer(modifier = Modifier.height(4.dp))
+                    Column(
+                        modifier = Modifier.fillMaxWidth().widthIn(max = 165.dp),
+                        horizontalAlignment = Alignment.Start
+                    ) {
+                        Text(
+                            text = item.title,
+                            fontSize = 14.sp,
+                            fontWeight = FontWeight.Bold,
+                            maxLines = 2,
+                            overflow = TextOverflow.Ellipsis,
+                            color = MaterialTheme.colorScheme.onSurface,
+                            lineHeight = 18.sp
+                        )
+                        Spacer(modifier = Modifier.height(4.dp))
+                    }
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.spacedBy(6.dp)

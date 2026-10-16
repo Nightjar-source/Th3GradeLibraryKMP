@@ -405,7 +405,7 @@ actual fun PdfViewerScreen(
     var showInitialExtractionIndicator by remember(item.id) { mutableStateOf(false) }
     LaunchedEffect(pdfRenderer, item.id) {
         if (pdfRenderer == null) {
-            kotlinx.coroutines.delay(180)
+            kotlinx.coroutines.delay(280) // Wait for container expand and dissolve to complete
             if (pdfRenderer == null) {
                 showInitialExtractionIndicator = true
             }
@@ -1077,7 +1077,7 @@ fun AndroidPdfPage(
     var showLoadingIndicator by remember(pageIndex, bookId) { mutableStateOf(false) }
     LaunchedEffect(pageIndex, bookId, bitmap) {
         if (bitmap == null) {
-            kotlinx.coroutines.delay(220)
+            kotlinx.coroutines.delay(280) // Never shows if page renders quickly during or right after transition
             if (bitmap == null) {
                 showLoadingIndicator = true
             }
@@ -1097,7 +1097,8 @@ fun AndroidPdfPage(
             if (cores >= 6 && maxMemoryMb >= 384 && pageIndex + 1 < renderer.pageCount) {
                 val nextKey = "pdf_${if (bookId.isNotEmpty()) bookId else renderer.hashCode().toString()}_page_${pageIndex + 1}"
                 if (PdfBitmapCache.cache.get(nextKey) == null) {
-                    scope.launch(Dispatchers.Default) {
+                    val prefetchDispatcher = if (cores >= 8) Dispatchers.Default else Dispatchers.IO
+                    scope.launch(prefetchDispatcher) {
                         try {
                             pdfMutex.withLock {
                                 currentCoroutineContext().ensureActive()
@@ -1124,7 +1125,12 @@ fun AndroidPdfPage(
 
     LaunchedEffect(pageIndex) {
         if (bitmap == null) {
-            withContext(Dispatchers.Default) {
+            val cores = Runtime.getRuntime().availableProcessors()
+            val maxMemoryMb = (Runtime.getRuntime().maxMemory() / (1024 * 1024)).toInt()
+            // Low-end devices (<= 4 cores): use Dispatchers.IO to prevent freezing Compose UI thread.
+            // High-end devices (>= 6 cores): use Dispatchers.Default for maximum multi-core CPU throughput.
+            val renderDispatcher = if (cores >= 6) Dispatchers.Default else Dispatchers.IO
+            withContext(renderDispatcher) {
                 try {
                     pdfMutex.withLock {
                         currentCoroutineContext().ensureActive()
