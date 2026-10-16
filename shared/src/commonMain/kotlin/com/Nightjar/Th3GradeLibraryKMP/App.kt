@@ -47,6 +47,7 @@ import com.Nightjar.Th3GradeLibraryKMP.theme.Th3GradeTheme
 import com.Nightjar.Th3GradeLibraryKMP.theme.liquidGlass
 import com.Nightjar.Th3GradeLibraryKMP.theme.parseHexColor
 import com.Nightjar.Th3GradeLibraryKMP.ui.*
+import com.Nightjar.Th3GradeLibraryKMP.navigation.*
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.Nightjar.Th3GradeLibraryKMP.viewmodel.AppViewModel
 import kotlinx.coroutines.delay
@@ -551,8 +552,7 @@ fun AppContent(
                                     com.Nightjar.Th3GradeLibraryKMP.theme.LocalIsReturningFromPdf provides isReturningFromPdf
                                 ) { saveableStateHolder.SaveableStateProvider(targetPage) {
                                 when (targetPage) {
-                                    "home" -> LibraryScreen(
-                                        category = null,
+                                    "home" -> RenderHomeDestination(
                                         isGridView = isGridView,
                                         searchQuery = searchQuery,
                                         onSearchQueryChange = { searchQuery = it },
@@ -574,7 +574,7 @@ fun AppContent(
                                         onScrollableStateChanged = { canCurrentPageScroll = it },
                                         scrollState = libraryHomeScrollState
                                     )
-                                    "list" -> LibraryScreen(
+                                    "list" -> RenderListDestination(
                                         category = selectedCategory ?: "books",
                                         isGridView = isGridView,
                                         searchQuery = searchQuery,
@@ -597,9 +597,9 @@ fun AppContent(
                                         onScrollableStateChanged = { canCurrentPageScroll = it },
                                         lazyGridState = if (selectedCategory == "books") libraryBooksLazyGridState else libraryNotesLazyGridState
                                     )
-                                    "news" -> NewsScreen(
+                                    "news" -> RenderNewsDestination(
                                         onOpenSettings = { isNewsSettingsOpen = true },
-                                        onClick = { url, _ ->
+                                        onItemClick = { url, _ ->
                                             platformActionHandler.openCustomTab(url, appSettings.primaryColor)
                                         },
                                         isDark = isDark,
@@ -607,40 +607,28 @@ fun AppContent(
                                         onScrollableStateChanged = { canCurrentPageScroll = it },
                                         lazyGridState = newsLazyGridState
                                     )
-                                    "bookmarks" -> {
-                                        val activeBookmarkKey = if ((isTransitionActive || isReturningFromPdf) && activeTargetId != null && activeTargetId.startsWith("bookmark_")) {
-                                            val parts = activeTargetId.removePrefix("bookmark_").split("_")
-                                            if (parts.size >= 2) "${parts[0]}:${parts[1]}" else null
-                                        } else null
-
-                                        val effectiveSavedPages = remember(savedItemIds, activeBookmarkKey) {
-                                            if (activeBookmarkKey != null && activeBookmarkKey !in savedItemIds) {
-                                                savedItemIds + activeBookmarkKey
-                                            } else {
-                                                savedItemIds
-                                            }
-                                        }
-
-                                        BookmarksScreen(
-                                            savedItems = savedItems,
-                                            savedPages = effectiveSavedPages.toList(),
-                                            isDark = isDark,
-                                            onNavigateToPdf = { item, pageIdx ->
-                                                viewModel.selectItem(item, pageIdx, fromBookmarks = true)
-                                            },
-                                            bottomPadding = listBottomPadding,
-                                            onScrollableStateChanged = { canCurrentPageScroll = it },
-                                            lazyGridState = bookmarksLazyGridState
-                                        )
-                                    }
-                                    "shortcuts" -> ShortcutsScreen(
+                                    "bookmarks" -> RenderBookmarksDestination(
+                                        savedItems = savedItems,
+                                        savedItemIds = savedItemIds,
+                                        isTransitionActive = isTransitionActive,
+                                        isReturningFromPdf = isReturningFromPdf,
+                                        activeTargetId = activeTargetId,
+                                        isDark = isDark,
+                                        onNavigateToPdf = { item, pageIdx ->
+                                            viewModel.selectItem(item, pageIdx, fromBookmarks = true)
+                                        },
+                                        bottomPadding = listBottomPadding,
+                                        onScrollableStateChanged = { canCurrentPageScroll = it },
+                                        lazyGridState = bookmarksLazyGridState
+                                    )
+                                    "shortcuts" -> RenderShortcutsDestination(
                                         platformActionHandler = platformActionHandler,
                                         isDark = isDark,
                                         bottomPadding = listBottomPadding,
                                         onScrollableStateChanged = { canCurrentPageScroll = it },
                                         lazyGridState = shortcutsLazyGridState
                                     )
-                                    "about" -> AboutScreen(
+                                    "about" -> RenderAboutDestination(
                                         onOpenUrl = { url ->
                                             platformActionHandler.showToast("تحويل إلى تليغرام...")
                                             platformActionHandler.openUrl(url)
@@ -653,10 +641,10 @@ fun AppContent(
                                     "pdf" -> {
                                         val currentItem = selectedItem
                                         if (currentItem != null) {
-                                            PdfViewerScreen(
+                                            RenderPdfDestination(
                                                 item = currentItem,
-                                                isSaved = { pageIdx -> "${currentItem.id}:$pageIdx" in savedItemIds },
-                                                onToggleSave = { pageIdx ->
+                                                savedItemIds = savedItemIds,
+                                                onToggleBookmark = { pageIdx ->
                                                     val key = "${currentItem.id}:$pageIdx"
                                                     val isNowSaved = SyncEngine.toggleBookmark(key)
                                                     if (!isNowSaved) {
