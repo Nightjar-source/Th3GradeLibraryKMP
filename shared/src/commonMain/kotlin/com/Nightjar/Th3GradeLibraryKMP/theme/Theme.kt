@@ -179,11 +179,15 @@ fun Modifier.screenEntranceStagger(index: Int = 0, itemId: String? = null): Modi
              com.Nightjar.Th3GradeLibraryKMP.ui.TransitionTargetTracker.activeTargetId == itemKey ||
              com.Nightjar.Th3GradeLibraryKMP.ui.TransitionTargetTracker.activeTargetId?.startsWith("bookmark_$itemKey") == true)
 
-    // When returning from PDF or navigating back or on active shared target: keep 100% stationary with zero movement!
-    if (isReturningFromPdf || isNavigatingBack || isActiveSharedTarget) return@composed this
-
     val screenKey = LocalScreenEntranceKey.current
     val seenMap = LocalSeenEntranceItems.current
+
+    // When returning from PDF or navigating back or on active shared target: keep 100% stationary with zero movement!
+    if (isReturningFromPdf || isNavigatingBack || isActiveSharedTarget) {
+        seenMap?.put(itemKey, true)
+        return@composed this
+    }
+
     val alreadySeen = seenMap?.get(itemKey) == true
     if (alreadySeen) return@composed this
 

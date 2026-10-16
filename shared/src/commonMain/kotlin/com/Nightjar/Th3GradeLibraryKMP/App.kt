@@ -473,71 +473,42 @@ fun AppContent(
                             .fillMaxSize()
                             .zIndex(10f)
                     ) {
+                        val contentPage = if (page == "pdf") viewModel.pdfSourcePage else page
                         AnimatedContent(
-                            targetState = page,
+                            targetState = contentPage,
                             modifier = Modifier.fillMaxSize(),
                             transitionSpec = {
                                 val pageOrder = listOf("home", "list", "news", "bookmarks", "shortcuts", "about")
                                 val initialIndex = pageOrder.indexOf(initialState).takeIf { it >= 0 } ?: 0
                                 val targetIndex = pageOrder.indexOf(targetState).takeIf { it >= 0 } ?: 0
-                                
-                                if (targetState == "pdf") {
-                                    fadeIn(tween(320, easing = androidx.compose.animation.core.LinearEasing)).togetherWith(
-                                        fadeOut(tween(320, easing = androidx.compose.animation.core.LinearEasing))
-                                    ).apply {
-                                        targetContentZIndex = 1f
-                                    }
-                                } else if (initialState == "pdf") {
-                                    val returnSource = viewModel.pdfSourcePage
-                                    val isSharedSource = returnSource in listOf("home", "list", "bookmarks")
-                                    val enterTransition = if (isSharedSource) {
-                                        androidx.compose.animation.EnterTransition.None
-                                    } else {
-                                        fadeIn(tween(260, easing = androidx.compose.animation.core.LinearEasing)) + slideInVertically(
-                                            initialOffsetY = { -it / 12 },
-                                            animationSpec = spring(dampingRatio = 0.82f, stiffness = Spring.StiffnessMediumLow)
-                                        )
-                                    }
-                                    val exitTransition = if (isSharedSource) {
-                                        fadeOut(tween(280, easing = androidx.compose.animation.core.LinearEasing))
-                                    } else {
-                                        fadeOut(tween(260, easing = androidx.compose.animation.core.LinearEasing)) + slideOutVertically(
-                                            targetOffsetY = { it },
-                                            animationSpec = spring(dampingRatio = 0.82f, stiffness = Spring.StiffnessMediumLow)
-                                        )
-                                    }
-                                    enterTransition.togetherWith(exitTransition).apply {
-                                        targetContentZIndex = -1f
-                                    }
-                                } else {
-                                    val fluidEasing = androidx.compose.animation.core.CubicBezierEasing(0.16f, 1f, 0.3f, 1f)
-                                    val slideSpec = androidx.compose.animation.core.tween<androidx.compose.ui.unit.IntOffset>(
-                                        durationMillis = 350,
-                                        easing = fluidEasing
-                                    )
-                                    val fadeSpec = androidx.compose.animation.core.tween<Float>(
-                                        durationMillis = 260,
-                                        easing = androidx.compose.animation.core.FastOutSlowInEasing
-                                    )
-                                    val direction = if (isNavigatingBack || targetIndex < initialIndex) 1 else -1 // RTL: Forward is -1 (from left), Backward is 1 (from right)
 
-                                    (slideInHorizontally(
-                                        initialOffsetX = { fullWidth -> fullWidth * direction },
+                                val fluidEasing = androidx.compose.animation.core.CubicBezierEasing(0.16f, 1f, 0.3f, 1f)
+                                val slideSpec = androidx.compose.animation.core.tween<androidx.compose.ui.unit.IntOffset>(
+                                    durationMillis = 350,
+                                    easing = fluidEasing
+                                )
+                                val fadeSpec = androidx.compose.animation.core.tween<Float>(
+                                    durationMillis = 260,
+                                    easing = androidx.compose.animation.core.FastOutSlowInEasing
+                                )
+                                val direction = if (isNavigatingBack || targetIndex < initialIndex) 1 else -1 // RTL: Forward is -1 (from left), Backward is 1 (from right)
+
+                                (slideInHorizontally(
+                                    initialOffsetX = { fullWidth -> fullWidth * direction },
+                                    animationSpec = slideSpec
+                                ) + fadeIn(animationSpec = fadeSpec)).togetherWith(
+                                    slideOutHorizontally(
+                                        targetOffsetX = { fullWidth -> -fullWidth * direction },
                                         animationSpec = slideSpec
-                                    ) + fadeIn(animationSpec = fadeSpec)).togetherWith(
-                                        slideOutHorizontally(
-                                            targetOffsetX = { fullWidth -> -fullWidth * direction },
-                                            animationSpec = slideSpec
-                                        ) + fadeOut(animationSpec = fadeSpec)
-                                    )
-                                }
+                                    ) + fadeOut(animationSpec = fadeSpec)
+                                )
                             }
                         ) { targetPage ->
                             val currentTransition = this@AnimatedContent.transition
                             LaunchedEffect(currentTransition.currentState, currentTransition.targetState, targetPage) {
                                 if (currentTransition.currentState == androidx.compose.animation.EnterExitState.Visible &&
                                     currentTransition.targetState == androidx.compose.animation.EnterExitState.Visible &&
-                                    targetPage != "pdf"
+                                    page != "pdf"
                                 ) {
                                     com.Nightjar.Th3GradeLibraryKMP.ui.TransitionTargetTracker.isTransitionActive = false
                                     com.Nightjar.Th3GradeLibraryKMP.ui.TransitionTargetTracker.activeTargetId = null
@@ -662,32 +633,53 @@ fun AppContent(
                                         onScrollableStateChanged = { canCurrentPageScroll = it },
                                         scrollState = aboutScrollState
                                     )
-                                    "pdf" -> {
-                                        if (selectedItem != null) {
-                                            PdfViewerScreen(
-                                                item = selectedItem!!,
-                                                isSaved = { pageIdx -> "${selectedItem!!.id}:$pageIdx" in savedItemIds },
-                                                onToggleSave = { pageIdx ->
-                                                    val key = "${selectedItem!!.id}:$pageIdx"
-                                                    val isNowSaved = SyncEngine.toggleBookmark(key)
-                                                    if (!isNowSaved) {
-                                                        platformActionHandler.showToast("تم حذف الصفحة ${pageIdx + 1} من المحفوظات")
-                                                    } else {
-                                                        platformActionHandler.showToast("تم حفظ الصفحة ${pageIdx + 1} في المحفوظات")
-                                                    }
-                                                },
-                                                onClose = {
-                                                    handleTopBarBack()
-                                                },
-                                                initialPage = pdfInitialPage,
-                                                isDark = isDark,
-                                                isFromBookmarks = viewModel.isFromBookmarks,
-                                                sourcePage = viewModel.pdfSourcePage
-                                            )
-                                        }
-                                    }
                                 }
-                                    }
+                                }
+                                }
+                            }
+                        }
+
+                        // Full-Screen PDF Reader Overlay with SharedTransitionScope
+                        androidx.compose.animation.AnimatedVisibility(
+                            visible = page == "pdf" && selectedItem != null,
+                            enter = fadeIn(tween(320, easing = androidx.compose.animation.core.LinearEasing)),
+                            exit = fadeOut(tween(300, easing = androidx.compose.animation.core.LinearEasing)),
+                            modifier = Modifier.fillMaxSize().zIndex(150f)
+                        ) {
+                            val currentTransition = this@AnimatedVisibility.transition
+                            LaunchedEffect(currentTransition.currentState, currentTransition.targetState) {
+                                if (currentTransition.currentState == androidx.compose.animation.EnterExitState.Visible &&
+                                    currentTransition.targetState == androidx.compose.animation.EnterExitState.PostExit
+                                ) {
+                                    com.Nightjar.Th3GradeLibraryKMP.ui.TransitionTargetTracker.isTransitionActive = false
+                                    com.Nightjar.Th3GradeLibraryKMP.ui.TransitionTargetTracker.activeTargetId = null
+                                }
+                            }
+                            val currentItem = selectedItem
+                            if (currentItem != null) {
+                                CompositionLocalProvider(
+                                    LocalAnimatedVisibilityScope provides this@AnimatedVisibility
+                                ) {
+                                    PdfViewerScreen(
+                                        item = currentItem,
+                                        isSaved = { pageIdx -> "${currentItem.id}:$pageIdx" in savedItemIds },
+                                        onToggleSave = { pageIdx ->
+                                            val key = "${currentItem.id}:$pageIdx"
+                                            val isNowSaved = SyncEngine.toggleBookmark(key)
+                                            if (!isNowSaved) {
+                                                platformActionHandler.showToast("تم حذف الصفحة ${pageIdx + 1} من المحفوظات")
+                                            } else {
+                                                platformActionHandler.showToast("تم حفظ الصفحة ${pageIdx + 1} في المحفوظات")
+                                            }
+                                        },
+                                        onClose = {
+                                            handleTopBarBack()
+                                        },
+                                        initialPage = pdfInitialPage,
+                                        isDark = isDark,
+                                        isFromBookmarks = viewModel.isFromBookmarks,
+                                        sourcePage = viewModel.pdfSourcePage
+                                    )
                                 }
                             }
                         }

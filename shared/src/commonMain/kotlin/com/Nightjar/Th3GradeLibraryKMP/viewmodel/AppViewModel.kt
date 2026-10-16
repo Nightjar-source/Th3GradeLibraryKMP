@@ -257,7 +257,9 @@ class AppViewModel : ViewModel() {
         } else {
             val current = pageHistory.value
             if (newPage != current.lastOrNull()) {
-                screenNavCounter++
+                if (newPage != "pdf") {
+                    screenNavCounter++
+                }
                 pageHistory.value = current.filter { it != newPage } + newPage
                 page = newPage
             }
