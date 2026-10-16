@@ -220,9 +220,15 @@ fun NewsScreen(
                     modifier = Modifier.fillMaxSize()
                 ) {
                     val screenWidthDp = with(androidx.compose.ui.platform.LocalDensity.current) { androidx.compose.ui.platform.LocalWindowInfo.current.containerSize.width.toDp() }
-                    val isMedium = screenWidthDp >= 600.dp
+                    val dynamicNewsColumns = remember(screenWidthDp) {
+                        when {
+                            screenWidthDp >= 1400.dp -> GridCells.Fixed(3)
+                            screenWidthDp >= 720.dp  -> GridCells.Fixed(2)
+                            else                     -> GridCells.Fixed(1)
+                        }
+                    }
                     LazyVerticalGrid(
-                        columns = if (isMedium) GridCells.Fixed(2) else GridCells.Adaptive(minSize = 340.dp),
+                        columns = dynamicNewsColumns,
                         state = lazyGridState,
                         modifier = Modifier
                             .fillMaxSize()

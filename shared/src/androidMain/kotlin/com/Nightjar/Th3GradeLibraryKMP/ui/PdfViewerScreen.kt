@@ -365,13 +365,14 @@ actual fun PdfViewerScreen(
                 animatedVisibilityScope = animatedVisibilityScope,
                 enter = androidx.compose.animation.fadeIn(
                     animationSpec = androidx.compose.animation.core.tween(
-                        durationMillis = 200,
+                        durationMillis = 130,
                         easing = androidx.compose.animation.core.LinearEasing
                     )
                 ),
                 exit = androidx.compose.animation.fadeOut(
                     animationSpec = androidx.compose.animation.core.tween(
-                        durationMillis = 200,
+                        durationMillis = 150,
+                        delayMillis = 75,
                         easing = androidx.compose.animation.core.LinearEasing
                     )
                 ),
@@ -401,6 +402,18 @@ actual fun PdfViewerScreen(
         }
     } else Modifier
 
+    var showInitialExtractionIndicator by remember(item.id) { mutableStateOf(false) }
+    LaunchedEffect(pdfRenderer, item.id) {
+        if (pdfRenderer == null) {
+            kotlinx.coroutines.delay(180)
+            if (pdfRenderer == null) {
+                showInitialExtractionIndicator = true
+            }
+        } else {
+            showInitialExtractionIndicator = false
+        }
+    }
+
     val rootModifier = Modifier
         .fillMaxSize()
         .then(sharedBoundsModifier)
@@ -425,14 +438,16 @@ actual fun PdfViewerScreen(
                 }
             }
         } else if (pdfRenderer == null) {
-            Box(
-                modifier = Modifier.fillMaxSize(),
-                contentAlignment = Alignment.Center
-            ) {
-                com.Nightjar.Th3GradeLibraryKMP.ui.ExpressiveLoadingIndicator(
-                    modifier = Modifier.size(48.dp),
-                    color = MaterialTheme.colorScheme.primary
-                )
+            if (showInitialExtractionIndicator) {
+                Box(
+                    modifier = Modifier.fillMaxSize(),
+                    contentAlignment = Alignment.Center
+                ) {
+                    com.Nightjar.Th3GradeLibraryKMP.ui.ExpressiveLoadingIndicator(
+                        modifier = Modifier.size(48.dp),
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                }
             }
         } else {
             val pageCount = pdfRenderer!!.pageCount
@@ -919,11 +934,11 @@ object PdfBitmapCache {
     private val maxMemory = (Runtime.getRuntime().maxMemory() / 1024).toInt()
     private val cores = Runtime.getRuntime().availableProcessors()
     // Dynamic cache allocation based on hardware capabilities:
-    // Flagships with 8+ cores & large heap (>= 512MB) get 1/6th of RAM for buttery instant caching.
+    // Flagships with 8+ cores & large heap (>= 512MB) get 1/4th of RAM for maximum performance with NO limits!
     // Mid-range devices get 1/8th of RAM.
     // Budget devices (Galaxy J7, RAM < 3GB, small heap) get 1/12th of RAM to prevent OOM.
     private val cacheDivisor = when {
-        maxMemory >= 512 * 1024 && cores >= 8 -> 6
+        maxMemory >= 512 * 1024 && cores >= 8 -> 4
         maxMemory >= 256 * 1024 -> 8
         else -> 12
     }
@@ -1060,12 +1075,14 @@ fun AndroidPdfPage(
     }
 
     var showLoadingIndicator by remember(pageIndex, bookId) { mutableStateOf(false) }
-    LaunchedEffect(pageIndex, bookId) {
+    LaunchedEffect(pageIndex, bookId, bitmap) {
         if (bitmap == null) {
             kotlinx.coroutines.delay(220)
             if (bitmap == null) {
                 showLoadingIndicator = true
             }
+        } else {
+            showLoadingIndicator = false
         }
     }
 
@@ -1080,13 +1097,13 @@ fun AndroidPdfPage(
             if (cores >= 6 && maxMemoryMb >= 384 && pageIndex + 1 < renderer.pageCount) {
                 val nextKey = "pdf_${if (bookId.isNotEmpty()) bookId else renderer.hashCode().toString()}_page_${pageIndex + 1}"
                 if (PdfBitmapCache.cache.get(nextKey) == null) {
-                    scope.launch(Dispatchers.IO) {
+                    scope.launch(Dispatchers.Default) {
                         try {
                             pdfMutex.withLock {
                                 currentCoroutineContext().ensureActive()
                                 val nextPage = renderer.openPage(pageIndex + 1)
                                 try {
-                                    val prefetchScale = if (maxMemoryMb >= 512 && cores >= 8) 1.75f else 1.4f
+                                    val prefetchScale = if (maxMemoryMb >= 512 && cores >= 8) 2.2f else 1.5f
                                     val nextW = (nextPage.width * prefetchScale).toInt()
                                     val nextH = (nextPage.height * prefetchScale).toInt()
                                     val nextBmp = Bitmap.createBitmap(nextW, nextH, Bitmap.Config.ARGB_8888)
@@ -1107,18 +1124,19 @@ fun AndroidPdfPage(
 
     LaunchedEffect(pageIndex) {
         if (bitmap == null) {
-            withContext(Dispatchers.IO) {
+            withContext(Dispatchers.Default) {
                 try {
                     pdfMutex.withLock {
                         currentCoroutineContext().ensureActive()
                         val page = renderer.openPage(pageIndex)
                         try {
                             // Hardware-profile Adaptive Scaling Engine (CPU Cores + RAM Heap):
+                            // Ultra-powerful flagships, DeX & tablets get unleashed 2.2f sharpness with zero bottleneck
                             val maxMemoryMb = (Runtime.getRuntime().maxMemory() / (1024 * 1024)).toInt()
                             val cores = Runtime.getRuntime().availableProcessors()
                             val scaleFactor = when {
-                                maxMemoryMb >= 512 && cores >= 8 -> 1.75f // High-end flagships & tablets (Snapdragon 8, Tensor, etc.)
-                                maxMemoryMb >= 384 && cores >= 6 -> 1.4f  // Upper mid-range
+                                maxMemoryMb >= 512 && cores >= 8 -> 2.2f // Ultra high-end flagships & tablets: UNLEASHED!
+                                maxMemoryMb >= 384 && cores >= 6 -> 1.5f  // Upper mid-range
                                 maxMemoryMb >= 256 && cores >= 4 -> 1.2f  // Mid-range
                                 else -> 1.0f // Low-end devices (Galaxy J7, RAM < 3GB, small heap, <= 4 cores)
                             }

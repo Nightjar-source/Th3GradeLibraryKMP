@@ -262,14 +262,28 @@ fun LibraryScreen(
                     } else {
                         statusBarHeight + 76.dp
                     }
+                    val dynamicGridColumns = remember(screenWidthDp, isGridView) {
+                        if (isGridView) {
+                            when {
+                                screenWidthDp >= 1600.dp -> GridCells.Fixed(6) // Ultra-wide / 4K / DeX fullscreen
+                                screenWidthDp >= 1200.dp -> GridCells.Fixed(5) // Desktop / Large Tablets
+                                screenWidthDp >= 840.dp  -> GridCells.Fixed(4) // Tablets landscape / Foldable unfolded
+                                screenWidthDp >= 600.dp  -> GridCells.Fixed(3) // Tablets portrait
+                                else                     -> GridCells.Fixed(2) // Standard mobile
+                            }
+                        } else {
+                            when {
+                                screenWidthDp >= 1400.dp -> GridCells.Fixed(3) // Ultra-wide list
+                                screenWidthDp >= 720.dp  -> GridCells.Fixed(2) // Tablets / Wide foldables
+                                else                     -> GridCells.Fixed(1) // Standard mobile
+                            }
+                        }
+                    }
+
                 LazyVerticalGrid(
                     state = lazyGridState,
                     userScrollEnabled = true,
-                    columns = if (isGridView) {
-                        GridCells.Adaptive(minSize = 140.dp)
-                    } else {
-                        GridCells.Adaptive(minSize = 340.dp)
-                    },
+                    columns = dynamicGridColumns,
                     modifier = Modifier
                         .weight(1f)
                         .fillMaxWidth()
@@ -518,13 +532,14 @@ fun LazyGridItemScope.ContentCard(
                 animatedVisibilityScope = animatedVisibilityScope,
                 enter = androidx.compose.animation.fadeIn(
                     animationSpec = androidx.compose.animation.core.tween(
-                        durationMillis = 200,
+                        durationMillis = 150,
+                        delayMillis = 75,
                         easing = androidx.compose.animation.core.LinearEasing
                     )
                 ),
                 exit = androidx.compose.animation.fadeOut(
                     animationSpec = androidx.compose.animation.core.tween(
-                        durationMillis = 200,
+                        durationMillis = 130,
                         easing = androidx.compose.animation.core.LinearEasing
                     )
                 ),

@@ -355,8 +355,8 @@ fun BookAccordionItem(
                             Modifier.sharedBounds(
                                 sharedContentState = rememberSharedContentState(key = rowTargetKey),
                                 animatedVisibilityScope = screenVisibilityScope,
-                                enter = fadeIn(animationSpec = tween(durationMillis = 200, easing = LinearEasing)),
-                                exit = fadeOut(animationSpec = tween(durationMillis = 200, easing = LinearEasing)),
+                                enter = fadeIn(animationSpec = tween(durationMillis = 150, delayMillis = 75, easing = LinearEasing)),
+                                exit = fadeOut(animationSpec = tween(durationMillis = 130, easing = LinearEasing)),
                                 renderInOverlayDuringTransition = false,
                                 clipInOverlayDuringTransition = OverlayClip(RoundedCornerShape(14.dp)),
                                 boundsTransform = { _, _ ->

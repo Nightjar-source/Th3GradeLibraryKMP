@@ -482,14 +482,14 @@ fun AppContent(
                                 val isFromPdf = initialState == "pdf"
 
                                 if (isToPdf) {
-                                    (fadeIn(animationSpec = tween(durationMillis = 260, easing = androidx.compose.animation.core.LinearEasing))).togetherWith(
-                                        fadeOut(animationSpec = tween(durationMillis = 260, easing = androidx.compose.animation.core.LinearEasing))
+                                    (fadeIn(animationSpec = tween(durationMillis = 130, easing = androidx.compose.animation.core.LinearEasing))).togetherWith(
+                                        fadeOut(animationSpec = tween(durationMillis = 130, easing = androidx.compose.animation.core.LinearEasing))
                                     ).apply {
                                         targetContentZIndex = 50f
                                     }
                                 } else if (isFromPdf) {
-                                    (fadeIn(animationSpec = tween(durationMillis = 260, easing = androidx.compose.animation.core.LinearEasing))).togetherWith(
-                                        fadeOut(animationSpec = tween(durationMillis = 260, easing = androidx.compose.animation.core.LinearEasing))
+                                    (fadeIn(animationSpec = tween(durationMillis = 150, delayMillis = 75, easing = androidx.compose.animation.core.LinearEasing))).togetherWith(
+                                        fadeOut(animationSpec = tween(durationMillis = 150, delayMillis = 75, easing = androidx.compose.animation.core.LinearEasing))
                                     ).apply {
                                         targetContentZIndex = -1f
                                     }

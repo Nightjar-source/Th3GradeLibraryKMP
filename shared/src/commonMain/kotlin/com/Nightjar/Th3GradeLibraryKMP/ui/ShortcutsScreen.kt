@@ -77,10 +77,20 @@ fun ShortcutsScreen(
                 }
             }
 
+            val dynamicShortcutColumns = remember(screenWidthDp) {
+                when {
+                    screenWidthDp >= 1400.dp -> GridCells.Fixed(6)
+                    screenWidthDp >= 1000.dp -> GridCells.Fixed(5)
+                    screenWidthDp >= 720.dp  -> GridCells.Fixed(4)
+                    screenWidthDp >= 480.dp  -> GridCells.Fixed(3)
+                    else                     -> GridCells.Fixed(2)
+                }
+            }
+
             LazyVerticalGrid(
                 state = lazyGridState,
                 userScrollEnabled = !isNavigatingBack,
-                columns = if (isWide) GridCells.Fixed(4) else GridCells.Adaptive(minSize = 150.dp),
+                columns = dynamicShortcutColumns,
                 modifier = Modifier
                     .fillMaxWidth()
                     .weight(1f)
