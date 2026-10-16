@@ -356,11 +356,11 @@ fun BookAccordionItem(
                                 sharedContentState = rememberSharedContentState(key = rowTargetKey),
                                 animatedVisibilityScope = screenVisibilityScope,
                                 enter = fadeIn(animationSpec = tween(durationMillis = 200, easing = LinearEasing)),
-                                exit = fadeOut(animationSpec = tween(durationMillis = 100, easing = LinearEasing)),
+                                exit = fadeOut(animationSpec = tween(durationMillis = 200, easing = LinearEasing)),
                                 renderInOverlayDuringTransition = false,
                                 clipInOverlayDuringTransition = OverlayClip(RoundedCornerShape(14.dp)),
                                 boundsTransform = { _, _ ->
-                                    spring(dampingRatio = 0.80f, stiffness = 300f)
+                                    spring(dampingRatio = 0.82f, stiffness = 280f)
                                 },
                                 resizeMode = SharedTransitionScope.ResizeMode.scaleToBounds(ContentScale.Crop)
                             )

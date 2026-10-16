@@ -345,20 +345,20 @@ actual fun PdfViewerScreen(
                 animatedVisibilityScope = animatedVisibilityScope,
                 enter = androidx.compose.animation.fadeIn(
                     animationSpec = androidx.compose.animation.core.tween(
-                        durationMillis = 120,
+                        durationMillis = 200,
                         easing = androidx.compose.animation.core.LinearEasing
                     )
                 ),
                 exit = androidx.compose.animation.fadeOut(
                     animationSpec = androidx.compose.animation.core.tween(
-                        durationMillis = 280,
+                        durationMillis = 200,
                         easing = androidx.compose.animation.core.LinearEasing
                     )
                 ),
                 renderInOverlayDuringTransition = true,
                 clipInOverlayDuringTransition = OverlayClip(androidx.compose.foundation.shape.RoundedCornerShape(safeCornerRadius)),
                 boundsTransform = { _, _ ->
-                    spring(dampingRatio = 0.80f, stiffness = 300f)
+                    spring(dampingRatio = 0.82f, stiffness = 280f)
                 },
                 resizeMode = SharedTransitionScope.ResizeMode.scaleToBounds(androidx.compose.ui.layout.ContentScale.Crop)
             )
@@ -388,6 +388,79 @@ actual fun PdfViewerScreen(
         .background(MaterialTheme.colorScheme.background)
 
     Box(modifier = rootModifier) {
+        // Seamless visual bridge: book cover or bookmark placeholder during expand & shrink transitions (Zero Flash)
+        if (!isFromBookmarksEffective) {
+            val coverAlpha by androidx.compose.animation.core.animateFloatAsState(
+                targetValue = if (isFirstPageReady && !isNavigatingOut) 0f else 1f,
+                animationSpec = tween(durationMillis = 220, easing = androidx.compose.animation.core.LinearEasing),
+                label = "coverAlpha"
+            )
+            if (coverAlpha > 0.01f) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .graphicsLayer { alpha = coverAlpha },
+                    contentAlignment = Alignment.Center
+                ) {
+                    coil3.compose.AsyncImage(
+                        model = coil3.request.ImageRequest.Builder(coil3.compose.LocalPlatformContext.current)
+                            .data(com.Nightjar.Th3GradeLibraryKMP.generated.resources.Res.getUri("drawable/${item.coverResName}." + if (item.coverResName in listOf("ayajaaa", "english", "englishactivity", "kss1")) "jpg" else "png"))
+                            .crossfade(false)
+                            .memoryCachePolicy(coil3.request.CachePolicy.ENABLED)
+                            .diskCachePolicy(coil3.request.CachePolicy.ENABLED)
+                            .build(),
+                        contentDescription = item.title,
+                        contentScale = ContentScale.Crop,
+                        modifier = Modifier.fillMaxSize()
+                    )
+                }
+            }
+        } else {
+            val cachedBitmap = remember(item.id, targetInitialPage) {
+                PdfBitmapCache.cache.get("pdf_${item.id}_page_$targetInitialPage")
+            }
+            val bookmarkAlpha by androidx.compose.animation.core.animateFloatAsState(
+                targetValue = if (isFirstPageReady && !isNavigatingOut) 0f else 1f,
+                animationSpec = tween(durationMillis = 220, easing = androidx.compose.animation.core.LinearEasing),
+                label = "bookmarkAlpha"
+            )
+            if (bookmarkAlpha > 0.01f) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .graphicsLayer { alpha = bookmarkAlpha },
+                    contentAlignment = Alignment.Center
+                ) {
+                    if (cachedBitmap != null) {
+                        Image(
+                            bitmap = cachedBitmap.asImageBitmap(),
+                            contentDescription = null,
+                            contentScale = ContentScale.Fit,
+                            modifier = Modifier.fillMaxSize()
+                        )
+                    } else {
+                        Column(
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            verticalArrangement = Arrangement.Center
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Bookmark,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.size(54.dp)
+                            )
+                            Spacer(modifier = Modifier.height(16.dp))
+                            Text(
+                                text = "الصفحة رقم ${(initialPage ?: 0) + 1}",
+                                fontSize = 18.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.onBackground
+                            )
+                        }
+                    }
+                }
+            }
+        }
         if (loadingError != null) {
             Column(
                 modifier = Modifier

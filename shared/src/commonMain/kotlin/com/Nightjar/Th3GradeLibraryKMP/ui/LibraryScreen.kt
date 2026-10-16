@@ -524,13 +524,13 @@ fun LazyGridItemScope.ContentCard(
                 ),
                 exit = androidx.compose.animation.fadeOut(
                     animationSpec = androidx.compose.animation.core.tween(
-                        durationMillis = 100,
+                        durationMillis = 200,
                         easing = androidx.compose.animation.core.LinearEasing
                     )
                 ),
                 renderInOverlayDuringTransition = true,
                 clipInOverlayDuringTransition = OverlayClip(RoundedCornerShape(cardCornerRadius)),
-                boundsTransform = { _, _ -> spring(dampingRatio = 0.80f, stiffness = 300f) },
+                boundsTransform = { _, _ -> spring(dampingRatio = 0.82f, stiffness = 280f) },
                 resizeMode = SharedTransitionScope.ResizeMode.scaleToBounds(androidx.compose.ui.layout.ContentScale.Crop)
             )
         }

@@ -8,7 +8,8 @@ compose = "1.12.1"
 kotlin = "2.4.20"
 coreSplashscreen = "1.0.1"
 navigationCompose = "2.8.0-alpha10"
-multiplatform-nav3-ui = "1.1.1"
+multiplatform-nav3 = "1.2.0"
+multiplatform-lifecycle = "2.12.0"
 androidx-navigation3 = "1.2.0"
 ktor = "2.3.12"
 settings = "1.1.1"
@@ -34,7 +35,8 @@ androidx-lifecycle-viewmodel-compose = { module = "androidx.lifecycle:lifecycle-
 androidx-activity-compose = { module = "androidx.activity:activity-compose", version.ref = "androidx-activityCompose" }
 androidx-core-splashscreen = { module = "androidx.core:core-splashscreen", version.ref = "coreSplashscreen" }
 navigation-compose = { module = "org.jetbrains.androidx.navigation:navigation-compose", version.ref = "navigationCompose" }
-jetbrains-navigation3-ui = { module = "org.jetbrains.androidx.navigation3:navigation3-ui", version.ref = "multiplatform-nav3-ui" }
+jetbrains-navigation3-ui = { module = "org.jetbrains.androidx.navigation3:navigation3-ui", version.ref = "multiplatform-nav3" }
+jetbrains-lifecycle-viewmodel-navigation3 = { module = "org.jetbrains.androidx.lifecycle:lifecycle-viewmodel-navigation3", version.ref = "multiplatform-lifecycle" }
 androidx-navigation3-ui = { module = "androidx.navigation3:navigation3-ui", version.ref = "androidx-navigation3" }
 androidx-navigation3-runtime = { module = "androidx.navigation3:navigation3-runtime", version.ref = "androidx-navigation3" }
 ktor-client-core = { module = "io.ktor:ktor-client-core", version.ref = "ktor" }
