@@ -29,14 +29,38 @@ jobs:
       - name: Make gradlew executable
         run: chmod +x ./gradlew
 
+      - name: Decode Keystore from GitHub Secrets
+        run: |
+          echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 --decode > androidApp/Nightjar.keystore
+        env:
+          KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
+
       - name: Build Android Release APK
         run: ./gradlew assembleRelease
+        env:
+          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+
+      - name: Prepare APK with Official Arabic Name
+        run: |
+          cp androidApp/build/outputs/apk/release/androidApp-release.apk "androidApp/build/outputs/apk/release/كتب_وملازم_الثالث_متوسط_${{ github.ref_name }}.apk"
 
       - name: Create Release
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ github.ref_name }}
-          name: Release ${{ github.ref_name }}
-          files: androidApp/build/outputs/apk/release/*.apk
+          name: كتب وملازم الثالث متوسط 2027 العراق (${{ github.ref_name }})
+          body: |
+            تطبيق «كتب وملازم الثالث متوسط 2027 العراق» - الإصدار ${{ github.ref_name }}
+
+            التحديثات والمميزات:
+            - دعم كامل لأحدث معايير Android Jetpack Compose 2026/2027.
+            - حركات وانتقالات سلسة فائقة الرطوبة (Fluid Spring Transitions) للشاشات والأغلفة وصفحات المحفوظات بمعدل 120 إطاراً في الثانية.
+            - فتح وغلق المنسدلات بانسيابية تامة ودوران الأيقونة 360 درجة بدون أي وميض أو قفزات.
+            - انتقال فوري وعائم إلى قارئ الكتب والـ PDF بدون تكرار مؤشرات التحميل.
+            - تنظيف ذكي للذاكرة المؤقتة وحذف الملفات المستخرجة عند إغلاق التطبيق.
+          files: |
+            androidApp/build/outputs/apk/release/كتب_وملازم_الثالث_متوسط_${{ github.ref_name }}.apk
+            androidApp/build/outputs/apk/release/androidApp-release.apk
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
