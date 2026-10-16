@@ -63,6 +63,10 @@ import androidx.compose.animation.core.tween
 import androidx.compose.animation.core.animate
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.animation.ExperimentalSharedTransitionApi
+import androidx.compose.ui.input.key.*
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
+import androidx.compose.foundation.focusable
 import com.Nightjar.Th3GradeLibraryKMP.LocalSharedTransitionScope
 import com.Nightjar.Th3GradeLibraryKMP.LocalAnimatedVisibilityScope
 import androidx.compose.foundation.gestures.*
@@ -360,7 +364,7 @@ actual fun PdfViewerScreen(
                 boundsTransform = { _, _ ->
                     spring(dampingRatio = 0.82f, stiffness = 280f)
                 },
-                resizeMode = SharedTransitionScope.ResizeMode.scaleToBounds(androidx.compose.ui.layout.ContentScale.Crop)
+                resizeMode = SharedTransitionScope.ResizeMode.RemeasureToBounds
             )
         }
     } else if (animatedVisibilityScope != null) {
@@ -388,79 +392,6 @@ actual fun PdfViewerScreen(
         .background(MaterialTheme.colorScheme.background)
 
     Box(modifier = rootModifier) {
-        // Seamless visual bridge: book cover or bookmark placeholder during expand & shrink transitions (Zero Flash)
-        if (!isFromBookmarksEffective) {
-            val coverAlpha by androidx.compose.animation.core.animateFloatAsState(
-                targetValue = if (isFirstPageReady && !isNavigatingOut) 0f else 1f,
-                animationSpec = tween(durationMillis = 220, easing = androidx.compose.animation.core.LinearEasing),
-                label = "coverAlpha"
-            )
-            if (coverAlpha > 0.01f) {
-                Box(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .graphicsLayer { alpha = coverAlpha },
-                    contentAlignment = Alignment.Center
-                ) {
-                    coil3.compose.AsyncImage(
-                        model = coil3.request.ImageRequest.Builder(coil3.compose.LocalPlatformContext.current)
-                            .data(com.Nightjar.Th3GradeLibraryKMP.generated.resources.Res.getUri("drawable/${item.coverResName}." + if (item.coverResName in listOf("ayajaaa", "english", "englishactivity", "kss1")) "jpg" else "png"))
-                            .crossfade(false)
-                            .memoryCachePolicy(coil3.request.CachePolicy.ENABLED)
-                            .diskCachePolicy(coil3.request.CachePolicy.ENABLED)
-                            .build(),
-                        contentDescription = item.title,
-                        contentScale = ContentScale.Crop,
-                        modifier = Modifier.fillMaxSize()
-                    )
-                }
-            }
-        } else {
-            val cachedBitmap = remember(item.id, targetInitialPage) {
-                PdfBitmapCache.cache.get("pdf_${item.id}_page_$targetInitialPage")
-            }
-            val bookmarkAlpha by androidx.compose.animation.core.animateFloatAsState(
-                targetValue = if (isFirstPageReady && !isNavigatingOut) 0f else 1f,
-                animationSpec = tween(durationMillis = 220, easing = androidx.compose.animation.core.LinearEasing),
-                label = "bookmarkAlpha"
-            )
-            if (bookmarkAlpha > 0.01f) {
-                Box(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .graphicsLayer { alpha = bookmarkAlpha },
-                    contentAlignment = Alignment.Center
-                ) {
-                    if (cachedBitmap != null) {
-                        Image(
-                            bitmap = cachedBitmap.asImageBitmap(),
-                            contentDescription = null,
-                            contentScale = ContentScale.Fit,
-                            modifier = Modifier.fillMaxSize()
-                        )
-                    } else {
-                        Column(
-                            horizontalAlignment = Alignment.CenterHorizontally,
-                            verticalArrangement = Arrangement.Center
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.Bookmark,
-                                contentDescription = null,
-                                tint = MaterialTheme.colorScheme.primary,
-                                modifier = Modifier.size(54.dp)
-                            )
-                            Spacer(modifier = Modifier.height(16.dp))
-                            Text(
-                                text = "الصفحة رقم ${(initialPage ?: 0) + 1}",
-                                fontSize = 18.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = MaterialTheme.colorScheme.onBackground
-                            )
-                        }
-                    }
-                }
-            }
-        }
         if (loadingError != null) {
             Column(
                 modifier = Modifier
@@ -477,9 +408,18 @@ actual fun PdfViewerScreen(
                     Text("رجوع")
                 }
             }
+        } else if (pdfRenderer == null) {
+            Box(
+                modifier = Modifier.fillMaxSize(),
+                contentAlignment = Alignment.Center
+            ) {
+                com.Nightjar.Th3GradeLibraryKMP.ui.ExpressiveLoadingIndicator(
+                    modifier = Modifier.size(48.dp),
+                    color = MaterialTheme.colorScheme.primary
+                )
+            }
         } else {
-            if (pdfRenderer != null) {
-                val pageCount = pdfRenderer!!.pageCount
+            val pageCount = pdfRenderer!!.pageCount
                 val targetInitialPage = initialPage ?: if (pageCount > 0) savedPage.coerceAtMost(pageCount - 1) else 0
                 androidx.compose.runtime.key(item.id, targetInitialPage) {
                     val pagerState = rememberPagerState(initialPage = targetInitialPage.coerceAtMost(maxOf(0, pageCount - 1))) { pageCount }
@@ -520,8 +460,45 @@ actual fun PdfViewerScreen(
 
                     var showJumpDialog by remember { mutableStateOf(false) }
                     var jumpPageInput by remember { mutableStateOf("") }
+                    val coroutineScope = rememberCoroutineScope()
+                    val focusRequester = remember { FocusRequester() }
 
-                    Box(modifier = Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)) {
+                    LaunchedEffect(Unit) {
+                        try {
+                            focusRequester.requestFocus()
+                        } catch (_: Exception) {}
+                    }
+
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .background(MaterialTheme.colorScheme.background)
+                            .focusRequester(focusRequester)
+                            .focusable()
+                            .onKeyEvent { keyEvent ->
+                                if (keyEvent.type == KeyEventType.KeyDown) {
+                                    when (keyEvent.key) {
+                                        Key.DirectionRight, Key.PageDown, Key.Spacebar -> {
+                                            if (pagerState.currentPage < pageCount - 1) {
+                                                coroutineScope.launch { pagerState.animateScrollToPage(pagerState.currentPage + 1) }
+                                                true
+                                            } else false
+                                        }
+                                        Key.DirectionLeft, Key.PageUp -> {
+                                            if (pagerState.currentPage > 0) {
+                                                coroutineScope.launch { pagerState.animateScrollToPage(pagerState.currentPage - 1) }
+                                                true
+                                            } else false
+                                        }
+                                        Key.Escape -> {
+                                            onClose()
+                                            true
+                                        }
+                                        else -> false
+                                    }
+                                } else false
+                            }
+                    ) {
                         // Render page content
                         Box(modifier = Modifier.fillMaxSize()) {
                             if (orientation == "vertical") {

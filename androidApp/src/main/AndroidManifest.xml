@@ -12,6 +12,14 @@
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_DATA_SYNC" />
     <uses-permission android:name="android.permission.WAKE_LOCK" />
 
+    <supports-screens
+        android:smallScreens="true"
+        android:normalScreens="true"
+        android:largeScreens="true"
+        android:xlargeScreens="true"
+        android:anyDensity="true"
+        android:resizeable="true" />
+
     <application
         android:name=".MainApplication"
         android:allowBackup="true"
@@ -48,6 +56,7 @@
 
             <meta-data android:name="com.samsung.android.keepalive.density" android:value="true" />
             <meta-data android:name="com.samsung.android.multidisplay.keep_process_alive" android:value="true" />
+            <meta-data android:name="android.max_aspect" android:value="2.6" />
             <meta-data android:name="android.app.shortcuts" android:resource="@xml/shortcuts" />
         </activity>
         

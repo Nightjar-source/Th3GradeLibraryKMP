@@ -362,7 +362,7 @@ fun BookAccordionItem(
                                 boundsTransform = { _, _ ->
                                     spring(dampingRatio = 0.82f, stiffness = 280f)
                                 },
-                                resizeMode = SharedTransitionScope.ResizeMode.scaleToBounds(ContentScale.Crop)
+                                resizeMode = SharedTransitionScope.ResizeMode.RemeasureToBounds
                             )
                         }
                     } else Modifier
