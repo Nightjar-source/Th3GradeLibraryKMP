@@ -7,6 +7,9 @@ import androidx.compose.animation.ExperimentalSharedTransitionApi
 import androidx.compose.ui.zIndex
 import androidx.compose.animation.*
 import androidx.compose.animation.core.*
+import androidx.compose.material3.adaptive.currentWindowAdaptiveInfo
+import androidx.window.core.layout.WindowWidthSizeClass
+import androidx.window.core.layout.WindowHeightSizeClass
 import com.Nightjar.Th3GradeLibraryKMP.theme.popInOnInitialLoad
 import com.Nightjar.Th3GradeLibraryKMP.theme.adaptiveItemEntrance
 import androidx.compose.foundation.Image
@@ -162,6 +165,12 @@ fun NewsScreen(
         }
     }
 
+    val adaptiveInfo = currentWindowAdaptiveInfo()
+    val windowSizeClass = adaptiveInfo.windowSizeClass
+    val widthClass = windowSizeClass.windowWidthSizeClass
+    val heightClass = windowSizeClass.windowHeightSizeClass
+    val isMedium = widthClass != WindowWidthSizeClass.COMPACT
+
     BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
         val pullRefreshState = rememberPullToRefreshState()
         // Uses hoisted lazyListState
@@ -219,12 +228,15 @@ fun NewsScreen(
                     },
                     modifier = Modifier.fillMaxSize()
                 ) {
-                    val screenWidthDp = with(androidx.compose.ui.platform.LocalDensity.current) { androidx.compose.ui.platform.LocalWindowInfo.current.containerSize.width.toDp() }
-                    val dynamicNewsColumns = remember(screenWidthDp) {
-                        when {
-                            screenWidthDp >= 1400.dp -> GridCells.Fixed(3)
-                            screenWidthDp >= 720.dp  -> GridCells.Fixed(2)
-                            else                     -> GridCells.Fixed(1)
+                    val windowInfo = androidx.compose.ui.platform.LocalWindowInfo.current
+                    val density = androidx.compose.ui.platform.LocalDensity.current
+                    val screenWidthDp = with(density) { windowInfo.containerSize.width.toDp() }
+                    val dynamicNewsColumns = remember(widthClass, screenWidthDp) {
+                        when (widthClass) {
+                            WindowWidthSizeClass.COMPACT -> GridCells.Fixed(1)
+                            WindowWidthSizeClass.MEDIUM -> GridCells.Fixed(2)
+                            WindowWidthSizeClass.EXPANDED -> if (screenWidthDp >= 1400.dp) GridCells.Fixed(3) else GridCells.Fixed(2)
+                            else -> GridCells.Fixed(1)
                         }
                     }
                     LazyVerticalGrid(

@@ -1,6 +1,9 @@
 package com.Nightjar.Th3GradeLibraryKMP.ui
 
 import androidx.compose.animation.*
+import androidx.compose.material3.adaptive.currentWindowAdaptiveInfo
+import androidx.window.core.layout.WindowWidthSizeClass
+import androidx.window.core.layout.WindowHeightSizeClass
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
@@ -145,12 +148,14 @@ fun BookmarksScreen(
                     }
                 }
 
+                val adaptiveInfo = currentWindowAdaptiveInfo()
+                val windowSizeClass = adaptiveInfo.windowSizeClass
+                val widthClass = windowSizeClass.windowWidthSizeClass
+                val heightClass = windowSizeClass.windowHeightSizeClass
                 val windowInfo = LocalWindowInfo.current
                 val density = LocalDensity.current
                 val screenWidthDp = with(density) { windowInfo.containerSize.width.toDp() }
-                val screenHeightDp = with(density) { windowInfo.containerSize.height.toDp() }
-                val isLandscape = screenWidthDp > screenHeightDp
-                val isMedium = screenWidthDp >= 600.dp
+                val isMedium = widthClass != WindowWidthSizeClass.COMPACT
                 val screenVisibilityScope = LocalAnimatedVisibilityScope.current
                 val expandedSet by SyncEngine.expandedBookmarks.collectAsState()
 
@@ -163,12 +168,18 @@ fun BookmarksScreen(
                     }
                 }
 
-                val dynamicBookmarkColumns = remember(screenWidthDp, screenHeightDp, isLandscape) {
-                    when {
-                        screenWidthDp >= 1440.dp -> GridCells.Fixed(4) // Ultra-wide / 4K / Desktop
-                        screenWidthDp >= 1080.dp -> GridCells.Fixed(3) // Samsung Galaxy Tab 12 Pro / Googlebook
-                        screenWidthDp >= 600.dp  -> GridCells.Fixed(2) // Tablets / Foldables
-                        else                     -> GridCells.Fixed(1) // Phone vertical
+                val dynamicBookmarkColumns = remember(widthClass, heightClass, screenWidthDp) {
+                    when (widthClass) {
+                        WindowWidthSizeClass.COMPACT -> GridCells.Fixed(1)
+                        WindowWidthSizeClass.MEDIUM -> GridCells.Fixed(2)
+                        WindowWidthSizeClass.EXPANDED -> {
+                            when {
+                                screenWidthDp >= 1440.dp -> GridCells.Fixed(4) // Ultra-wide / 4K / Desktop
+                                screenWidthDp >= 1080.dp -> GridCells.Fixed(3) // Samsung Galaxy Tab 12 Pro / Googlebook
+                                else                     -> GridCells.Fixed(2) // Tablets / Foldables
+                            }
+                        }
+                        else -> GridCells.Fixed(1)
                     }
                 }
 

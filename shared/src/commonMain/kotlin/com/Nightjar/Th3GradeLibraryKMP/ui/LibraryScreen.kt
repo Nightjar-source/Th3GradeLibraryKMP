@@ -3,6 +3,9 @@ package com.Nightjar.Th3GradeLibraryKMP.ui
 
 import androidx.compose.foundation.lazy.grid.LazyGridItemScope
 import androidx.compose.animation.*
+import androidx.compose.material3.adaptive.currentWindowAdaptiveInfo
+import androidx.window.core.layout.WindowWidthSizeClass
+import androidx.window.core.layout.WindowHeightSizeClass
 import androidx.compose.ui.graphics.drawscope.translate
 import kotlinx.coroutines.launch
 import androidx.compose.animation.core.tween
@@ -97,13 +100,17 @@ fun LibraryScreen(
     scrollState: androidx.compose.foundation.ScrollState = androidx.compose.foundation.rememberScrollState(),
     lazyGridState: androidx.compose.foundation.lazy.grid.LazyGridState = androidx.compose.foundation.lazy.grid.rememberLazyGridState()
 ) {
+    val adaptiveInfo = currentWindowAdaptiveInfo()
+    val windowSizeClass = adaptiveInfo.windowSizeClass
+    val widthClass = windowSizeClass.windowWidthSizeClass
+    val heightClass = windowSizeClass.windowHeightSizeClass
+
     BoxWithConstraints(
         modifier = Modifier
             .fillMaxSize()
             .padding(horizontal = 16.dp)
     ) {
-        val screenWidthDp = with(androidx.compose.ui.platform.LocalDensity.current) { androidx.compose.ui.platform.LocalWindowInfo.current.containerSize.width.toDp() }
-        val isWide = screenWidthDp >= 600.dp
+        val isWide = widthClass != WindowWidthSizeClass.COMPACT
         Column(modifier = Modifier.fillMaxSize()) {
             if (category == null) {
                 // Home/Categories view
@@ -257,29 +264,46 @@ fun LibraryScreen(
                     val windowInfo = androidx.compose.ui.platform.LocalWindowInfo.current
                     val density = androidx.compose.ui.platform.LocalDensity.current
                     val screenWidthDp = with(density) { windowInfo.containerSize.width.toDp() }
-                    val screenHeightDp = with(density) { windowInfo.containerSize.height.toDp() }
-                    val isLandscape = screenWidthDp > screenHeightDp
-                    val isMedium = screenWidthDp >= 600.dp
-                    val dynamicTopPadding = if (isMedium) {
+                    val dynamicTopPadding = if (isWide) {
                         statusBarHeight + 64.dp
                     } else {
                         statusBarHeight + 76.dp
                     }
-                    val dynamicGridColumns = remember(screenWidthDp, screenHeightDp, isGridView, isLandscape) {
+                    val dynamicGridColumns = remember(widthClass, heightClass, screenWidthDp, isGridView) {
                         if (isGridView) {
-                            when {
-                                screenWidthDp >= 1800.dp -> GridCells.Fixed(8) // Ultra-wide 4K / Dual monitor / Samsung DeX
-                                screenWidthDp >= 1440.dp -> GridCells.Fixed(6) // Googlebook 15-16" / High-end desktop
-                                screenWidthDp >= 1080.dp -> GridCells.Fixed(5) // Samsung Galaxy Tab 12 Pro / Googlebook 13-14"
-                                screenWidthDp >= 840.dp  -> GridCells.Fixed(4) // Tablets landscape / Foldable unfolded
-                                screenWidthDp >= 600.dp  -> if (isLandscape) GridCells.Fixed(4) else GridCells.Fixed(3) // Mobile landscape = 4, Tablet portrait = 3
-                                else                     -> GridCells.Fixed(2) // Mobile vertical portrait = 2
+                            when (widthClass) {
+                                WindowWidthSizeClass.COMPACT -> {
+                                    // Official Material 3 Compact: Phone in vertical portrait (< 600dp) -> 2 columns
+                                    GridCells.Fixed(2)
+                                }
+                                WindowWidthSizeClass.MEDIUM -> {
+                                    // Official Material 3 Medium (600dp - 840dp):
+                                    // Compact height indicates mobile phone in landscape orientation -> 4 columns!
+                                    // Medium/Expanded height indicates tablet in portrait -> 3 columns!
+                                    if (heightClass == WindowHeightSizeClass.COMPACT) {
+                                        GridCells.Fixed(4)
+                                    } else {
+                                        GridCells.Fixed(3)
+                                    }
+                                }
+                                WindowWidthSizeClass.EXPANDED -> {
+                                    // Official Material 3 Expanded (>= 840dp):
+                                    // Large screens, Samsung Galaxy Tab 12 Pro, Googlebook OS laptops, DeX
+                                    when {
+                                        screenWidthDp >= 1800.dp -> GridCells.Fixed(8) // Ultra-wide 4K / Dual monitor / Samsung DeX
+                                        screenWidthDp >= 1440.dp -> GridCells.Fixed(6) // Googlebook 15-16" / High-end desktop
+                                        screenWidthDp >= 1080.dp -> GridCells.Fixed(5) // Samsung Galaxy Tab 12 Pro / Googlebook 13-14"
+                                        else                     -> GridCells.Fixed(4) // Standard Tablet landscape (840dp - 1080dp)
+                                    }
+                                }
+                                else -> GridCells.Fixed(2)
                             }
                         } else {
-                            when {
-                                screenWidthDp >= 1400.dp -> GridCells.Fixed(3) // Ultra-wide list
-                                screenWidthDp >= 720.dp  -> GridCells.Fixed(2) // Tablets / Wide foldables
-                                else                     -> GridCells.Fixed(1) // Standard mobile
+                            when (widthClass) {
+                                WindowWidthSizeClass.COMPACT -> GridCells.Fixed(1)
+                                WindowWidthSizeClass.MEDIUM -> GridCells.Fixed(2)
+                                WindowWidthSizeClass.EXPANDED -> if (screenWidthDp >= 1400.dp) GridCells.Fixed(3) else GridCells.Fixed(2)
+                                else -> GridCells.Fixed(1)
                             }
                         }
                     }

@@ -6,6 +6,9 @@ import androidx.compose.animation.ExperimentalSharedTransitionApi
 import com.Nightjar.Th3GradeLibraryKMP.theme.popInOnInitialLoad
 import com.Nightjar.Th3GradeLibraryKMP.theme.screenEntranceCascade
 import com.Nightjar.Th3GradeLibraryKMP.theme.adaptiveItemEntrance
+import androidx.compose.material3.adaptive.currentWindowAdaptiveInfo
+import androidx.window.core.layout.WindowWidthSizeClass
+import androidx.window.core.layout.WindowHeightSizeClass
 
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -60,13 +63,16 @@ fun ShortcutsScreen(
         onScrollableStateChanged(canScroll)
     }
 
+    val adaptiveInfo = currentWindowAdaptiveInfo()
+    val windowSizeClass = adaptiveInfo.windowSizeClass
+    val widthClass = windowSizeClass.windowWidthSizeClass
+    val heightClass = windowSizeClass.windowHeightSizeClass
+
     BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
         val windowInfo = androidx.compose.ui.platform.LocalWindowInfo.current
         val density = androidx.compose.ui.platform.LocalDensity.current
         val screenWidthDp = with(density) { windowInfo.containerSize.width.toDp() }
-        val screenHeightDp = with(density) { windowInfo.containerSize.height.toDp() }
-        val isLandscape = screenWidthDp > screenHeightDp
-        val isWide = screenWidthDp >= 600.dp
+        val isWide = widthClass != WindowWidthSizeClass.COMPACT
         Column(
             modifier = Modifier
                 .fillMaxSize()
@@ -81,14 +87,21 @@ fun ShortcutsScreen(
                 }
             }
 
-            val dynamicShortcutColumns = remember(screenWidthDp, screenHeightDp, isLandscape) {
-                when {
-                    screenWidthDp >= 1800.dp -> GridCells.Fixed(8)
-                    screenWidthDp >= 1440.dp -> GridCells.Fixed(6)
-                    screenWidthDp >= 1080.dp -> GridCells.Fixed(5)
-                    screenWidthDp >= 840.dp  -> GridCells.Fixed(4)
-                    screenWidthDp >= 600.dp  -> if (isLandscape) GridCells.Fixed(4) else GridCells.Fixed(3)
-                    else                     -> GridCells.Fixed(2)
+            val dynamicShortcutColumns = remember(widthClass, heightClass, screenWidthDp) {
+                when (widthClass) {
+                    WindowWidthSizeClass.COMPACT -> GridCells.Fixed(2)
+                    WindowWidthSizeClass.MEDIUM -> {
+                        if (heightClass == WindowHeightSizeClass.COMPACT) GridCells.Fixed(4) else GridCells.Fixed(3)
+                    }
+                    WindowWidthSizeClass.EXPANDED -> {
+                        when {
+                            screenWidthDp >= 1800.dp -> GridCells.Fixed(8)
+                            screenWidthDp >= 1440.dp -> GridCells.Fixed(6)
+                            screenWidthDp >= 1080.dp -> GridCells.Fixed(5)
+                            else                     -> GridCells.Fixed(4)
+                        }
+                    }
+                    else -> GridCells.Fixed(2)
                 }
             }
 
