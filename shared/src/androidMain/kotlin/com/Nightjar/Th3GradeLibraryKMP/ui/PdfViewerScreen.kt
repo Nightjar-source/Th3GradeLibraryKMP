@@ -255,11 +255,12 @@ actual fun PdfViewerScreen(
                 val rendererToClose = pdfRenderer
                 pdfRenderer = null
                 val fileToDelete = tempFile
+                val bookId = item.id
                 
-                // Delayed cleanup: Allow 500ms safety window for the reverse sharedBounds shrink animation to finish smoothly
+                // 1. Safe renderer release: Close renderer after reverse sharedBounds shrink animation completes (600ms)
                 CoroutineScope(Dispatchers.IO).launch {
                     try {
-                        kotlinx.coroutines.delay(500)
+                        kotlinx.coroutines.delay(600)
                         pdfMutex.withLock {
                             try {
                                 rendererToClose?.close()
@@ -267,17 +268,32 @@ actual fun PdfViewerScreen(
                                 e.printStackTrace()
                             }
                         }
-                        PdfBitmapCache.cache.evictAll()
-                        if (activeViewingBookId != item.id) {
-                            if (fileToDelete != null && fileToDelete.exists()) {
-                                fileToDelete.delete()
-                            }
-                            PdfBitmapCache.evictBook(item.id)
-                        }
                     } catch (e: Exception) {
                         e.printStackTrace()
                     }
                 }
+
+                // 2. Official 2-Minute Grace Timer (120 seconds):
+                // Retains extracted PDF file and page cache in RAM for 2 minutes.
+                // If user re-opens this book within 2 minutes, launch is instantaneous with zero disk re-copy!
+                // If 2 minutes elapse without re-opening, cleanly deletes file and evicts cache.
+                val cleanupJob = CoroutineScope(Dispatchers.IO).launch {
+                    try {
+                        kotlinx.coroutines.delay(120_000L) // 2-Minute official timer
+                        if (activeViewingBookId != bookId) {
+                            if (fileToDelete != null && fileToDelete.exists()) {
+                                fileToDelete.delete()
+                            }
+                            PdfBitmapCache.evictBook(bookId)
+                            pendingCacheCleanups.remove("pdf_$bookId.pdf")
+                        }
+                    } catch (_: kotlinx.coroutines.CancellationException) {
+                        // User reopened the book within 2 minutes! Cleanup aborted safely.
+                    } catch (e: Exception) {
+                        e.printStackTrace()
+                    }
+                }
+                pendingCacheCleanups["pdf_$bookId.pdf"] = cleanupJob
 
                 activity?.let { act ->
                     val window = act.window
@@ -901,7 +917,17 @@ actual fun PdfViewerScreen(
 // Singleton Cache for PDF Pages to prevent lag during scrolling
 object PdfBitmapCache {
     private val maxMemory = (Runtime.getRuntime().maxMemory() / 1024).toInt()
-    private val cacheSize = maxMemory / 8 // Use 1/8th of available memory
+    private val cores = Runtime.getRuntime().availableProcessors()
+    // Dynamic cache allocation based on hardware capabilities:
+    // Flagships with 8+ cores & large heap (>= 512MB) get 1/6th of RAM for buttery instant caching.
+    // Mid-range devices get 1/8th of RAM.
+    // Budget devices (Galaxy J7, RAM < 3GB, small heap) get 1/12th of RAM to prevent OOM.
+    private val cacheDivisor = when {
+        maxMemory >= 512 * 1024 && cores >= 8 -> 6
+        maxMemory >= 256 * 1024 -> 8
+        else -> 12
+    }
+    private val cacheSize = maxMemory / cacheDivisor
     val cache = object : LruCache<String, Bitmap>(cacheSize) {
         override fun sizeOf(key: String, bitmap: Bitmap): Int {
             return bitmap.byteCount / 1024
@@ -1043,10 +1069,39 @@ fun AndroidPdfPage(
         }
     }
 
-    LaunchedEffect(bitmap) {
+    LaunchedEffect(bitmap, pageIndex) {
         if (bitmap != null) {
             showLoadingIndicator = false
             onPageReady()
+
+            // Asynchronous prefetch of next page on capable devices to eliminate scrolling lag
+            val cores = Runtime.getRuntime().availableProcessors()
+            val maxMemoryMb = (Runtime.getRuntime().maxMemory() / (1024 * 1024)).toInt()
+            if (cores >= 6 && maxMemoryMb >= 384 && pageIndex + 1 < renderer.pageCount) {
+                val nextKey = "pdf_${if (bookId.isNotEmpty()) bookId else renderer.hashCode().toString()}_page_${pageIndex + 1}"
+                if (PdfBitmapCache.cache.get(nextKey) == null) {
+                    scope.launch(Dispatchers.IO) {
+                        try {
+                            pdfMutex.withLock {
+                                currentCoroutineContext().ensureActive()
+                                val nextPage = renderer.openPage(pageIndex + 1)
+                                try {
+                                    val prefetchScale = if (maxMemoryMb >= 512 && cores >= 8) 1.75f else 1.4f
+                                    val nextW = (nextPage.width * prefetchScale).toInt()
+                                    val nextH = (nextPage.height * prefetchScale).toInt()
+                                    val nextBmp = Bitmap.createBitmap(nextW, nextH, Bitmap.Config.ARGB_8888)
+                                    val canvas = android.graphics.Canvas(nextBmp)
+                                    canvas.drawColor(android.graphics.Color.WHITE)
+                                    nextPage.render(nextBmp, null, null, PdfRenderer.Page.RENDER_MODE_FOR_DISPLAY)
+                                    PdfBitmapCache.cache.put(nextKey, nextBmp)
+                                } finally {
+                                    try { nextPage.close() } catch (_: Exception) {}
+                                }
+                            }
+                        } catch (_: Exception) {}
+                    }
+                }
+            }
         }
     }
 
@@ -1058,15 +1113,14 @@ fun AndroidPdfPage(
                         currentCoroutineContext().ensureActive()
                         val page = renderer.openPage(pageIndex)
                         try {
-                            // Dynamic RAM-based scaling:
-                            // Android's native PdfRenderer.render() strictly mandates Bitmap.Config.ARGB_8888.
-                            // Passing RGB_565 throws IllegalArgumentException: Unsupported pixel format.
-                            // To protect low-end devices (Galaxy J7, etc.) and save RAM, we scale resolution dynamically:
+                            // Hardware-profile Adaptive Scaling Engine (CPU Cores + RAM Heap):
                             val maxMemoryMb = (Runtime.getRuntime().maxMemory() / (1024 * 1024)).toInt()
+                            val cores = Runtime.getRuntime().availableProcessors()
                             val scaleFactor = when {
-                                maxMemoryMb >= 512 -> 1.5 // High-end devices with large heap
-                                maxMemoryMb >= 256 -> 1.2 // Mid-range
-                                else -> 1.0 // Low-end devices (Galaxy J7, RAM < 3GB, small heap)
+                                maxMemoryMb >= 512 && cores >= 8 -> 1.75f // High-end flagships & tablets (Snapdragon 8, Tensor, etc.)
+                                maxMemoryMb >= 384 && cores >= 6 -> 1.4f  // Upper mid-range
+                                maxMemoryMb >= 256 && cores >= 4 -> 1.2f  // Mid-range
+                                else -> 1.0f // Low-end devices (Galaxy J7, RAM < 3GB, small heap, <= 4 cores)
                             }
                             
                             val width = (page.width * scaleFactor).toInt()
