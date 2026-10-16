@@ -59,7 +59,16 @@ jobs:
         run: |
           cp androidApp/build/outputs/apk/release/androidApp-release.apk "androidApp/build/outputs/apk/release/كتب_وملازم_الثالث_متوسط_${{ steps.release_info.outputs.tag }}.apk"
 
+      - name: Upload Release APK Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: كتب_وملازم_الثالث_متوسط_${{ steps.release_info.outputs.tag }}
+          path: |
+            androidApp/build/outputs/apk/release/كتب_وملازم_الثالث_متوسط_${{ steps.release_info.outputs.tag }}.apk
+            androidApp/build/outputs/apk/release/androidApp-release.apk
+
       - name: Create Release
+        continue-on-error: true
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ steps.release_info.outputs.tag }}
