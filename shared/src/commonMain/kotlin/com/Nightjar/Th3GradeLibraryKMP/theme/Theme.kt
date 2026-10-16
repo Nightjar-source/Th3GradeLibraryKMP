@@ -167,38 +167,44 @@ fun Modifier.expressiveButtonMorph(
  */
 fun Modifier.screenEntranceStagger(index: Int = 0, itemId: String? = null): Modifier = composed {
     val isLowEnd = LocalIsLowEndDevice.current
-    if (isLowEnd || index > 10) return@composed this
+    if (isLowEnd || index > 12) return@composed this
 
     val isReturningFromPdf = LocalIsReturningFromPdf.current
+    val isNavigatingBack = LocalIsNavigatingBack.current
+    val itemKey = itemId ?: index.toString()
+    val isActiveSharedTarget = com.Nightjar.Th3GradeLibraryKMP.ui.TransitionTargetTracker.isTransitionActive &&
+            (com.Nightjar.Th3GradeLibraryKMP.ui.TransitionTargetTracker.activeTargetId == "card_$itemKey" ||
+             com.Nightjar.Th3GradeLibraryKMP.ui.TransitionTargetTracker.activeTargetId == itemKey ||
+             com.Nightjar.Th3GradeLibraryKMP.ui.TransitionTargetTracker.activeTargetId?.startsWith("bookmark_$itemKey") == true)
+
+    // When returning from PDF or navigating back or on active shared target: keep 100% stationary with zero movement!
+    if (isReturningFromPdf || isNavigatingBack || isActiveSharedTarget) return@composed this
+
     val screenKey = LocalScreenEntranceKey.current
     val seenMap = LocalSeenEntranceItems.current
-    val itemKey = itemId ?: index.toString()
     val alreadySeen = seenMap?.get(itemKey) == true
-    val isActiveSharedTarget = com.Nightjar.Th3GradeLibraryKMP.ui.TransitionTargetTracker.isTransitionActive &&
-            (com.Nightjar.Th3GradeLibraryKMP.ui.TransitionTargetTracker.activeTargetId == "card_$itemKey" || com.Nightjar.Th3GradeLibraryKMP.ui.TransitionTargetTracker.activeTargetId == itemKey)
+    if (alreadySeen) return@composed this
 
-    if (isReturningFromPdf || alreadySeen || isActiveSharedTarget) return@composed this
-
-    val animProgress = androidx.compose.runtime.remember(screenKey) { androidx.compose.animation.core.Animatable(0f) }
+    val animProgress = androidx.compose.runtime.remember(screenKey, itemKey) { androidx.compose.animation.core.Animatable(0f) }
     val density = androidx.compose.ui.platform.LocalDensity.current
-    val offsetYPx = androidx.compose.runtime.remember(density) { with(density) { 12.dp.toPx() } }
+    val offsetYPx = androidx.compose.runtime.remember(density) { with(density) { 14.dp.toPx() } }
 
-    androidx.compose.runtime.LaunchedEffect(screenKey) {
-        val staggerDelay = (index.coerceIn(0, 6) * 16L)
+    androidx.compose.runtime.LaunchedEffect(screenKey, itemKey) {
+        val staggerDelay = (index.coerceIn(0, 8) * 22L)
         if (staggerDelay > 0) kotlinx.coroutines.delay(staggerDelay)
         animProgress.animateTo(
             targetValue = 1f,
             animationSpec = androidx.compose.animation.core.spring(
-                dampingRatio = 0.82f, // Ultra-buttery moist curve
-                stiffness = 420f
+                dampingRatio = 0.76f, // Ultra-moist fluid organic spring (كالجبنة)
+                stiffness = 320f
             )
         )
         seenMap?.put(itemKey, true)
     }
 
+    val p = animProgress.value
     this.graphicsLayer {
-        val p = animProgress.value
-        this.alpha = p.coerceIn(0f, 1f)
+        this.alpha = 0.30f + 0.70f * p // Base alpha 0.30f eliminates harsh dark/white flashes!
         this.translationY = (1f - p) * offsetYPx
         this.scaleX = 0.985f + 0.015f * p
         this.scaleY = 0.985f + 0.015f * p
@@ -217,55 +223,11 @@ fun Modifier.screenEntranceCascade(index: Int = 0, itemId: String? = null): Modi
 fun Modifier.popInOnInitialLoad(index: Int = 0, itemId: String? = null): Modifier = this.screenEntranceStagger(index, itemId)
 
 /**
- * Snappy Scroll-Driven Lazy Loading for items entering viewport during list scrolling (> 6).
- * Instant 0ms delay, smooth 160ms duration, never flickers or jumps.
- */
-fun Modifier.scrollLazyLoading(index: Int = 0, itemId: String? = null): Modifier = composed {
-    val isLowEnd = LocalIsLowEndDevice.current
-    if (isLowEnd) return@composed this
-
-    val isReturningFromPdf = LocalIsReturningFromPdf.current
-    val itemKey = itemId ?: index.toString()
-    var isLoaded by androidx.compose.runtime.remember(itemKey) { 
-        androidx.compose.runtime.mutableStateOf(isReturningFromPdf) 
-    }
-
-    androidx.compose.runtime.LaunchedEffect(itemKey) {
-        isLoaded = true
-    }
-
-    val animProgress by androidx.compose.animation.core.animateFloatAsState(
-        targetValue = if (isLoaded || isReturningFromPdf) 1f else 0f,
-        animationSpec = androidx.compose.animation.core.tween(
-            durationMillis = 160,
-            delayMillis = 0,
-            easing = androidx.compose.animation.core.FastOutSlowInEasing
-        ),
-        label = "scrollLazy_$itemKey"
-    )
-
-    val density = androidx.compose.ui.platform.LocalDensity.current
-    val offsetYPx = androidx.compose.runtime.remember(density) { with(density) { 16.dp.toPx() } }
-
-    this.graphicsLayer {
-        val p = if (isReturningFromPdf) 1f else animProgress
-        this.alpha = 0.85f + 0.15f * p
-        this.translationY = (1f - p) * offsetYPx
-        this.scaleX = 0.98f + 0.02f * p
-        this.scaleY = 0.98f + 0.02f * p
-        this.clip = false
-    }
-}
-
-fun Modifier.lazyFastLoading(index: Int = 0, itemId: String? = null): Modifier = this.scrollLazyLoading(index, itemId)
-
-/**
- * Unified adaptive entrance: Screen Entrance Cascade for initial visible items (0..6),
- * and Snappy Scroll Lazy Loading for subsequent scrolled items (> 6).
- * Ensures every tab re-entry smoothly cascades, while list scrolling remains snappy and lag-free.
+ * Unified adaptive entrance: Screen Entrance Cascade for initial visible items (0..8).
+ * Scrolled items (> 8) are rendered instantly without overhead to preserve 120 FPS scrolling.
  */
 fun Modifier.adaptiveItemEntrance(index: Int = 0, itemId: String? = null): Modifier = composed {
-    if (index <= 6) {
+    if (index <= 8) {
         this.screenEntranceCascade(index, itemId)
     } else {
         this

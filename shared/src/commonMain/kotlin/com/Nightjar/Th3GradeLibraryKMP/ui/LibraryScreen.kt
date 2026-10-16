@@ -278,37 +278,43 @@ fun LibraryScreen(
                     } else {
                         statusBarHeight + 76.dp
                     }
-                    LazyVerticalGrid(
-                        state = lazyGridState,
-                        userScrollEnabled = true,
-                        columns = if (isGridView) {
-                            GridCells.Adaptive(minSize = 140.dp)
-                        } else {
-                            GridCells.Adaptive(minSize = 340.dp)
-                        },
-                        modifier = Modifier
-                            .weight(1f)
-                            .fillMaxWidth()
-                            .elasticOverscroll(),
-                        horizontalArrangement = Arrangement.spacedBy(16.dp, Alignment.CenterHorizontally),
-                        verticalArrangement = Arrangement.spacedBy(if (isGridView) 16.dp else 12.dp),
-                        contentPadding = PaddingValues(
-                            top = dynamicTopPadding, 
-                            bottom = bottomPadding
+                LazyVerticalGrid(
+                    state = lazyGridState,
+                    userScrollEnabled = true,
+                    columns = if (isGridView) {
+                        GridCells.Adaptive(minSize = 140.dp)
+                    } else {
+                        GridCells.Adaptive(minSize = 340.dp)
+                    },
+                    modifier = Modifier
+                        .weight(1f)
+                        .fillMaxWidth()
+                        .elasticOverscroll(),
+                    horizontalArrangement = Arrangement.spacedBy(16.dp, Alignment.CenterHorizontally),
+                    verticalArrangement = Arrangement.spacedBy(if (isGridView) 16.dp else 12.dp),
+                    contentPadding = PaddingValues(
+                        top = dynamicTopPadding, 
+                        bottom = bottomPadding
+                    )
+                ) {
+                    itemsIndexed(items = filteredList, key = { _, item -> item.id }, contentType = { _, _ -> "library_item" }) { index, item ->
+                        ContentCard(
+                            modifier = Modifier
+                                .animateItem(
+                                    placementSpec = spring(
+                                        dampingRatio = 0.80f,
+                                        stiffness = androidx.compose.animation.core.Spring.StiffnessMediumLow
+                                    )
+                                )
+                                .adaptiveItemEntrance(index, itemId = item.id),
+                            item = item,
+                            isGridView = isGridView,
+                            isDark = isDark,
+                            index = index,
+                            onClick = { onNavigateToPdf(item) }
                         )
-                    ) {
-                        itemsIndexed(items = filteredList, key = { _, item -> item.id }, contentType = { _, _ -> "library_item" }) { index, item ->
-                            ContentCard(
-                                modifier = Modifier
-                                    .adaptiveItemEntrance(index, itemId = item.id),
-                                item = item,
-                                fraction = gridListFraction,
-                                isDark = isDark,
-                                index = index,
-                                onClick = { onNavigateToPdf(item) }
-                            )
-                        }
                     }
+                }
                 }
             }
         }
@@ -506,56 +512,93 @@ fun CategoryMenuCard(
 fun LazyGridItemScope.ContentCard(
     modifier: Modifier = Modifier,
     item: BookItem,
-    fraction: Float,
+    isGridView: Boolean,
     isDark: Boolean,
     index: Int = 0,
     onClick: () -> Unit
 ) {
-
-    val safeFraction = fraction.coerceIn(0f, 1f)
-    val coverCornerRadius = lerp(16.dp, 20.dp, safeFraction).coerceAtLeast(0.dp)
-    val cardCornerRadius = androidx.compose.ui.unit.lerp(28.dp, 20.dp, safeFraction).coerceAtLeast(0.dp)
-
-    val imageModifier = Modifier.fillMaxSize()
-
+    val cardCornerRadius = if (isGridView) 20.dp else 24.dp
     val sharedTransitionScope = LocalSharedTransitionScope.current
     val animatedVisibilityScope = LocalAnimatedVisibilityScope.current
     val isThisCardTarget = (TransitionTargetTracker.activeTargetId == "card_${item.id}" || TransitionTargetTracker.activeTargetId == item.id)
+    val isTransitionActive = TransitionTargetTracker.isTransitionActive
+    val isAttachedForTransition = isThisCardTarget && isTransitionActive
+    val isReturningFromPdf = com.Nightjar.Th3GradeLibraryKMP.theme.LocalIsReturningFromPdf.current
 
-    Layout(
-        content = {
-            // Child 0: Cover Image with Radial Orbs background
-            Box(modifier = imageModifier) {
-                Box(modifier = Modifier
-                    .fillMaxSize()
-                    .clip(RoundedCornerShape(coverCornerRadius))
-                    .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
-                )
+    val sharedBoundsModifier = if (sharedTransitionScope != null && animatedVisibilityScope != null && isAttachedForTransition) {
+        with(sharedTransitionScope) {
+            Modifier.sharedBounds(
+                sharedContentState = rememberSharedContentState(key = "card_${item.id}"),
+                animatedVisibilityScope = animatedVisibilityScope,
+                enter = androidx.compose.animation.fadeIn(
+                    animationSpec = androidx.compose.animation.core.tween(
+                        durationMillis = 90,
+                        delayMillis = 240,
+                        easing = androidx.compose.animation.core.LinearEasing
+                    )
+                ),
+                exit = androidx.compose.animation.fadeOut(
+                    animationSpec = androidx.compose.animation.core.tween(
+                        durationMillis = 90,
+                        easing = androidx.compose.animation.core.LinearEasing
+                    )
+                ),
+                renderInOverlayDuringTransition = true,
+                boundsTransform = { _, _ -> spring(dampingRatio = 0.78f, stiffness = 320f) },
+                resizeMode = SharedTransitionScope.ResizeMode.scaleToBounds(androidx.compose.ui.layout.ContentScale.Crop)
+            )
+        }
+    } else Modifier
 
-                val isReturningFromPdf = com.Nightjar.Th3GradeLibraryKMP.theme.LocalIsReturningFromPdf.current
-                coil3.compose.AsyncImage(
-                    model = coil3.request.ImageRequest.Builder(coil3.compose.LocalPlatformContext.current)
-                        .data(com.Nightjar.Th3GradeLibraryKMP.generated.resources.Res.getUri("drawable/${item.coverResName}." + if (item.coverResName in listOf("ayajaaa", "english", "englishactivity", "kss1")) "jpg" else "png"))
-                        .crossfade(!isReturningFromPdf)
-                        .memoryCachePolicy(coil3.request.CachePolicy.ENABLED)
-                        .diskCachePolicy(coil3.request.CachePolicy.ENABLED)
-                        .build(),
-                    contentDescription = item.title,
-                    contentScale = ContentScale.Crop,
-                    placeholder = androidx.compose.ui.graphics.painter.ColorPainter(Color.Transparent),
-                    error = androidx.compose.ui.graphics.painter.ColorPainter(Color.Transparent),
-                    modifier = Modifier.fillMaxSize().clip(RoundedCornerShape(coverCornerRadius))
-                )
+    Box(
+        modifier = modifier
+            .zIndex(if (isThisCardTarget) 15f else if (com.Nightjar.Th3GradeLibraryKMP.theme.LocalIsNavigatingBack.current) 1f else 0f)
+            .fillMaxWidth()
+            .then(sharedBoundsModifier)
+            .liquidGlass(isDark, borderRadius = cardCornerRadius, alpha = 0.5f)
+            .clip(RoundedCornerShape(cardCornerRadius))
+            .clickable {
+                TransitionTargetTracker.activeTargetId = "card_${item.id}"
+                TransitionTargetTracker.isTransitionActive = true
+                onClick()
             }
-            // Child 1: Title & Details Column
-            Column {
+            .padding(12.dp)
+    ) {
+        if (isGridView) {
+            Column(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalAlignment = Alignment.Start
+            ) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .aspectRatio(0.72f)
+                        .clip(RoundedCornerShape(16.dp))
+                        .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
+                ) {
+                    coil3.compose.AsyncImage(
+                        model = coil3.request.ImageRequest.Builder(coil3.compose.LocalPlatformContext.current)
+                            .data(com.Nightjar.Th3GradeLibraryKMP.generated.resources.Res.getUri("drawable/${item.coverResName}." + if (item.coverResName in listOf("ayajaaa", "english", "englishactivity", "kss1")) "jpg" else "png"))
+                            .crossfade(!isReturningFromPdf)
+                            .memoryCachePolicy(coil3.request.CachePolicy.ENABLED)
+                            .diskCachePolicy(coil3.request.CachePolicy.ENABLED)
+                            .build(),
+                        contentDescription = item.title,
+                        contentScale = ContentScale.Crop,
+                        modifier = Modifier.fillMaxSize()
+                    )
+                }
+
+                Spacer(modifier = Modifier.height(10.dp))
+
                 Text(
                     text = item.title,
-                    fontSize = (16 + (14 - 16) * safeFraction).sp,
+                    fontSize = 14.sp,
                     fontWeight = FontWeight.Bold,
                     maxLines = 2,
                     overflow = TextOverflow.Ellipsis,
-                    color = MaterialTheme.colorScheme.onSurface
+                    color = MaterialTheme.colorScheme.onSurface,
+                    lineHeight = 18.sp
                 )
                 Spacer(modifier = Modifier.height(4.dp))
                 Row(
@@ -577,121 +620,84 @@ fun LazyGridItemScope.ContentCard(
                     )
                     Text(
                         text = item.author,
-                        fontSize = (12 + (11 - 12) * fraction).sp,
+                        fontSize = 11.sp,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis
                     )
                 }
             }
-            // Child 2: Arrow icon (fades out in Grid view)
-            Icon(
-                imageVector = Icons.Default.ChevronLeft,
-                contentDescription = null,
-                tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f * (1f - fraction))
-            )
-        },
-        modifier = modifier
-            .zIndex(if (isThisCardTarget) 15f else if (com.Nightjar.Th3GradeLibraryKMP.theme.LocalIsNavigatingBack.current) 1f else 0f)
-            .fillMaxWidth()
-            .then(
-                if (sharedTransitionScope != null && animatedVisibilityScope != null) {
-                    with(sharedTransitionScope) {
-                        Modifier.sharedBounds(
-                            sharedContentState = rememberSharedContentState(key = "card_${item.id}"),
-                            animatedVisibilityScope = animatedVisibilityScope,
-                            enter = androidx.compose.animation.fadeIn(
-                                animationSpec = androidx.compose.animation.core.tween(
-                                    durationMillis = 90,
-                                    delayMillis = 270,
-                                    easing = androidx.compose.animation.core.LinearEasing
+        } else {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Box(
+                    modifier = Modifier
+                        .size(width = 72.dp, height = 96.dp)
+                        .clip(RoundedCornerShape(14.dp))
+                        .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
+                ) {
+                    coil3.compose.AsyncImage(
+                        model = coil3.request.ImageRequest.Builder(coil3.compose.LocalPlatformContext.current)
+                            .data(com.Nightjar.Th3GradeLibraryKMP.generated.resources.Res.getUri("drawable/${item.coverResName}." + if (item.coverResName in listOf("ayajaaa", "english", "englishactivity", "kss1")) "jpg" else "png"))
+                            .crossfade(!isReturningFromPdf)
+                            .memoryCachePolicy(coil3.request.CachePolicy.ENABLED)
+                            .diskCachePolicy(coil3.request.CachePolicy.ENABLED)
+                            .build(),
+                        contentDescription = item.title,
+                        contentScale = ContentScale.Crop,
+                        modifier = Modifier.fillMaxSize()
+                    )
+                }
+
+                Spacer(modifier = Modifier.width(16.dp))
+
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = item.title,
+                        fontSize = 16.sp,
+                        fontWeight = FontWeight.Bold,
+                        maxLines = 2,
+                        overflow = TextOverflow.Ellipsis,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                    Spacer(modifier = Modifier.height(6.dp))
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .size(8.dp)
+                                .clip(CircleShape)
+                                .background(
+                                    Brush.linearGradient(
+                                        listOf(
+                                            parseHexColor(item.colorStart),
+                                            parseHexColor(item.colorEnd)
+                                        )
+                                    )
                                 )
-                            ),
-                            exit = androidx.compose.animation.fadeOut(
-                                animationSpec = androidx.compose.animation.core.tween(
-                                    durationMillis = 90,
-                                    easing = androidx.compose.animation.core.LinearEasing
-                                )
-                            ),
-                            renderInOverlayDuringTransition = true,
-                            boundsTransform = { _, _ -> spring(dampingRatio = 0.78f, stiffness = 320f) },
-                            resizeMode = SharedTransitionScope.ResizeMode.scaleToBounds(androidx.compose.ui.layout.ContentScale.Crop)
+                        )
+                        Text(
+                            text = item.author,
+                            fontSize = 12.sp,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
                         )
                     }
-                } else Modifier
-            )
-            .liquidGlass(isDark, borderRadius = cardCornerRadius, alpha = 0.5f)
-            .clip(RoundedCornerShape(cardCornerRadius))
-            .onGloballyPositioned { coordinates ->
-                if (TransitionTargetTracker.activeTargetId == item.id || TransitionTargetTracker.activeTargetId == "card_${item.id}") {
-                    TransitionTargetTracker.updateTargetBounds("card_${item.id}", coordinates.boundsInRoot())
                 }
+
+                Icon(
+                    imageVector = Icons.Default.ChevronLeft,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
+                )
             }
-            .clickable {
-                TransitionTargetTracker.activeTargetId = "card_${item.id}"
-                TransitionTargetTracker.isTransitionActive = true
-                onClick()
-            }
-            .padding(12.dp)
-    ) { measurables, constraints ->
-        val containerWidth = constraints.maxWidth
-        val listWidthPx = 76.dp.toPx()
-        val gridWidthPx = containerWidth.toFloat()
-        val imgWidth = (listWidthPx + safeFraction * (gridWidthPx - listWidthPx)).toInt().coerceAtLeast(1)
-
-        val listHeightPx = 96.dp.toPx()
-        val gridHeightPx = gridWidthPx * 1.30f
-        val imgHeight = (listHeightPx + safeFraction * (gridHeightPx - listHeightPx)).toInt().coerceAtLeast(1)
-
-        // Measure image
-        val imagePlaceable = measurables[0].measure(
-            Constraints.fixed(imgWidth, imgHeight)
-        )
-
-        // Measure text column
-        // In list mode: width is containerWidth - imageWidth - spacing - arrowWidth - padding
-        val listTextWidth = (containerWidth - listWidthPx - 40.dp.toPx()).toInt()
-        val gridTextWidth = containerWidth
-        val textWidth = (listTextWidth + safeFraction * (gridTextWidth - listTextWidth)).toInt().coerceAtLeast(0)
-        val textPlaceable = measurables[1].measure(
-            Constraints(
-                minWidth = 0,
-                maxWidth = textWidth.coerceAtLeast(0),
-                minHeight = 0,
-                maxHeight = Constraints.Infinity
-            )
-        )
-
-        // Measure arrow
-        val arrowPlaceable = measurables[2].measure(Constraints())
-
-        // Calculate layout height
-        val listLayoutHeight = 96.dp.toPx().toInt() // Fixed image height in list mode
-        val gridLayoutHeight = imgHeight + 10.dp.toPx().toInt() + textPlaceable.height
-        val layoutHeight = (listLayoutHeight + safeFraction * (gridLayoutHeight - listLayoutHeight)).toInt().coerceAtLeast(1)
-
-        layout(containerWidth, layoutHeight) {
-            // Place cover image at (0, 0)
-            imagePlaceable.placeRelative(0, 0)
-
-            // Place text column
-            // In list mode: to the right of image, vertically centered
-            val listTextX = (76.dp.toPx() + 16.dp.toPx()).toInt()
-            val listTextY = (layoutHeight - textPlaceable.height) / 2
-            
-            // In grid mode: below image
-            val gridTextX = 0
-            val gridTextY = imgHeight + 10.dp.toPx().toInt()
-
-            val textX = (listTextX + safeFraction * (gridTextX - listTextX)).toInt()
-            val textY = (listTextY + safeFraction * (gridTextY - listTextY)).toInt()
-            textPlaceable.placeRelative(textX, textY)
-
-            // Place arrow icon (only visible in list mode, at the far right)
-            val arrowX = containerWidth - arrowPlaceable.width
-            val arrowY = (layoutHeight - arrowPlaceable.height) / 2
-            arrowPlaceable.placeRelative(arrowX, arrowY)
         }
     }
 }
+
 

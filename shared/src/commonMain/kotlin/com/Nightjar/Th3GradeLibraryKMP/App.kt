@@ -507,7 +507,7 @@ fun AppContent(
                                         )
                                     }
                                     enterTransition.togetherWith(exitTransition).apply {
-                                        targetContentZIndex = 0f
+                                        targetContentZIndex = -1f
                                     }
                                 } else {
                                     val fluidEasing = androidx.compose.animation.core.CubicBezierEasing(0.16f, 1f, 0.3f, 1f)
@@ -619,17 +619,32 @@ fun AppContent(
                                         onScrollableStateChanged = { canCurrentPageScroll = it },
                                         lazyGridState = newsLazyGridState
                                     )
-                                    "bookmarks" -> BookmarksScreen(
-                                        savedItems = savedItems,
-                                        savedPages = savedItemIds.toList(),
-                                        isDark = isDark,
-                                        onNavigateToPdf = { item, pageIdx ->
-                                            viewModel.selectItem(item, pageIdx, fromBookmarks = true)
-                                        },
-                                        bottomPadding = listBottomPadding,
-                                        onScrollableStateChanged = { canCurrentPageScroll = it },
-                                        lazyGridState = bookmarksLazyGridState
-                                    )
+                                    "bookmarks" -> {
+                                        val activeBookmarkKey = if ((isTransitionActive || isReturningFromPdf) && activeTargetId != null && activeTargetId.startsWith("bookmark_")) {
+                                            val parts = activeTargetId.removePrefix("bookmark_").split("_")
+                                            if (parts.size >= 2) "${parts[0]}:${parts[1]}" else null
+                                        } else null
+
+                                        val effectiveSavedPages = remember(savedItemIds, activeBookmarkKey) {
+                                            if (activeBookmarkKey != null && activeBookmarkKey !in savedItemIds) {
+                                                savedItemIds + activeBookmarkKey
+                                            } else {
+                                                savedItemIds
+                                            }
+                                        }
+
+                                        BookmarksScreen(
+                                            savedItems = savedItems,
+                                            savedPages = effectiveSavedPages.toList(),
+                                            isDark = isDark,
+                                            onNavigateToPdf = { item, pageIdx ->
+                                                viewModel.selectItem(item, pageIdx, fromBookmarks = true)
+                                            },
+                                            bottomPadding = listBottomPadding,
+                                            onScrollableStateChanged = { canCurrentPageScroll = it },
+                                            lazyGridState = bookmarksLazyGridState
+                                        )
+                                    }
                                     "shortcuts" -> ShortcutsScreen(
                                         platformActionHandler = platformActionHandler,
                                         isDark = isDark,
@@ -1130,120 +1145,186 @@ fun AppContent(
                     .padding(bottom = 16.dp, start = 16.dp, end = 16.dp),
                 contentAlignment = Alignment.Center
             ) {
-                val navItems = listOf(
+                val mainNavItems = listOf(
                     Triple("المكتبة", Icons.Default.Home) {
                         navigateTo("home")
                         SyncEngine.saveSelectedCategory(null)
                     },
                     Triple("الأخبار", Icons.Default.Newspaper) { navigateTo("news") },
-                    Triple("المحفوظات", Icons.Default.Star) { navigateTo("bookmarks") },
-                    Triple("القائمة", Icons.Default.Menu) { isDrawerOpen = true }
+                    Triple("المحفوظات", Icons.Default.Star) { navigateTo("bookmarks") }
                 )
 
-                val isNavActive = listOf(page == "home" || page == "list", page == "news", page == "bookmarks", isDrawerOpen || page == "about" || page == "shortcuts")
+                val isMainActive = listOf(page == "home" || page == "list", page == "news", page == "bookmarks")
                 var lastValidIndex by remember { mutableStateOf(0) }
-                val currentIndex = isNavActive.indexOfFirst { it }.takeIf { it >= 0 }
+                val currentIndex = isMainActive.indexOfFirst { it }.takeIf { it >= 0 }
                 if (currentIndex != null) {
                     lastValidIndex = currentIndex
                 }
                 val selectedIndex = lastValidIndex
+                val isMenuButtonActive = isDrawerOpen || page == "about" || page == "shortcuts"
 
-                BoxWithConstraints(
+                Row(
                     modifier = Modifier
-                        .widthIn(max = 440.dp)
+                        .widthIn(max = 480.dp)
                         .fillMaxWidth()
-                        .height(64.dp)
-                        .border(
-                            width = 1.dp,
-                            brush = Brush.linearGradient(listOf(Color.White.copy(alpha = 0.3f), Color.White.copy(alpha = 0.05f))),
-                            shape = RoundedCornerShape(32.dp)
-                        )
-                        .liquidGlass(isDark, borderRadius = 32.dp, alpha = 0.90f)
-                        .padding(horizontal = 8.dp)
+                        .height(64.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.Center
                 ) {
-                    val contentWidth = maxWidth
-                    val itemWidth = contentWidth / navItems.size
-                    var dragOffset by remember { mutableStateOf<Float?>(null) }
-                    val itemWidthPx = with(androidx.compose.ui.platform.LocalDensity.current) { itemWidth.toPx() }
-                    
-                    val indicatorOffset by animateDpAsState(
-                        targetValue = if (dragOffset != null) with(androidx.compose.ui.platform.LocalDensity.current) { (dragOffset!! - (itemWidthPx / 2)).toDp() } else itemWidth * selectedIndex,
-                        animationSpec = spring(dampingRatio = 0.6f, stiffness = Spring.StiffnessLow)
-                    )
-
-                    Box(
+                    // 1. Elongated Main Pill with 3 Tabs & Sliding Indicator
+                    BoxWithConstraints(
                         modifier = Modifier
-                            .offset(x = indicatorOffset)
-                            .width(itemWidth)
-                            .fillMaxHeight()
-                            .padding(vertical = 8.dp, horizontal = 12.dp)
-                            .clip(RoundedCornerShape(20.dp))
-                            .background(
-                                Brush.radialGradient(
-                                    listOf(
-                                        MaterialTheme.colorScheme.primary.copy(alpha = 0.35f),
-                                        Color.Transparent
+                            .weight(1f)
+                            .height(64.dp)
+                            .border(
+                                width = 1.dp,
+                                brush = Brush.linearGradient(listOf(Color.White.copy(alpha = 0.25f), Color.White.copy(alpha = 0.05f))),
+                                shape = RoundedCornerShape(32.dp)
+                            )
+                            .liquidGlass(isDark, borderRadius = 32.dp, alpha = 0.90f)
+                            .padding(horizontal = 6.dp)
+                    ) {
+                        val contentWidth = maxWidth
+                        val itemWidth = contentWidth / mainNavItems.size
+                        var dragOffset by remember { mutableStateOf<Float?>(null) }
+                        val itemWidthPx = with(androidx.compose.ui.platform.LocalDensity.current) { itemWidth.toPx() }
+
+                        val indicatorOffset by animateDpAsState(
+                            targetValue = if (dragOffset != null) with(androidx.compose.ui.platform.LocalDensity.current) { (dragOffset!! - (itemWidthPx / 2)).toDp() } else itemWidth * selectedIndex,
+                            animationSpec = spring(dampingRatio = 0.74f, stiffness = Spring.StiffnessMediumLow)
+                        )
+
+                        Box(
+                            modifier = Modifier
+                                .offset(x = indicatorOffset)
+                                .width(itemWidth)
+                                .fillMaxHeight()
+                                .padding(vertical = 8.dp, horizontal = 6.dp)
+                                .clip(RoundedCornerShape(20.dp))
+                                .background(
+                                    Brush.radialGradient(
+                                        listOf(
+                                            MaterialTheme.colorScheme.primary.copy(alpha = 0.35f),
+                                            Color.Transparent
+                                        )
                                     )
                                 )
-                            )
-                    )
+                        )
 
-                    val layoutDirection = androidx.compose.ui.platform.LocalLayoutDirection.current
-                    Row(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .pointerInput(layoutDirection) {
-                                val isRtl = layoutDirection == androidx.compose.ui.unit.LayoutDirection.Rtl
-                                awaitPointerEventScope {
-                                    while (true) {
-                                        val event = awaitPointerEvent()
-                                        val change = event.changes.firstOrNull()
-                                        if (change != null) {
-                                            if (change.pressed) {
-                                                val rawX = change.position.x
-                                                val directionalX = if (isRtl) size.width.toFloat() - rawX else rawX
-                                                dragOffset = directionalX.coerceIn(0f, size.width.toFloat())
-                                            } else {
-                                                // When finger lifted, trigger click if we dragged
-                                                if (dragOffset != null) {
-                                                    val idx = (dragOffset!! / itemWidthPx).toInt().coerceIn(0, navItems.lastIndex)
-                                                    navItems[idx].third()
-                                                    dragOffset = null
+                        val layoutDirection = androidx.compose.ui.platform.LocalLayoutDirection.current
+                        Row(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .pointerInput(layoutDirection) {
+                                    val isRtl = layoutDirection == androidx.compose.ui.unit.LayoutDirection.Rtl
+                                    awaitPointerEventScope {
+                                        while (true) {
+                                            val event = awaitPointerEvent()
+                                            val change = event.changes.firstOrNull()
+                                            if (change != null) {
+                                                if (change.pressed) {
+                                                    val rawX = change.position.x
+                                                    val directionalX = if (isRtl) size.width.toFloat() - rawX else rawX
+                                                    dragOffset = directionalX.coerceIn(0f, size.width.toFloat())
+                                                } else {
+                                                    if (dragOffset != null) {
+                                                        val idx = (dragOffset!! / itemWidthPx).toInt().coerceIn(0, mainNavItems.lastIndex)
+                                                        mainNavItems[idx].third()
+                                                        dragOffset = null
+                                                    }
                                                 }
                                             }
                                         }
                                     }
                                 }
+                        ) {
+                            mainNavItems.forEachIndexed { index, item ->
+                                val isActive = isMainActive[index]
+                                val tint by animateColorAsState(
+                                    targetValue = if (isActive) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
+                                    animationSpec = tween(250)
+                                )
+                                Column(
+                                    modifier = Modifier
+                                        .weight(1f)
+                                        .fillMaxHeight()
+                                        .clip(RoundedCornerShape(20.dp)),
+                                    horizontalAlignment = Alignment.CenterHorizontally,
+                                    verticalArrangement = Arrangement.Center
+                                ) {
+                                    Icon(
+                                        imageVector = item.second,
+                                        contentDescription = item.first,
+                                        tint = tint,
+                                        modifier = Modifier.size(24.dp)
+                                    )
+                                    Spacer(modifier = Modifier.height(2.dp))
+                                    Text(
+                                        text = item.first,
+                                        fontSize = 9.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        color = tint
+                                    )
+                                }
                             }
-                    ) {
-                        navItems.forEachIndexed { index, item ->
-                            val isActive = isNavActive[index]
-                            val tint by animateColorAsState(
-                                targetValue = if (isActive) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
-                                animationSpec = tween(250)
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.width(10.dp))
+
+                    // 2. Separate Squircle Menu Button ("القائمة")
+                    val menuTint by animateColorAsState(
+                        targetValue = if (isMenuButtonActive) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
+                        animationSpec = tween(250)
+                    )
+                    Box(
+                        modifier = Modifier
+                            .size(64.dp)
+                            .border(
+                                width = 1.dp,
+                                brush = Brush.linearGradient(listOf(Color.White.copy(alpha = 0.25f), Color.White.copy(alpha = 0.05f))),
+                                shape = RoundedCornerShape(24.dp)
                             )
-                            Column(
+                            .liquidGlass(isDark, borderRadius = 24.dp, alpha = 0.90f)
+                            .clip(RoundedCornerShape(24.dp))
+                            .bounceClick {
+                                isDrawerOpen = !isDrawerOpen
+                            },
+                        contentAlignment = Alignment.Center
+                    ) {
+                        if (isMenuButtonActive) {
+                            Box(
                                 modifier = Modifier
-                                    .weight(1f)
-                                    .fillMaxHeight()
-                                    .clip(RoundedCornerShape(20.dp)), // Removed clickable since we handle it in pointerInput
-                                horizontalAlignment = Alignment.CenterHorizontally,
-                                verticalArrangement = Arrangement.Center
-                            ) {
-                                Icon(
-                                    imageVector = item.second,
-                                    contentDescription = item.first,
-                                    tint = tint,
-                                    modifier = Modifier.size(24.dp)
-                                )
-                                Spacer(modifier = Modifier.height(2.dp))
-                                Text(
-                                    text = item.first,
-                                    fontSize = 9.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    color = tint
-                                )
-                            }
+                                    .fillMaxSize()
+                                    .padding(8.dp)
+                                    .clip(RoundedCornerShape(16.dp))
+                                    .background(
+                                        Brush.radialGradient(
+                                            listOf(
+                                                MaterialTheme.colorScheme.primary.copy(alpha = 0.35f),
+                                                Color.Transparent
+                                            )
+                                        )
+                                    )
+                            )
+                        }
+                        Column(
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            verticalArrangement = Arrangement.Center
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Menu,
+                                contentDescription = "القائمة",
+                                tint = menuTint,
+                                modifier = Modifier.size(24.dp)
+                            )
+                            Spacer(modifier = Modifier.height(2.dp))
+                            Text(
+                                text = "القائمة",
+                                fontSize = 9.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = menuTint
+                            )
                         }
                     }
                 }
@@ -1268,120 +1349,184 @@ fun AppContent(
                     .fillMaxHeight()
                     .statusBarsPadding()
                     .windowInsetsPadding(WindowInsets.safeDrawing.only(WindowInsetsSides.Horizontal))
-                    .padding(end = 12.dp, top = 24.dp, bottom = 24.dp), // reduced end padding from 24.dp to 12.dp
+                    .padding(end = 12.dp, top = 24.dp, bottom = 24.dp),
                 contentAlignment = Alignment.Center
             ) {
-                val navItems = listOf(
+                val mainNavItems = listOf(
                     Triple("المكتبة", Icons.Default.Home) {
                         navigateTo("home")
                         SyncEngine.saveSelectedCategory(null)
                     },
                     Triple("الأخبار", Icons.Default.Newspaper) { navigateTo("news") },
-                    Triple("المحفوظات", Icons.Default.Star) { navigateTo("bookmarks") },
-                    Triple("المزيد", Icons.Default.Menu) { isDrawerOpen = true }
+                    Triple("المحفوظات", Icons.Default.Star) { navigateTo("bookmarks") }
                 )
 
-                val isNavActive = listOf(page == "home" || page == "list", page == "news", page == "bookmarks", isDrawerOpen)
+                val isMainActive = listOf(page == "home" || page == "list", page == "news", page == "bookmarks")
                 var lastValidIndex by remember { mutableStateOf(0) }
-                val currentIndex = if (isDrawerOpen) 3 else isNavActive.take(3).indexOfFirst { it }.takeIf { it >= 0 }
+                val currentIndex = isMainActive.indexOfFirst { it }.takeIf { it >= 0 }
                 if (currentIndex != null) {
                     lastValidIndex = currentIndex
                 }
                 val selectedIndex = lastValidIndex
+                val isMenuButtonActive = isDrawerOpen || page == "about" || page == "shortcuts"
 
-                BoxWithConstraints(
-                    modifier = Modifier
-                        .heightIn(max = 440.dp)
-                        .fillMaxHeight()
-                        .width(72.dp) // reduced from 84.dp
-                        .border(
-                            width = 1.dp,
-                            brush = Brush.linearGradient(listOf(Color.White.copy(alpha = 0.3f), Color.White.copy(alpha = 0.05f))),
-                            shape = RoundedCornerShape(32.dp)
-                        )
-                        .liquidGlass(isDark, borderRadius = 32.dp, alpha = 0.90f)
-                        .padding(vertical = 12.dp)
+                Column(
+                    modifier = Modifier.fillMaxHeight(),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.Center
                 ) {
-                    val contentHeight = maxHeight
-                    val itemHeight = contentHeight / navItems.size
-                    var dragOffsetY by remember { mutableStateOf<Float?>(null) }
-                    val itemHeightPx = with(androidx.compose.ui.platform.LocalDensity.current) { itemHeight.toPx() }
-
-                    val indicatorOffset by animateDpAsState(
-                        targetValue = if (dragOffsetY != null) with(androidx.compose.ui.platform.LocalDensity.current) { (dragOffsetY!! - (itemHeightPx / 2)).toDp() } else itemHeight * selectedIndex,
-                        animationSpec = spring(dampingRatio = 0.6f, stiffness = Spring.StiffnessLow)
-                    )
-
-                    Box(
+                    // 1. Vertical 3-tab pill
+                    BoxWithConstraints(
                         modifier = Modifier
-                            .offset(y = indicatorOffset)
-                            .height(itemHeight)
-                            .fillMaxWidth()
-                            .padding(horizontal = 8.dp, vertical = 12.dp)
-                            .clip(RoundedCornerShape(20.dp))
-                            .background(
-                                Brush.radialGradient(
-                                    listOf(
-                                        MaterialTheme.colorScheme.primary.copy(alpha = 0.35f),
-                                        Color.Transparent
+                            .heightIn(max = 330.dp)
+                            .weight(1f, fill = false)
+                            .width(72.dp)
+                            .border(
+                                width = 1.dp,
+                                brush = Brush.linearGradient(listOf(Color.White.copy(alpha = 0.25f), Color.White.copy(alpha = 0.05f))),
+                                shape = RoundedCornerShape(32.dp)
+                            )
+                            .liquidGlass(isDark, borderRadius = 32.dp, alpha = 0.90f)
+                            .padding(vertical = 10.dp)
+                    ) {
+                        val contentHeight = maxHeight
+                        val itemHeight = contentHeight / mainNavItems.size
+                        var dragOffsetY by remember { mutableStateOf<Float?>(null) }
+                        val itemHeightPx = with(androidx.compose.ui.platform.LocalDensity.current) { itemHeight.toPx() }
+
+                        val indicatorOffset by animateDpAsState(
+                            targetValue = if (dragOffsetY != null) with(androidx.compose.ui.platform.LocalDensity.current) { (dragOffsetY!! - (itemHeightPx / 2)).toDp() } else itemHeight * selectedIndex,
+                            animationSpec = spring(dampingRatio = 0.74f, stiffness = Spring.StiffnessMediumLow)
+                        )
+
+                        Box(
+                            modifier = Modifier
+                                .offset(y = indicatorOffset)
+                                .height(itemHeight)
+                                .fillMaxWidth()
+                                .padding(horizontal = 8.dp, vertical = 8.dp)
+                                .clip(RoundedCornerShape(20.dp))
+                                .background(
+                                    Brush.radialGradient(
+                                        listOf(
+                                            MaterialTheme.colorScheme.primary.copy(alpha = 0.35f),
+                                            Color.Transparent
+                                        )
                                     )
                                 )
-                            )
-                    )
+                        )
 
-                    Column(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .pointerInput(Unit) {
-                                awaitPointerEventScope {
-                                    while (true) {
-                                        val event = awaitPointerEvent()
-                                        val change = event.changes.firstOrNull()
-                                        if (change != null) {
-                                            if (change.pressed) {
-                                                val rawY = change.position.y
-                                                dragOffsetY = rawY.coerceIn(0f, size.height.toFloat())
-                                            } else {
-                                                // When finger lifted, trigger tab action if dragged
-                                                if (dragOffsetY != null) {
-                                                    val idx = (dragOffsetY!! / itemHeightPx).toInt().coerceIn(0, navItems.lastIndex)
-                                                    navItems[idx].third()
-                                                    dragOffsetY = null
+                        Column(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .pointerInput(Unit) {
+                                    awaitPointerEventScope {
+                                        while (true) {
+                                            val event = awaitPointerEvent()
+                                            val change = event.changes.firstOrNull()
+                                            if (change != null) {
+                                                if (change.pressed) {
+                                                    val rawY = change.position.y
+                                                    dragOffsetY = rawY.coerceIn(0f, size.height.toFloat())
+                                                } else {
+                                                    if (dragOffsetY != null) {
+                                                        val idx = (dragOffsetY!! / itemHeightPx).toInt().coerceIn(0, mainNavItems.lastIndex)
+                                                        mainNavItems[idx].third()
+                                                        dragOffsetY = null
+                                                    }
                                                 }
                                             }
                                         }
                                     }
                                 }
+                        ) {
+                            mainNavItems.forEachIndexed { index, item ->
+                                val isActive = isMainActive[index]
+                                val tint by animateColorAsState(
+                                    targetValue = if (isActive) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
+                                    animationSpec = tween(250)
+                                )
+                                Column(
+                                    modifier = Modifier
+                                        .weight(1f)
+                                        .fillMaxWidth()
+                                        .clip(RoundedCornerShape(20.dp)),
+                                    horizontalAlignment = Alignment.CenterHorizontally,
+                                    verticalArrangement = Arrangement.Center
+                                ) {
+                                    Icon(
+                                        imageVector = item.second,
+                                        contentDescription = item.first,
+                                        tint = tint,
+                                        modifier = Modifier.size(26.dp)
+                                    )
+                                    Spacer(modifier = Modifier.height(4.dp))
+                                    Text(
+                                        text = item.first,
+                                        fontSize = 10.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        color = tint
+                                    )
+                                }
                             }
-                    ) {
-                        navItems.forEachIndexed { index, item ->
-                            val isActive = isNavActive[index]
-                            val tint by animateColorAsState(
-                                targetValue = if (isActive) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
-                                animationSpec = tween(250)
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(12.dp))
+
+                    // 2. Separate Squircle Menu Button for Tablet ("القائمة")
+                    val sideMenuTint by animateColorAsState(
+                        targetValue = if (isMenuButtonActive) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
+                        animationSpec = tween(250)
+                    )
+                    Box(
+                        modifier = Modifier
+                            .size(72.dp)
+                            .border(
+                                width = 1.dp,
+                                brush = Brush.linearGradient(listOf(Color.White.copy(alpha = 0.25f), Color.White.copy(alpha = 0.05f))),
+                                shape = RoundedCornerShape(24.dp)
                             )
-                            Column(
+                            .liquidGlass(isDark, borderRadius = 24.dp, alpha = 0.90f)
+                            .clip(RoundedCornerShape(24.dp))
+                            .bounceClick {
+                                isDrawerOpen = !isDrawerOpen
+                            },
+                        contentAlignment = Alignment.Center
+                    ) {
+                        if (isMenuButtonActive) {
+                            Box(
                                 modifier = Modifier
-                                    .weight(1f)
-                                    .fillMaxWidth()
-                                    .clip(RoundedCornerShape(20.dp)),
-                                horizontalAlignment = Alignment.CenterHorizontally,
-                                verticalArrangement = Arrangement.Center
-                            ) {
-                                Icon(
-                                    imageVector = item.second,
-                                    contentDescription = item.first,
-                                    tint = tint,
-                                    modifier = Modifier.size(26.dp)
-                                )
-                                Spacer(modifier = Modifier.height(6.dp))
-                                Text(
-                                    text = item.first,
-                                    fontSize = 10.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    color = tint
-                                )
-                            }
+                                    .fillMaxSize()
+                                    .padding(8.dp)
+                                    .clip(RoundedCornerShape(16.dp))
+                                    .background(
+                                        Brush.radialGradient(
+                                            listOf(
+                                                MaterialTheme.colorScheme.primary.copy(alpha = 0.35f),
+                                                Color.Transparent
+                                            )
+                                        )
+                                    )
+                            )
+                        }
+                        Column(
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            verticalArrangement = Arrangement.Center
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Menu,
+                                contentDescription = "القائمة",
+                                tint = sideMenuTint,
+                                modifier = Modifier.size(26.dp)
+                            )
+                            Spacer(modifier = Modifier.height(4.dp))
+                            Text(
+                                text = "القائمة",
+                                fontSize = 10.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = sideMenuTint
+                            )
                         }
                     }
                 }

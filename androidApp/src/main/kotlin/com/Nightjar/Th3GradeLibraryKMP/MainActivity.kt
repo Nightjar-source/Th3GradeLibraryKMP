@@ -866,4 +866,26 @@ class MainActivity : ComponentActivity() {
             }
         }
     }
+
+    override fun onTrimMemory(level: Int) {
+        super.onTrimMemory(level)
+        if (level >= TRIM_MEMORY_UI_HIDDEN) {
+            com.Nightjar.Th3GradeLibraryKMP.ui.clearPdfCache(cacheDir)
+            com.Nightjar.Th3GradeLibraryKMP.ui.PdfBitmapCache.cache.evictAll()
+        }
+    }
+
+    override fun onStop() {
+        super.onStop()
+        if (isFinishing) {
+            com.Nightjar.Th3GradeLibraryKMP.ui.clearPdfCache(cacheDir)
+            com.Nightjar.Th3GradeLibraryKMP.ui.PdfBitmapCache.cache.evictAll()
+        }
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        com.Nightjar.Th3GradeLibraryKMP.ui.clearPdfCache(cacheDir)
+        com.Nightjar.Th3GradeLibraryKMP.ui.PdfBitmapCache.cache.evictAll()
+    }
 }

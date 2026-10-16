@@ -252,12 +252,10 @@ actual fun PdfViewerScreen(
                 pdfRenderer = null
                 val fileToDelete = tempFile
                 
-                // Delayed cleanup: RAM is purely a transient pipeline (أنبوب تحويل).
-                // At 450ms (shrink complete), the renderer is closed and RAM bitmap cache is 100% evicted to 0 MB.
-                // The extracted file itself remains in Phone Storage (Data User / cacheDir) under the 2-minute timer.
+                // Delayed cleanup: Allow 500ms safety window for the reverse sharedBounds shrink animation to finish smoothly
                 CoroutineScope(Dispatchers.IO).launch {
                     try {
-                        kotlinx.coroutines.delay(450)
+                        kotlinx.coroutines.delay(500)
                         pdfMutex.withLock {
                             try {
                                 rendererToClose?.close()
@@ -266,30 +264,15 @@ actual fun PdfViewerScreen(
                             }
                         }
                         PdfBitmapCache.cache.evictAll()
+                        if (activeViewingBookId != item.id) {
+                            if (fileToDelete != null && fileToDelete.exists()) {
+                                fileToDelete.delete()
+                            }
+                            PdfBitmapCache.evictBook(item.id)
+                        }
                     } catch (e: Exception) {
                         e.printStackTrace()
                     }
-                }
-
-                // 2-minute inactivity disk and memory cache cleanup (lightweight background timer)
-                fileToDelete?.let { currentFile ->
-                    val job = CoroutineScope(Dispatchers.IO).launch {
-                        try {
-                            kotlinx.coroutines.delay(120_000) // 2 minutes
-                            // NEVER delete if user still has this book active/open
-                            if (activeViewingBookId != item.id) {
-                                if (currentFile.exists()) {
-                                    currentFile.delete()
-                                }
-                                PdfBitmapCache.evictBook(item.id)
-                            }
-                        } catch (e: Exception) {
-                            e.printStackTrace()
-                        } finally {
-                            pendingCacheCleanups.remove(currentFile.name)
-                        }
-                    }
-                    pendingCacheCleanups[currentFile.name] = job
                 }
 
                 activity?.let { act ->
@@ -431,6 +414,14 @@ actual fun PdfViewerScreen(
                     LaunchedEffect(targetInitialPage) {
                         if (pagerState.currentPage != targetInitialPage && targetInitialPage in 0 until pageCount) {
                             pagerState.scrollToPage(targetInitialPage)
+                        }
+                    }
+
+                    LaunchedEffect(isNavigatingOut) {
+                        if (isNavigatingOut && isFromBookmarksEffective && targetInitialPage in 0 until pageCount) {
+                            if (pagerState.currentPage != targetInitialPage) {
+                                pagerState.scrollToPage(targetInitialPage)
+                            }
                         }
                     }
 
@@ -853,33 +844,6 @@ actual fun PdfViewerScreen(
                     }
             }
         }
-
-            // 2. Loading overlay (rendered while loading, disappears immediately the moment first page is ready)
-            if (!isFirstPageReady && loadingError == null) {
-                Box(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .background(MaterialTheme.colorScheme.background),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Column(
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                        verticalArrangement = Arrangement.Center
-                    ) {
-                        com.Nightjar.Th3GradeLibraryKMP.ui.ExpressiveLoadingIndicator(
-                            modifier = Modifier.size(56.dp),
-                            color = MaterialTheme.colorScheme.primary
-                        )
-                        Spacer(modifier = Modifier.height(16.dp))
-                        Text(
-                            "جاري معالجة وفتح الملف...",
-                            color = MaterialTheme.colorScheme.onBackground,
-                            fontSize = 14.sp,
-                            fontWeight = FontWeight.Bold
-                        )
-                    }
-                }
-            }
     }
 }
 }
