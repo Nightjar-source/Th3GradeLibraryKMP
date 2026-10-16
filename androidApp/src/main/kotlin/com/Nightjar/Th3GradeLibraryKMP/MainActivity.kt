@@ -676,6 +676,10 @@ class MainActivity : ComponentActivity() {
         // Evict transient PDF page bitmaps and in-memory images completely to drop anonymous memory near zero
         try {
             com.Nightjar.Th3GradeLibraryKMP.ui.PdfBitmapCache.cache.evictAll()
+            if (isFinishing) {
+                AppCleanupService.cleanAllTemporaryPdfFiles(applicationContext)
+                com.Nightjar.Th3GradeLibraryKMP.ui.clearPdfCache(cacheDir)
+            }
             coil3.SingletonImageLoader.get(this).let { loader ->
                 loader.memoryCache?.clear()
             }
@@ -687,11 +691,13 @@ class MainActivity : ComponentActivity() {
 
     override fun onTrimMemory(level: Int) {
         super.onTrimMemory(level)
-        if (level == TRIM_MEMORY_UI_HIDDEN) {
+        if (level >= TRIM_MEMORY_UI_HIDDEN) {
             try {
                 // UI is completely hidden (e.g. user pressed Home or switched apps).
                 // Evict transient UI caches to drop anonymous RSS immediately (Android 15-18 cgroup v2 freezer standard).
                 com.Nightjar.Th3GradeLibraryKMP.ui.PdfBitmapCache.cache.evictAll()
+                com.Nightjar.Th3GradeLibraryKMP.ui.clearPdfCache(cacheDir)
+                AppCleanupService.cleanAllTemporaryPdfFiles(applicationContext)
                 coil3.SingletonImageLoader.get(this).let { loader ->
                     loader.memoryCache?.clear()
                 }
@@ -729,7 +735,9 @@ class MainActivity : ComponentActivity() {
         super.onDestroy()
         // Delete all temporary PDF cache files upon exiting the app to ensure zero storage footprint
         try {
+            com.Nightjar.Th3GradeLibraryKMP.ui.clearPdfCache(cacheDir)
             AppCleanupService.cleanAllTemporaryPdfFiles(applicationContext)
+            com.Nightjar.Th3GradeLibraryKMP.ui.PdfBitmapCache.cache.evictAll()
         } catch (e: Exception) {
             e.printStackTrace()
         }
@@ -865,27 +873,5 @@ class MainActivity : ComponentActivity() {
                 }
             }
         }
-    }
-
-    override fun onTrimMemory(level: Int) {
-        super.onTrimMemory(level)
-        if (level >= TRIM_MEMORY_UI_HIDDEN) {
-            com.Nightjar.Th3GradeLibraryKMP.ui.clearPdfCache(cacheDir)
-            com.Nightjar.Th3GradeLibraryKMP.ui.PdfBitmapCache.cache.evictAll()
-        }
-    }
-
-    override fun onStop() {
-        super.onStop()
-        if (isFinishing) {
-            com.Nightjar.Th3GradeLibraryKMP.ui.clearPdfCache(cacheDir)
-            com.Nightjar.Th3GradeLibraryKMP.ui.PdfBitmapCache.cache.evictAll()
-        }
-    }
-
-    override fun onDestroy() {
-        super.onDestroy()
-        com.Nightjar.Th3GradeLibraryKMP.ui.clearPdfCache(cacheDir)
-        com.Nightjar.Th3GradeLibraryKMP.ui.PdfBitmapCache.cache.evictAll()
     }
 }
