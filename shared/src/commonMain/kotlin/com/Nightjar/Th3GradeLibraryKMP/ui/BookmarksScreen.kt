@@ -145,7 +145,11 @@ fun BookmarksScreen(
                     }
                 }
 
-                val screenWidthDp = with(LocalDensity.current) { LocalWindowInfo.current.containerSize.width.toDp() }
+                val windowInfo = LocalWindowInfo.current
+                val density = LocalDensity.current
+                val screenWidthDp = with(density) { windowInfo.containerSize.width.toDp() }
+                val screenHeightDp = with(density) { windowInfo.containerSize.height.toDp() }
+                val isLandscape = screenWidthDp > screenHeightDp
                 val isMedium = screenWidthDp >= 600.dp
                 val screenVisibilityScope = LocalAnimatedVisibilityScope.current
                 val expandedSet by SyncEngine.expandedBookmarks.collectAsState()
@@ -159,10 +163,19 @@ fun BookmarksScreen(
                     }
                 }
 
+                val dynamicBookmarkColumns = remember(screenWidthDp, screenHeightDp, isLandscape) {
+                    when {
+                        screenWidthDp >= 1440.dp -> GridCells.Fixed(4) // Ultra-wide / 4K / Desktop
+                        screenWidthDp >= 1080.dp -> GridCells.Fixed(3) // Samsung Galaxy Tab 12 Pro / Googlebook
+                        screenWidthDp >= 600.dp  -> GridCells.Fixed(2) // Tablets / Foldables
+                        else                     -> GridCells.Fixed(1) // Phone vertical
+                    }
+                }
+
                 LazyVerticalGrid(
                     state = lazyGridState,
                     userScrollEnabled = true,
-                    columns = if (isMedium) GridCells.Fixed(2) else GridCells.Adaptive(minSize = 340.dp),
+                    columns = dynamicBookmarkColumns,
                     modifier = Modifier
                         .fillMaxWidth()
                         .weight(1f)

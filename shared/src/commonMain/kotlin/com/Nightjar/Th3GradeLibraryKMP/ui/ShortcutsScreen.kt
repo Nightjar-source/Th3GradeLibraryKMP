@@ -61,7 +61,11 @@ fun ShortcutsScreen(
     }
 
     BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
-        val screenWidthDp = with(androidx.compose.ui.platform.LocalDensity.current) { androidx.compose.ui.platform.LocalWindowInfo.current.containerSize.width.toDp() }
+        val windowInfo = androidx.compose.ui.platform.LocalWindowInfo.current
+        val density = androidx.compose.ui.platform.LocalDensity.current
+        val screenWidthDp = with(density) { windowInfo.containerSize.width.toDp() }
+        val screenHeightDp = with(density) { windowInfo.containerSize.height.toDp() }
+        val isLandscape = screenWidthDp > screenHeightDp
         val isWide = screenWidthDp >= 600.dp
         Column(
             modifier = Modifier
@@ -77,12 +81,13 @@ fun ShortcutsScreen(
                 }
             }
 
-            val dynamicShortcutColumns = remember(screenWidthDp) {
+            val dynamicShortcutColumns = remember(screenWidthDp, screenHeightDp, isLandscape) {
                 when {
-                    screenWidthDp >= 1400.dp -> GridCells.Fixed(6)
-                    screenWidthDp >= 1000.dp -> GridCells.Fixed(5)
-                    screenWidthDp >= 720.dp  -> GridCells.Fixed(4)
-                    screenWidthDp >= 480.dp  -> GridCells.Fixed(3)
+                    screenWidthDp >= 1800.dp -> GridCells.Fixed(8)
+                    screenWidthDp >= 1440.dp -> GridCells.Fixed(6)
+                    screenWidthDp >= 1080.dp -> GridCells.Fixed(5)
+                    screenWidthDp >= 840.dp  -> GridCells.Fixed(4)
+                    screenWidthDp >= 600.dp  -> if (isLandscape) GridCells.Fixed(4) else GridCells.Fixed(3)
                     else                     -> GridCells.Fixed(2)
                 }
             }

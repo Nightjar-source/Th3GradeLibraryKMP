@@ -402,18 +402,6 @@ actual fun PdfViewerScreen(
         }
     } else Modifier
 
-    var showInitialExtractionIndicator by remember(item.id) { mutableStateOf(false) }
-    LaunchedEffect(pdfRenderer, item.id) {
-        if (pdfRenderer == null) {
-            kotlinx.coroutines.delay(280) // Wait for container expand and dissolve to complete
-            if (pdfRenderer == null) {
-                showInitialExtractionIndicator = true
-            }
-        } else {
-            showInitialExtractionIndicator = false
-        }
-    }
-
     val rootModifier = Modifier
         .fillMaxSize()
         .then(sharedBoundsModifier)
@@ -438,16 +426,14 @@ actual fun PdfViewerScreen(
                 }
             }
         } else if (pdfRenderer == null) {
-            if (showInitialExtractionIndicator) {
-                Box(
-                    modifier = Modifier.fillMaxSize(),
-                    contentAlignment = Alignment.Center
-                ) {
-                    com.Nightjar.Th3GradeLibraryKMP.ui.ExpressiveLoadingIndicator(
-                        modifier = Modifier.size(48.dp),
-                        color = MaterialTheme.colorScheme.primary
-                    )
-                }
+            Box(
+                modifier = Modifier.fillMaxSize(),
+                contentAlignment = Alignment.Center
+            ) {
+                com.Nightjar.Th3GradeLibraryKMP.ui.ExpressiveLoadingIndicator(
+                    modifier = Modifier.size(48.dp),
+                    color = MaterialTheme.colorScheme.primary
+                )
             }
         } else {
             val pageCount = pdfRenderer!!.pageCount
@@ -1074,21 +1060,8 @@ fun AndroidPdfPage(
         onZoomChanged(scale > 1.05f)
     }
 
-    var showLoadingIndicator by remember(pageIndex, bookId) { mutableStateOf(false) }
-    LaunchedEffect(pageIndex, bookId, bitmap) {
-        if (bitmap == null) {
-            kotlinx.coroutines.delay(280) // Never shows if page renders quickly during or right after transition
-            if (bitmap == null) {
-                showLoadingIndicator = true
-            }
-        } else {
-            showLoadingIndicator = false
-        }
-    }
-
     LaunchedEffect(bitmap, pageIndex) {
         if (bitmap != null) {
-            showLoadingIndicator = false
             onPageReady()
 
             // Asynchronous prefetch of next page on capable devices to eliminate scrolling lag
@@ -1277,7 +1250,7 @@ fun AndroidPdfPage(
                     }
             )
         }
-    } else if (showLoadingIndicator) {
+    } else {
         Box(
             modifier = modifier.fillMaxSize(),
             contentAlignment = Alignment.Center

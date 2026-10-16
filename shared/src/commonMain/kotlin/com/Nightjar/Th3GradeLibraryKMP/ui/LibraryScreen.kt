@@ -254,22 +254,26 @@ fun LibraryScreen(
                         }
                     }
                 } else {
-                    val statusBarHeight = WindowInsets.statusBars.add(WindowInsets.captionBar).asPaddingValues().calculateTopPadding()
-                    val screenWidthDp = with(androidx.compose.ui.platform.LocalDensity.current) { androidx.compose.ui.platform.LocalWindowInfo.current.containerSize.width.toDp() }
+                    val windowInfo = androidx.compose.ui.platform.LocalWindowInfo.current
+                    val density = androidx.compose.ui.platform.LocalDensity.current
+                    val screenWidthDp = with(density) { windowInfo.containerSize.width.toDp() }
+                    val screenHeightDp = with(density) { windowInfo.containerSize.height.toDp() }
+                    val isLandscape = screenWidthDp > screenHeightDp
                     val isMedium = screenWidthDp >= 600.dp
                     val dynamicTopPadding = if (isMedium) {
                         statusBarHeight + 64.dp
                     } else {
                         statusBarHeight + 76.dp
                     }
-                    val dynamicGridColumns = remember(screenWidthDp, isGridView) {
+                    val dynamicGridColumns = remember(screenWidthDp, screenHeightDp, isGridView, isLandscape) {
                         if (isGridView) {
                             when {
-                                screenWidthDp >= 1600.dp -> GridCells.Fixed(6) // Ultra-wide / 4K / DeX fullscreen
-                                screenWidthDp >= 1200.dp -> GridCells.Fixed(5) // Desktop / Large Tablets
+                                screenWidthDp >= 1800.dp -> GridCells.Fixed(8) // Ultra-wide 4K / Dual monitor / Samsung DeX
+                                screenWidthDp >= 1440.dp -> GridCells.Fixed(6) // Googlebook 15-16" / High-end desktop
+                                screenWidthDp >= 1080.dp -> GridCells.Fixed(5) // Samsung Galaxy Tab 12 Pro / Googlebook 13-14"
                                 screenWidthDp >= 840.dp  -> GridCells.Fixed(4) // Tablets landscape / Foldable unfolded
-                                screenWidthDp >= 600.dp  -> GridCells.Fixed(3) // Tablets portrait
-                                else                     -> GridCells.Adaptive(minSize = 135.dp) // Mobile portrait: adaptive ensures refined proportions, never oversized
+                                screenWidthDp >= 600.dp  -> if (isLandscape) GridCells.Fixed(4) else GridCells.Fixed(3) // Mobile landscape = 4, Tablet portrait = 3
+                                else                     -> GridCells.Fixed(2) // Mobile vertical portrait = 2
                             }
                         } else {
                             when {
@@ -574,12 +578,11 @@ fun LazyGridItemScope.ContentCard(
         if (isGridView) {
                 Column(
                     modifier = Modifier.fillMaxWidth(),
-                    horizontalAlignment = Alignment.CenterHorizontally
+                    horizontalAlignment = Alignment.Start
                 ) {
                     Box(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .widthIn(max = 165.dp)
                             .aspectRatio(0.72f)
                             .clip(RoundedCornerShape(16.dp))
                             .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
@@ -599,21 +602,16 @@ fun LazyGridItemScope.ContentCard(
 
                     Spacer(modifier = Modifier.height(10.dp))
 
-                    Column(
-                        modifier = Modifier.fillMaxWidth().widthIn(max = 165.dp),
-                        horizontalAlignment = Alignment.Start
-                    ) {
-                        Text(
-                            text = item.title,
-                            fontSize = 14.sp,
-                            fontWeight = FontWeight.Bold,
-                            maxLines = 2,
-                            overflow = TextOverflow.Ellipsis,
-                            color = MaterialTheme.colorScheme.onSurface,
-                            lineHeight = 18.sp
-                        )
-                        Spacer(modifier = Modifier.height(4.dp))
-                    }
+                    Text(
+                        text = item.title,
+                        fontSize = 14.sp,
+                        fontWeight = FontWeight.Bold,
+                        maxLines = 2,
+                        overflow = TextOverflow.Ellipsis,
+                        color = MaterialTheme.colorScheme.onSurface,
+                        lineHeight = 18.sp
+                    )
+                    Spacer(modifier = Modifier.height(4.dp))
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.spacedBy(6.dp)
