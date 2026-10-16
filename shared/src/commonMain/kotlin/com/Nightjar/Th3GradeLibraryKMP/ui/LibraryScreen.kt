@@ -56,6 +56,7 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.draw.blur
 import com.Nightjar.Th3GradeLibraryKMP.data.BookItem
 import coil3.request.crossfade
+import coil3.request.CachePolicy
 import com.Nightjar.Th3GradeLibraryKMP.data.AllItems
 import com.Nightjar.Th3GradeLibraryKMP.theme.liquidGlass
 import com.Nightjar.Th3GradeLibraryKMP.theme.bounceClick
@@ -503,6 +504,7 @@ fun LazyGridItemScope.ContentCard(
     val cardCornerRadius = if (isGridView) 20.dp else 24.dp
     val sharedTransitionScope = LocalSharedTransitionScope.current
     val animatedVisibilityScope = LocalAnimatedVisibilityScope.current
+    val isReturningFromPdf = com.Nightjar.Th3GradeLibraryKMP.theme.LocalIsReturningFromPdf.current
     val sharedBoundsModifier = if (sharedTransitionScope != null && animatedVisibilityScope != null) {
         with(sharedTransitionScope) {
             Modifier.sharedBounds(
