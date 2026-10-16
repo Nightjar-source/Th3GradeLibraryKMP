@@ -166,6 +166,11 @@ class MainActivity : ComponentActivity() {
         window.navigationBarColor = android.graphics.Color.TRANSPARENT
         super.onCreate(savedInstanceState)
         
+        try {
+            startService(Intent(this, AppCleanupService::class.java))
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
 
         batteryOptimizationLauncher = registerForActivityResult(
             androidx.activity.result.contract.ActivityResultContracts.StartActivityForResult()

@@ -283,14 +283,7 @@ fun LibraryScreen(
                 ) {
                     itemsIndexed(items = filteredList, key = { _, item -> item.id }, contentType = { _, _ -> "library_item" }) { index, item ->
                         ContentCard(
-                            modifier = Modifier
-                                .animateItem(
-                                    placementSpec = spring(
-                                        dampingRatio = 0.80f,
-                                        stiffness = androidx.compose.animation.core.Spring.StiffnessMediumLow
-                                    )
-                                )
-                                .adaptiveItemEntrance(index, itemId = item.id),
+                            modifier = Modifier.adaptiveItemEntrance(index, itemId = item.id),
                             item = item,
                             isGridView = isGridView,
                             isDark = isDark,
@@ -505,7 +498,8 @@ fun LazyGridItemScope.ContentCard(
     val sharedTransitionScope = LocalSharedTransitionScope.current
     val animatedVisibilityScope = LocalAnimatedVisibilityScope.current
     val isReturningFromPdf = com.Nightjar.Th3GradeLibraryKMP.theme.LocalIsReturningFromPdf.current
-    val sharedBoundsModifier = if (sharedTransitionScope != null && animatedVisibilityScope != null) {
+    val isThisCardTarget = (TransitionTargetTracker.activeTargetId == "card_${item.id}" || TransitionTargetTracker.activeTargetId == item.id)
+    val sharedBoundsModifier = if (sharedTransitionScope != null && animatedVisibilityScope != null && isThisCardTarget) {
         with(sharedTransitionScope) {
             Modifier.sharedBounds(
                 sharedContentState = rememberSharedContentState(key = "card_${item.id}"),
@@ -529,7 +523,6 @@ fun LazyGridItemScope.ContentCard(
             )
         }
     } else Modifier
-    val isThisCardTarget = (TransitionTargetTracker.activeTargetId == "card_${item.id}" || TransitionTargetTracker.activeTargetId == item.id)
 
     Box(
         modifier = modifier

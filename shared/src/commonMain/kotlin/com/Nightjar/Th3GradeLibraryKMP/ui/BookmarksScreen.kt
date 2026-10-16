@@ -172,9 +172,10 @@ fun BookmarksScreen(
                         val book = remember(bookId, savedItems) { savedItems.find { it.id == bookId } }
                         if (book != null) {
                             val pages = groupedPages[bookId] ?: emptyList()
-                            BookAccordionItem(
+                                BookAccordionItem(
                                 item = book,
                                 pages = pages,
+                                isPageSaved = { pageIdx -> savedPages.contains("${book.id}:$pageIdx") },
                                 isDark = isDark,
                                 isExpanded = expandedSet.contains(book.id),
                                 onToggleExpand = { SyncEngine.toggleExpandedBookmark(book.id) },
@@ -194,6 +195,7 @@ fun BookmarksScreen(
 fun BookAccordionItem(
     item: BookItem,
     pages: List<Int>,
+    isPageSaved: (Int) -> Boolean,
     isDark: Boolean,
     isExpanded: Boolean,
     onToggleExpand: () -> Unit,
@@ -204,6 +206,12 @@ fun BookAccordionItem(
     Column(
         modifier = modifier
             .fillMaxWidth()
+            .animateContentSize(
+                animationSpec = spring(
+                    dampingRatio = 0.82f,
+                    stiffness = 380f
+                )
+            )
             .liquidGlass(isDark, borderRadius = 20.dp, alpha = 0.96f)
             .clip(RoundedCornerShape(20.dp))
     ) {
@@ -260,10 +268,10 @@ fun BookAccordionItem(
             }
 
             val arrowRotation by animateFloatAsState(
-                targetValue = if (isExpanded) 360f else 0f,
+                targetValue = if (isExpanded) 180f else 0f,
                 animationSpec = spring(
-                    dampingRatio = 0.74f, // Moist fluid bounce
-                    stiffness = androidx.compose.animation.core.Spring.StiffnessMediumLow
+                    dampingRatio = 0.78f,
+                    stiffness = 380f
                 ),
                 label = "arrow_rotation"
             )
@@ -275,70 +283,82 @@ fun BookAccordionItem(
             )
         }
 
+        // Instant synchronized divider line
+        val dividerAlpha by animateFloatAsState(
+            targetValue = if (isExpanded) 1f else 0f,
+            animationSpec = spring(dampingRatio = 0.80f, stiffness = 420f),
+            label = "divider_alpha"
+        )
+        if (dividerAlpha > 0.01f) {
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp)
+                    .height(1.dp)
+                    .graphicsLayer { alpha = dividerAlpha }
+                    .background(MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.18f), CircleShape)
+            )
+        }
+
         // Expanded Bookmark Rows with Moist Organic Spring
         AnimatedVisibility(
             visible = isExpanded,
             enter = expandVertically(
                 animationSpec = spring(
-                    dampingRatio = 0.76f,
-                    stiffness = androidx.compose.animation.core.Spring.StiffnessMediumLow
+                    dampingRatio = 0.82f,
+                    stiffness = 380f
                 )
-            ) + fadeIn(tween(220)),
+            ) + fadeIn(tween(140)),
             exit = shrinkVertically(
                 animationSpec = spring(
-                    dampingRatio = 0.80f,
-                    stiffness = androidx.compose.animation.core.Spring.StiffnessMediumLow
+                    dampingRatio = 0.82f,
+                    stiffness = 380f
                 )
-            ) + fadeOut(tween(180))
+            ) + fadeOut(tween(120))
         ) {
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
                     .clipToBounds()
+                    .padding(horizontal = 16.dp)
+                    .padding(top = 10.dp, bottom = 12.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 16.dp)
-                        .height(1.dp)
-                        .background(MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.20f), CircleShape)
-                )
+                val sharedTransitionScope = LocalSharedTransitionScope.current
 
-                Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 16.dp)
-                        .padding(top = 10.dp, bottom = 12.dp),
-                    verticalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    val sharedTransitionScope = LocalSharedTransitionScope.current
+                pages.sorted().forEach { pageIndex ->
+                    val rowInteractionSource = remember { MutableInteractionSource() }
+                    val rowTargetKey = "bookmark_${item.id}_$pageIndex"
+                    val isRowActiveTarget = TransitionTargetTracker.isTransitionActive && TransitionTargetTracker.activeTargetId == rowTargetKey
 
-                    pages.sorted().forEach { pageIndex ->
-                        val rowInteractionSource = remember { MutableInteractionSource() }
-                        val rowTargetKey = "bookmark_${item.id}_$pageIndex"
+                    val rowSharedModifier = if (sharedTransitionScope != null && screenVisibilityScope != null && isRowActiveTarget) {
+                        with(sharedTransitionScope) {
+                            Modifier.sharedBounds(
+                                sharedContentState = rememberSharedContentState(key = rowTargetKey),
+                                animatedVisibilityScope = screenVisibilityScope,
+                                enter = fadeIn(
+                                    animationSpec = tween(
+                                        durationMillis = 90,
+                                        delayMillis = 240,
+                                        easing = LinearEasing
+                                    )
+                                ),
+                                exit = fadeOut(tween(90, easing = LinearEasing)),
+                                renderInOverlayDuringTransition = true,
+                                boundsTransform = { _, _ ->
+                                    spring(dampingRatio = 0.78f, stiffness = 340f)
+                                },
+                                resizeMode = SharedTransitionScope.ResizeMode.scaleToBounds(ContentScale.Crop)
+                            )
+                        }
+                    } else Modifier
 
-                        val rowSharedModifier = if (sharedTransitionScope != null && screenVisibilityScope != null) {
-                            with(sharedTransitionScope) {
-                                Modifier.sharedBounds(
-                                    sharedContentState = rememberSharedContentState(key = rowTargetKey),
-                                    animatedVisibilityScope = screenVisibilityScope,
-                                    enter = fadeIn(
-                                        animationSpec = tween(
-                                            durationMillis = 90,
-                                            delayMillis = 240,
-                                            easing = LinearEasing
-                                        )
-                                    ),
-                                    exit = fadeOut(tween(90, easing = LinearEasing)),
-                                    renderInOverlayDuringTransition = false,
-                                    boundsTransform = { _, _ ->
-                                        spring(dampingRatio = 0.78f, stiffness = 340f)
-                                    },
-                                    resizeMode = SharedTransitionScope.ResizeMode.scaleToBounds(ContentScale.Crop)
-                                )
-                            }
-                        } else Modifier
-
+                    val isSavedLocally = isPageSaved(pageIndex)
+                    AnimatedVisibility(
+                        visible = isSavedLocally || isRowActiveTarget,
+                        enter = expandVertically(animationSpec = spring(dampingRatio = 0.80f, stiffness = 380f)) + fadeIn(tween(150)),
+                        exit = shrinkVertically(animationSpec = spring(dampingRatio = 0.80f, stiffness = 380f)) + fadeOut(tween(150))
+                    ) {
                         Row(
                             modifier = Modifier
                                 .fillMaxWidth()

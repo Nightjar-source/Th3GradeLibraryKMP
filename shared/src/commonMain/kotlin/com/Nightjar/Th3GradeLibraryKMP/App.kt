@@ -350,18 +350,17 @@ fun AppContent(
                 ?: AllItems.notes.firstOrNull { it.id == initialBookId }
             if (target != null) {
                 SyncEngine.saveSelectedCategory(if (target.isNote) "notes" else "books")
+                viewModel.page = "list"
                 
                 val list = if (target.isNote) AllItems.notes else AllItems.books
                 val targetIdx = list.indexOfFirst { it.id == target.id }
                 
                 if (targetIdx >= 0) {
                     val state = if (target.isNote) libraryNotesLazyGridState else libraryBooksLazyGridState
-                    if (state.firstVisibleItemIndex != targetIdx) {
-                        scope.launch {
-                            try {
-                                state.scrollToItem(targetIdx)
-                            } catch (_: Exception) {}
-                        }
+                    scope.launch {
+                        try {
+                            state.scrollToItem(targetIdx)
+                        } catch (_: Exception) {}
                     }
                 }
                 
@@ -1580,7 +1579,12 @@ fun AppContent(
                                 .fillMaxWidth()
                                 .padding(horizontal = 24.dp)
                                 .clip(RoundedCornerShape(24.dp))
-                                .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
+                                .background(if (isDark) MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f) else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.85f))
+                                .border(
+                                    width = 1.dp,
+                                    color = if (isDark) Color.White.copy(alpha = 0.15f) else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.22f),
+                                    shape = RoundedCornerShape(24.dp)
+                                )
                                 .padding(20.dp)
                         ) {
                             Column {
