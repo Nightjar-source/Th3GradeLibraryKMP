@@ -354,14 +354,14 @@ fun AppContent(
                 val list = if (target.isNote) AllItems.notes else AllItems.books
                 val targetIdx = list.indexOfFirst { it.id == target.id }
                 
-                // Do NOT push 'list' to pageHistory to avoid flashing and extra back presses.
-                // Scroll the state in the background in case they do go back to list later.
                 if (targetIdx >= 0) {
                     val state = if (target.isNote) libraryNotesLazyGridState else libraryBooksLazyGridState
-                    scope.launch {
-                        try {
-                            state.scrollToItem(targetIdx + 1)
-                        } catch (_: Exception) {}
+                    if (state.firstVisibleItemIndex != targetIdx) {
+                        scope.launch {
+                            try {
+                                state.scrollToItem(targetIdx)
+                            } catch (_: Exception) {}
+                        }
                     }
                 }
                 

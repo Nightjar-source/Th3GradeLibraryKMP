@@ -351,9 +351,9 @@ actual fun PdfViewerScreen(
                 ),
                 exit = androidx.compose.animation.fadeOut(
                     animationSpec = androidx.compose.animation.core.tween(
-                        durationMillis = 90,
-                        delayMillis = 270,
-                        easing = androidx.compose.animation.core.LinearEasing
+                        durationMillis = 180,
+                        delayMillis = 60,
+                        easing = androidx.compose.animation.core.FastOutSlowInEasing
                     )
                 ),
                 renderInOverlayDuringTransition = true,
@@ -983,8 +983,19 @@ fun AndroidPdfPage(
         onZoomChanged(scale > 1.05f)
     }
 
+    var showLoadingIndicator by remember(pageIndex, bookId) { mutableStateOf(false) }
+    LaunchedEffect(pageIndex, bookId) {
+        if (bitmap == null) {
+            kotlinx.coroutines.delay(220)
+            if (bitmap == null) {
+                showLoadingIndicator = true
+            }
+        }
+    }
+
     LaunchedEffect(bitmap) {
         if (bitmap != null) {
+            showLoadingIndicator = false
             onPageReady()
         }
     }
@@ -1138,7 +1149,7 @@ fun AndroidPdfPage(
                     }
             )
         }
-    } else {
+    } else if (showLoadingIndicator) {
         Box(
             modifier = modifier.fillMaxSize(),
             contentAlignment = Alignment.Center

@@ -11,8 +11,6 @@ import androidx.compose.foundation.gestures.stopScroll
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.grid.GridCells
-import androidx.compose.foundation.lazy.grid.GridItemSpan
-import androidx.compose.foundation.lazy.grid.LazyGridItemScope
 import androidx.compose.foundation.lazy.grid.LazyGridState
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
@@ -30,6 +28,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
@@ -180,15 +179,7 @@ fun BookmarksScreen(
                                 isExpanded = expandedSet.contains(book.id),
                                 onToggleExpand = { SyncEngine.toggleExpandedBookmark(book.id) },
                                 onNavigateToPdf = { pageIdx -> onNavigateToPdf(book, pageIdx) },
-                                screenVisibilityScope = screenVisibilityScope,
-                                modifier = Modifier.animateItem(
-                                    fadeInSpec = null,
-                                    fadeOutSpec = null,
-                                    placementSpec = spring(
-                                        dampingRatio = 0.85f,
-                                        stiffness = androidx.compose.animation.core.Spring.StiffnessMediumLow
-                                    )
-                                )
+                                screenVisibilityScope = screenVisibilityScope
                             )
                         }
                     }
@@ -200,7 +191,7 @@ fun BookmarksScreen(
 
 @OptIn(ExperimentalSharedTransitionApi::class)
 @Composable
-fun LazyGridItemScope.BookAccordionItem(
+fun BookAccordionItem(
     item: BookItem,
     pages: List<Int>,
     isDark: Boolean,
@@ -234,9 +225,9 @@ fun LazyGridItemScope.BookAccordionItem(
                 AsyncImage(
                     model = ImageRequest.Builder(LocalPlatformContext.current)
                         .data(Res.getUri("drawable/${item.coverResName}." + if (item.coverResName in listOf("ayajaaa", "english", "englishactivity", "kss1")) "jpg" else "png"))
-                        .memoryCachePolicy(CachePolicy.ENABLED)
-                        .diskCachePolicy(CachePolicy.ENABLED)
-                        .build(),
+                    .memoryCachePolicy(CachePolicy.ENABLED)
+                    .diskCachePolicy(CachePolicy.ENABLED)
+                    .build(),
                     contentDescription = item.title,
                     contentScale = ContentScale.Crop,
                     modifier = Modifier.fillMaxSize()
@@ -289,18 +280,22 @@ fun LazyGridItemScope.BookAccordionItem(
             visible = isExpanded,
             enter = expandVertically(
                 animationSpec = spring(
-                    dampingRatio = 0.74f, // Ultra-moist fluid spring
+                    dampingRatio = 0.76f,
                     stiffness = androidx.compose.animation.core.Spring.StiffnessMediumLow
                 )
             ) + fadeIn(tween(220)),
             exit = shrinkVertically(
                 animationSpec = spring(
-                    dampingRatio = 0.78f,
+                    dampingRatio = 0.80f,
                     stiffness = androidx.compose.animation.core.Spring.StiffnessMediumLow
                 )
             ) + fadeOut(tween(180))
         ) {
-            Column(modifier = Modifier.fillMaxWidth()) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clipToBounds()
+            ) {
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -321,9 +316,8 @@ fun LazyGridItemScope.BookAccordionItem(
                     pages.sorted().forEach { pageIndex ->
                         val rowInteractionSource = remember { MutableInteractionSource() }
                         val rowTargetKey = "bookmark_${item.id}_$pageIndex"
-                        val isThisRowTarget = TransitionTargetTracker.isTransitionActive && TransitionTargetTracker.activeTargetId == rowTargetKey
 
-                        val rowSharedModifier = if (sharedTransitionScope != null && screenVisibilityScope != null && isThisRowTarget) {
+                        val rowSharedModifier = if (sharedTransitionScope != null && screenVisibilityScope != null) {
                             with(sharedTransitionScope) {
                                 Modifier.sharedBounds(
                                     sharedContentState = rememberSharedContentState(key = rowTargetKey),
@@ -335,10 +329,10 @@ fun LazyGridItemScope.BookAccordionItem(
                                             easing = LinearEasing
                                         )
                                     ),
-                                    exit = ExitTransition.None,
+                                    exit = fadeOut(tween(90, easing = LinearEasing)),
                                     renderInOverlayDuringTransition = false,
                                     boundsTransform = { _, _ ->
-                                        spring(dampingRatio = 0.76f, stiffness = 320f)
+                                        spring(dampingRatio = 0.78f, stiffness = 340f)
                                     },
                                     resizeMode = SharedTransitionScope.ResizeMode.scaleToBounds(ContentScale.Crop)
                                 )

@@ -220,24 +220,7 @@ fun LibraryScreen(
                     }
                 }
 
-                // Ensure target item is present for Hero shrink (ONLY if completely off-screen, e.g. cold start shortcut)
-                LaunchedEffect(TransitionTargetTracker.isTransitionActive, TransitionTargetTracker.activeTargetId) {
-                    if (TransitionTargetTracker.isTransitionActive) {
-                        val targetId = TransitionTargetTracker.activeTargetId
-                        if (targetId != null) {
-                            val cleanId = targetId.removePrefix("card_")
-                            val isAlreadyVisible = lazyGridState.layoutInfo.visibleItemsInfo.any { it.key == cleanId || it.key == targetId }
-                            if (!isAlreadyVisible) {
-                                val targetIndex = filteredList.indexOfFirst { it.id == cleanId }
-                                if (targetIndex != -1) {
-                                    val screenHeight = lazyGridState.layoutInfo.viewportSize.height
-                                    val naturalOffset = if (screenHeight > 0) -screenHeight / 4 else 0
-                                    lazyGridState.scrollToItem(targetIndex, naturalOffset)
-                                }
-                            }
-                        }
-                    }
-                }
+
 
                 val gridListFraction by animateFloatAsState(
                     targetValue = if (isGridView) 1f else 0f,
@@ -520,12 +503,7 @@ fun LazyGridItemScope.ContentCard(
     val cardCornerRadius = if (isGridView) 20.dp else 24.dp
     val sharedTransitionScope = LocalSharedTransitionScope.current
     val animatedVisibilityScope = LocalAnimatedVisibilityScope.current
-    val isThisCardTarget = (TransitionTargetTracker.activeTargetId == "card_${item.id}" || TransitionTargetTracker.activeTargetId == item.id)
-    val isTransitionActive = TransitionTargetTracker.isTransitionActive
-    val isAttachedForTransition = isThisCardTarget && isTransitionActive
-    val isReturningFromPdf = com.Nightjar.Th3GradeLibraryKMP.theme.LocalIsReturningFromPdf.current
-
-    val sharedBoundsModifier = if (sharedTransitionScope != null && animatedVisibilityScope != null && isAttachedForTransition) {
+    val sharedBoundsModifier = if (sharedTransitionScope != null && animatedVisibilityScope != null) {
         with(sharedTransitionScope) {
             Modifier.sharedBounds(
                 sharedContentState = rememberSharedContentState(key = "card_${item.id}"),
@@ -549,6 +527,7 @@ fun LazyGridItemScope.ContentCard(
             )
         }
     } else Modifier
+    val isThisCardTarget = (TransitionTargetTracker.activeTargetId == "card_${item.id}" || TransitionTargetTracker.activeTargetId == item.id)
 
     Box(
         modifier = modifier

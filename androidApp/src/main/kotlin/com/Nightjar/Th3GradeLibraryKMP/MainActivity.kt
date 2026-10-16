@@ -676,10 +676,8 @@ class MainActivity : ComponentActivity() {
         // Evict transient PDF page bitmaps and in-memory images completely to drop anonymous memory near zero
         try {
             com.Nightjar.Th3GradeLibraryKMP.ui.PdfBitmapCache.cache.evictAll()
-            if (isFinishing) {
-                AppCleanupService.cleanAllTemporaryPdfFiles(applicationContext)
-                com.Nightjar.Th3GradeLibraryKMP.ui.clearPdfCache(cacheDir)
-            }
+            AppCleanupService.cleanAllTemporaryPdfFiles(applicationContext)
+            com.Nightjar.Th3GradeLibraryKMP.ui.clearPdfCache(cacheDir)
             coil3.SingletonImageLoader.get(this).let { loader ->
                 loader.memoryCache?.clear()
             }
