@@ -354,15 +354,6 @@ fun AppContent(
                 val list = if (target.isNote) AllItems.notes else AllItems.books
                 val targetIdx = list.indexOfFirst { it.id == target.id }
                 
-                if (targetIdx >= 0) {
-                    val state = if (target.isNote) libraryNotesLazyGridState else libraryBooksLazyGridState
-                    scope.launch {
-                        try {
-                            state.scrollToItem(targetIdx)
-                        } catch (_: Exception) {}
-                    }
-                }
-                
                 // Open directly into PDF reader with shared element transition
                 com.Nightjar.Th3GradeLibraryKMP.ui.TransitionTargetTracker.activeTargetId = "card_${target.id}"
                 com.Nightjar.Th3GradeLibraryKMP.ui.TransitionTargetTracker.isTransitionActive = true
@@ -526,7 +517,6 @@ fun AppContent(
                                 if (currentTransition.currentState == currentTransition.targetState &&
                                     page != "pdf"
                                 ) {
-                                    kotlinx.coroutines.delay(380)
                                     com.Nightjar.Th3GradeLibraryKMP.ui.TransitionTargetTracker.isTransitionActive = false
                                     com.Nightjar.Th3GradeLibraryKMP.ui.TransitionTargetTracker.activeTargetId = null
                                 }

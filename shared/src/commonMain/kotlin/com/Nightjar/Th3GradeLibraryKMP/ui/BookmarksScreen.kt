@@ -380,7 +380,7 @@ fun BookAccordionItem(
                     val isRowActiveTarget = (TransitionTargetTracker.isTransitionActive || LocalIsReturningFromPdf.current) &&
                             TransitionTargetTracker.activeTargetId == rowTargetKey
 
-                    val rowSharedModifier = if (sharedTransitionScope != null && screenVisibilityScope != null && isRowActiveTarget) {
+                    val rowSharedModifier = if (sharedTransitionScope != null && screenVisibilityScope != null) {
                         with(sharedTransitionScope) {
                             Modifier.sharedBounds(
                                 sharedContentState = rememberSharedContentState(key = rowTargetKey),
