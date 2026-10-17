@@ -57,6 +57,7 @@ import com.Nightjar.Th3GradeLibraryKMP.generated.resources.Res
 import com.Nightjar.Th3GradeLibraryKMP.network.SyncEngine
 import com.Nightjar.Th3GradeLibraryKMP.theme.LocalIsNavigatingBack
 import com.Nightjar.Th3GradeLibraryKMP.theme.LocalIsReturningFromPdf
+import com.Nightjar.Th3GradeLibraryKMP.theme.adaptiveItemEntrance
 import com.Nightjar.Th3GradeLibraryKMP.theme.expressiveButtonMorph
 import com.Nightjar.Th3GradeLibraryKMP.theme.liquidGlass
 
@@ -197,11 +198,12 @@ fun BookmarksScreen(
                     horizontalArrangement = Arrangement.spacedBy(16.dp),
                     contentPadding = PaddingValues(top = dynamicTopPadding, bottom = bottomPadding)
                 ) {
-                    items(sortedBookIds, key = { it }) { bookId ->
+                    itemsIndexed(sortedBookIds, key = { _, it -> it }) { index, bookId ->
                         val book = remember(bookId, savedItems) { savedItems.find { it.id == bookId } }
                         if (book != null) {
                             val pages = groupedPages[bookId] ?: emptyList()
-                                BookAccordionItem(
+                            BookAccordionItem(
+                                modifier = Modifier.adaptiveItemEntrance(index, itemId = bookId),
                                 item = book,
                                 pages = pages,
                                 isPageSaved = { pageIdx -> savedPages.contains("${book.id}:$pageIdx") },
@@ -377,7 +379,7 @@ fun BookAccordionItem(
                     val isRowActiveTarget = (TransitionTargetTracker.isTransitionActive || LocalIsReturningFromPdf.current) &&
                             TransitionTargetTracker.activeTargetId == rowTargetKey
 
-                    val rowSharedModifier = if (sharedTransitionScope != null && screenVisibilityScope != null) {
+                    val rowSharedModifier = if (isRowActiveTarget && sharedTransitionScope != null && screenVisibilityScope != null) {
                         with(sharedTransitionScope) {
                             Modifier.sharedBounds(
                                 sharedContentState = rememberSharedContentState(key = rowTargetKey),

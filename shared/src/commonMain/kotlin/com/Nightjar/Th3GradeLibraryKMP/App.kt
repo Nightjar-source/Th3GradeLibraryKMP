@@ -172,8 +172,12 @@ fun AppContent(
 
     
     // Hoisted scroll/list states for preserving positions across navigation
-    val newsLazyGridState = androidx.compose.foundation.lazy.grid.rememberLazyGridState()
-    val libraryHomeScrollState = androidx.compose.foundation.rememberScrollState()
+    val newsLazyGridState = androidx.compose.runtime.saveable.rememberSaveable(saver = androidx.compose.foundation.lazy.grid.LazyGridState.Saver) {
+        androidx.compose.foundation.lazy.grid.LazyGridState()
+    }
+    val libraryHomeScrollState = androidx.compose.runtime.saveable.rememberSaveable(saver = androidx.compose.foundation.ScrollState.Saver) {
+        androidx.compose.foundation.ScrollState(0)
+    }
     val initialBookIndex = remember(initialBookId, initialIsNote) {
         if (initialBookId != null && !initialIsNote) {
             AllItems.books.indexOfFirst { it.id == initialBookId }.takeIf { it >= 0 } ?: 0
@@ -184,11 +188,21 @@ fun AppContent(
             AllItems.notes.indexOfFirst { it.id == initialBookId }.takeIf { it >= 0 } ?: 0
         } else 0
     }
-    val libraryBooksLazyGridState = androidx.compose.foundation.lazy.grid.rememberLazyGridState(initialFirstVisibleItemIndex = initialBookIndex)
-    val libraryNotesLazyGridState = androidx.compose.foundation.lazy.grid.rememberLazyGridState(initialFirstVisibleItemIndex = initialNoteIndex)
-    val bookmarksLazyGridState = androidx.compose.foundation.lazy.grid.rememberLazyGridState()
-    val shortcutsLazyGridState = androidx.compose.foundation.lazy.grid.rememberLazyGridState()
-    val aboutScrollState = androidx.compose.foundation.rememberScrollState()
+    val libraryBooksLazyGridState = androidx.compose.runtime.saveable.rememberSaveable(saver = androidx.compose.foundation.lazy.grid.LazyGridState.Saver) {
+        androidx.compose.foundation.lazy.grid.LazyGridState(firstVisibleItemIndex = initialBookIndex)
+    }
+    val libraryNotesLazyGridState = androidx.compose.runtime.saveable.rememberSaveable(saver = androidx.compose.foundation.lazy.grid.LazyGridState.Saver) {
+        androidx.compose.foundation.lazy.grid.LazyGridState(firstVisibleItemIndex = initialNoteIndex)
+    }
+    val bookmarksLazyGridState = androidx.compose.runtime.saveable.rememberSaveable(saver = androidx.compose.foundation.lazy.grid.LazyGridState.Saver) {
+        androidx.compose.foundation.lazy.grid.LazyGridState()
+    }
+    val shortcutsLazyGridState = androidx.compose.runtime.saveable.rememberSaveable(saver = androidx.compose.foundation.lazy.grid.LazyGridState.Saver) {
+        androidx.compose.foundation.lazy.grid.LazyGridState()
+    }
+    val aboutScrollState = androidx.compose.runtime.saveable.rememberSaveable(saver = androidx.compose.foundation.ScrollState.Saver) {
+        androidx.compose.foundation.ScrollState(0)
+    }
 
     val viewModel: AppViewModel = viewModel()
 

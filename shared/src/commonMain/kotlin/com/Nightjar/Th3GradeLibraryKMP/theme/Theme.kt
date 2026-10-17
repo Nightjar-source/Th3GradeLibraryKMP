@@ -175,9 +175,12 @@ fun Modifier.popInOnInitialLoad(index: Int = 0, itemId: String? = null): Modifie
     val isNavigatingBack = LocalIsNavigatingBack.current
     if (isReturningFromPdf || isNavigatingBack) return@composed this
 
-    var isLoaded by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf(false) }
+    var isLoaded by androidx.compose.runtime.saveable.rememberSaveable { androidx.compose.runtime.mutableStateOf(false) }
     androidx.compose.runtime.LaunchedEffect(Unit) {
         isLoaded = true
+    }
+    if (isLoaded) {
+        return@composed this
     }
     val animProgress by androidx.compose.animation.core.animateFloatAsState(
         targetValue = if (isLoaded) 1f else 0f,

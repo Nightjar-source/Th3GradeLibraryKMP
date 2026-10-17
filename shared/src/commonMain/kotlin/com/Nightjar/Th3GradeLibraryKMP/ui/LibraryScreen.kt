@@ -367,12 +367,12 @@ fun CategoryMenuCard(
     val isReturningFromPdf = LocalIsReturningFromPdf.current
     val screenKey = LocalScreenEntranceKey.current
 
-    var isCardVisible by remember(screenKey) { mutableStateOf(isReturningFromPdf) }
+    var isCardVisible by androidx.compose.runtime.saveable.rememberSaveable { mutableStateOf(isReturningFromPdf) }
     LaunchedEffect(screenKey) {
         isCardVisible = true
     }
     val cardProgress by animateFloatAsState(
-        targetValue = if (isCardVisible) 1f else 0f,
+        targetValue = if (isCardVisible || isReturningFromPdf) 1f else 0f,
         animationSpec = tween(
             durationMillis = 500,
             delayMillis = if (isReturningFromPdf) 0 else index * 90,
