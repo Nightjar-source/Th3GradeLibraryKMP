@@ -208,10 +208,7 @@ fun BookmarksScreen(
                                 isDark = isDark,
                                 isExpanded = expandedSet.contains(book.id),
                                 onToggleExpand = {
-                                    val isRet = TransitionTargetTracker.isTransitionActive || isReturningFromPdf
-                                    if (!isRet) {
-                                        SyncEngine.toggleExpandedBookmark(book.id)
-                                    }
+                                    SyncEngine.toggleExpandedBookmark(book.id)
                                 },
                                 onNavigateToPdf = { pageIdx -> onNavigateToPdf(book, pageIdx) },
                                 screenVisibilityScope = screenVisibilityScope
@@ -385,14 +382,11 @@ fun BookAccordionItem(
                             Modifier.sharedBounds(
                                 sharedContentState = rememberSharedContentState(key = rowTargetKey),
                                 animatedVisibilityScope = screenVisibilityScope,
-                                enter = fadeIn(animationSpec = tween(durationMillis = 150, delayMillis = 75, easing = LinearEasing)),
-                                exit = fadeOut(animationSpec = tween(durationMillis = 130, easing = LinearEasing)),
-                                renderInOverlayDuringTransition = true,
-                                clipInOverlayDuringTransition = OverlayClip(RoundedCornerShape(14.dp)),
+                                renderInOverlayDuringTransition = false,
                                 boundsTransform = { _, _ ->
-                                    spring(dampingRatio = 0.82f, stiffness = 280f)
+                                    spring(dampingRatio = 0.80f, stiffness = 280f)
                                 },
-                                resizeMode = SharedTransitionScope.ResizeMode.RemeasureToBounds
+                                resizeMode = SharedTransitionScope.ResizeMode.scaleToBounds(androidx.compose.ui.layout.ContentScale.Crop)
                             )
                         }
                     } else Modifier

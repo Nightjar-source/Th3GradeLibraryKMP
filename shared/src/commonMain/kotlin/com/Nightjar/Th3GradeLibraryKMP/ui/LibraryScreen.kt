@@ -562,23 +562,9 @@ fun LazyGridItemScope.ContentCard(
             Modifier.sharedBounds(
                 sharedContentState = rememberSharedContentState(key = "card_${item.id}"),
                 animatedVisibilityScope = animatedVisibilityScope,
-                enter = androidx.compose.animation.fadeIn(
-                    animationSpec = androidx.compose.animation.core.tween(
-                        durationMillis = 150,
-                        delayMillis = 75,
-                        easing = androidx.compose.animation.core.LinearEasing
-                    )
-                ),
-                exit = androidx.compose.animation.fadeOut(
-                    animationSpec = androidx.compose.animation.core.tween(
-                        durationMillis = 130,
-                        easing = androidx.compose.animation.core.LinearEasing
-                    )
-                ),
-                renderInOverlayDuringTransition = true,
-                clipInOverlayDuringTransition = OverlayClip(RoundedCornerShape(cardCornerRadius)),
-                boundsTransform = { _, _ -> spring(dampingRatio = 0.82f, stiffness = 280f) },
-                resizeMode = SharedTransitionScope.ResizeMode.RemeasureToBounds
+                renderInOverlayDuringTransition = false,
+                boundsTransform = { _, _ -> spring(dampingRatio = 0.80f, stiffness = 280f) },
+                resizeMode = SharedTransitionScope.ResizeMode.scaleToBounds(androidx.compose.ui.layout.ContentScale.Crop)
             )
         }
     } else Modifier

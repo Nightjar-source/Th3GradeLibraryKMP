@@ -350,15 +350,25 @@ fun AppContent(
             val target = AllItems.books.firstOrNull { it.id == initialBookId }
                 ?: AllItems.notes.firstOrNull { it.id == initialBookId }
             if (target != null) {
-                SyncEngine.saveSelectedCategory(if (target.isNote) "notes" else "books")
+                val cat = if (target.isNote) "notes" else "books"
+                SyncEngine.saveSelectedCategory(cat)
                 val list = if (target.isNote) AllItems.notes else AllItems.books
                 val targetIdx = list.indexOfFirst { it.id == target.id }
+                
+                if (targetIdx >= 0) {
+                    val state = if (target.isNote) libraryNotesLazyGridState else libraryBooksLazyGridState
+                    try {
+                        state.scrollToItem(targetIdx)
+                    } catch (_: Exception) {}
+                }
+
+                // Configure backstack so returning from PDF smoothly lands on the book card in "list"
+                viewModel.pageHistory.value = listOf("home", "list")
+                viewModel.page = "list"
                 
                 // Open directly into PDF reader with shared element transition
                 com.Nightjar.Th3GradeLibraryKMP.ui.TransitionTargetTracker.activeTargetId = "card_${target.id}"
                 com.Nightjar.Th3GradeLibraryKMP.ui.TransitionTargetTracker.isTransitionActive = true
-                viewModel.pdfSourcePage = "list"
-                viewModel.pageHistory.value = listOf("home", "list", "pdf")
                 viewModel.selectItem(target, SyncEngine.lastReadPages.value[target.id])
                 consumed = true
             }
