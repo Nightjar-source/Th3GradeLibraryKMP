@@ -367,7 +367,7 @@ fun CategoryMenuCard(
     val isReturningFromPdf = LocalIsReturningFromPdf.current
     val screenKey = LocalScreenEntranceKey.current
 
-    var isCardVisible by androidx.compose.runtime.saveable.rememberSaveable { mutableStateOf(isReturningFromPdf) }
+    var isCardVisible by remember(screenKey) { mutableStateOf(isReturningFromPdf) }
     LaunchedEffect(screenKey) {
         isCardVisible = true
     }
