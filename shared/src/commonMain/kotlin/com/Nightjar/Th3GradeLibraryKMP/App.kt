@@ -414,8 +414,13 @@ fun AppContent(
             BoxWithConstraints(
                 modifier = Modifier.fillMaxSize()
             ) {
-        val screenWidthDp = with(androidx.compose.ui.platform.LocalDensity.current) { androidx.compose.ui.platform.LocalWindowInfo.current.containerSize.width.toDp() }
-        val isWide = screenWidthDp >= 600.dp
+        val adaptiveInfo = androidx.compose.material3.adaptive.currentWindowAdaptiveInfo()
+        val widthClass = adaptiveInfo.windowSizeClass.windowWidthSizeClass
+        val isWide = widthClass != androidx.window.core.layout.WindowWidthSizeClass.COMPACT
+        val railWidth = when (widthClass) {
+            androidx.window.core.layout.WindowWidthSizeClass.EXPANDED -> 72.dp
+            else -> 64.dp
+        }
         
         val currentNavBar = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
         val currentStatusBar = WindowInsets.statusBars.add(WindowInsets.captionBar).asPaddingValues().calculateTopPadding()
@@ -532,7 +537,7 @@ fun AppContent(
                                 }
                             }
                             val pageContentPadding = PaddingValues(
-                                end = if (isWide && targetPage in listOf("home", "list", "news", "bookmarks", "shortcuts", "about")) 90.dp else 0.dp
+                                end = if (isWide && targetPage in listOf("home", "list", "news", "bookmarks", "shortcuts", "about")) (railWidth + 24.dp) else 0.dp
                             )
                             val innerHorizontalInsets = if (targetPage != "pdf") WindowInsets.safeDrawing.only(WindowInsetsSides.Horizontal) else WindowInsets(0, 0, 0, 0)
                             Box(
@@ -1357,16 +1362,16 @@ fun AppContent(
                     // 1. Vertical 3-tab pill
                     BoxWithConstraints(
                         modifier = Modifier
-                            .heightIn(max = 330.dp)
+                            .heightIn(max = 300.dp)
                             .weight(1f, fill = false)
-                            .width(72.dp)
+                            .width(railWidth)
                             .border(
                                 width = 1.dp,
                                 brush = Brush.linearGradient(listOf(Color.White.copy(alpha = 0.25f), Color.White.copy(alpha = 0.05f))),
-                                shape = RoundedCornerShape(32.dp)
+                                shape = RoundedCornerShape(28.dp)
                             )
-                            .liquidGlass(isDark, borderRadius = 32.dp, alpha = 0.90f)
-                            .padding(vertical = 10.dp)
+                            .liquidGlass(isDark, borderRadius = 28.dp, alpha = 0.90f)
+                            .padding(vertical = 8.dp)
                     ) {
                         val contentHeight = maxHeight
                         val itemHeight = contentHeight / mainNavItems.size
@@ -1383,7 +1388,7 @@ fun AppContent(
                                 .offset(y = indicatorOffset)
                                 .height(itemHeight)
                                 .fillMaxWidth()
-                                .padding(horizontal = 8.dp, vertical = 8.dp)
+                                .padding(horizontal = 6.dp, vertical = 6.dp)
                                 .clip(RoundedCornerShape(20.dp))
                                 .background(
                                     Brush.radialGradient(
@@ -1437,12 +1442,12 @@ fun AppContent(
                                         imageVector = item.second,
                                         contentDescription = item.first,
                                         tint = tint,
-                                        modifier = Modifier.size(26.dp)
+                                        modifier = Modifier.size(24.dp)
                                     )
-                                    Spacer(modifier = Modifier.height(4.dp))
+                                    Spacer(modifier = Modifier.height(2.dp))
                                     Text(
                                         text = item.first,
-                                        fontSize = 10.sp,
+                                        fontSize = 9.sp,
                                         fontWeight = FontWeight.Bold,
                                         color = tint
                                     )
@@ -1451,23 +1456,24 @@ fun AppContent(
                         }
                     }
 
-                    Spacer(modifier = Modifier.height(12.dp))
+                    Spacer(modifier = Modifier.height(8.dp))
 
-                    // 2. Separate Squircle Menu Button for Tablet ("القائمة")
+                    // 2. Separate Squircle Menu Button for Tablet ("القائمة") matching bottom bar sleek design & railWidth
                     val sideMenuTint by animateColorAsState(
                         targetValue = if (isMenuButtonActive) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
                         animationSpec = tween(250)
                     )
                     Box(
                         modifier = Modifier
-                            .size(72.dp)
+                            .height(64.dp)
+                            .width(railWidth)
                             .border(
                                 width = 1.dp,
                                 brush = Brush.linearGradient(listOf(Color.White.copy(alpha = 0.25f), Color.White.copy(alpha = 0.05f))),
-                                shape = RoundedCornerShape(24.dp)
+                                shape = RoundedCornerShape(28.dp)
                             )
-                            .liquidGlass(isDark, borderRadius = 24.dp, alpha = 0.90f)
-                            .clip(RoundedCornerShape(24.dp))
+                            .liquidGlass(isDark, borderRadius = 28.dp, alpha = 0.90f)
+                            .clip(RoundedCornerShape(28.dp))
                             .bounceClick {
                                 isDrawerOpen = !isDrawerOpen
                             },
@@ -1477,8 +1483,8 @@ fun AppContent(
                             Box(
                                 modifier = Modifier
                                     .fillMaxSize()
-                                    .padding(8.dp)
-                                    .clip(RoundedCornerShape(16.dp))
+                                    .padding(vertical = 8.dp, horizontal = 4.dp)
+                                    .clip(RoundedCornerShape(20.dp))
                                     .background(
                                         Brush.radialGradient(
                                             listOf(
@@ -1497,12 +1503,12 @@ fun AppContent(
                                 imageVector = Icons.Default.Menu,
                                 contentDescription = "القائمة",
                                 tint = sideMenuTint,
-                                modifier = Modifier.size(26.dp)
+                                modifier = Modifier.size(24.dp)
                             )
-                            Spacer(modifier = Modifier.height(4.dp))
+                            Spacer(modifier = Modifier.height(2.dp))
                             Text(
                                 text = "القائمة",
-                                fontSize = 10.sp,
+                                fontSize = 9.sp,
                                 fontWeight = FontWeight.Bold,
                                 color = sideMenuTint
                             )
