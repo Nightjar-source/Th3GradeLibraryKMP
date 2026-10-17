@@ -122,9 +122,10 @@ fun BookmarksScreen(
 
                 val activeTarget = TransitionTargetTracker.activeTargetId
                 val isTransitionActive = TransitionTargetTracker.isTransitionActive
-                val groupedPages = remember(savedPages, activeTarget, isTransitionActive) {
+                val isReturningFromPdf = LocalIsReturningFromPdf.current
+                val groupedPages = remember(savedPages, activeTarget, isTransitionActive, isReturningFromPdf) {
                     val allPages = savedPages.toMutableSet()
-                    if (isTransitionActive && activeTarget != null && activeTarget.startsWith("bookmark_")) {
+                    if ((isTransitionActive || isReturningFromPdf) && activeTarget != null && activeTarget.startsWith("bookmark_")) {
                         val sub = activeTarget.removePrefix("bookmark_")
                         val lastUnderscore = sub.lastIndexOf('_')
                         if (lastUnderscore > 0 && lastUnderscore < sub.length - 1) {
@@ -206,7 +207,12 @@ fun BookmarksScreen(
                                 isPageSaved = { pageIdx -> savedPages.contains("${book.id}:$pageIdx") },
                                 isDark = isDark,
                                 isExpanded = expandedSet.contains(book.id),
-                                onToggleExpand = { SyncEngine.toggleExpandedBookmark(book.id) },
+                                onToggleExpand = {
+                                    val isRet = TransitionTargetTracker.isTransitionActive || isReturningFromPdf
+                                    if (!isRet) {
+                                        SyncEngine.toggleExpandedBookmark(book.id)
+                                    }
+                                },
                                 onNavigateToPdf = { pageIdx -> onNavigateToPdf(book, pageIdx) },
                                 screenVisibilityScope = screenVisibilityScope
                             )
@@ -242,7 +248,6 @@ fun BookAccordionItem(
     Column(
         modifier = modifier
             .fillMaxWidth()
-            .animateContentSize(spring(dampingRatio = 0.82f, stiffness = 280f))
             .liquidGlass(isDark, borderRadius = 20.dp, alpha = 0.96f)
             .clip(RoundedCornerShape(20.dp))
     ) {
@@ -301,9 +306,9 @@ fun BookAccordionItem(
 
             val arrowRotation by animateFloatAsState(
                 targetValue = if (isExpanded) 180f else 0f,
-                animationSpec = tween(
-                    durationMillis = 220,
-                    easing = androidx.compose.animation.core.FastOutSlowInEasing
+                animationSpec = spring(
+                    dampingRatio = 0.82f,
+                    stiffness = 320f
                 ),
                 label = "arrow_rotation"
             )
@@ -322,7 +327,7 @@ fun BookAccordionItem(
         // Instant synchronized divider line directly under Header (t=0, smoothly blends with expand)
         val dividerAlpha by animateFloatAsState(
             targetValue = if (isExpanded) 1f else 0f,
-            animationSpec = tween(durationMillis = 150, easing = androidx.compose.animation.core.FastOutSlowInEasing),
+            animationSpec = spring(dampingRatio = 0.82f, stiffness = 320f),
             label = "divider_alpha"
         )
         if (dividerAlpha > 0.01f) {
@@ -345,17 +350,17 @@ fun BookAccordionItem(
             enter = expandVertically(
                 animationSpec = spring(
                     dampingRatio = 0.82f,
-                    stiffness = 280f
+                    stiffness = 320f
                 ),
                 expandFrom = Alignment.Top
-            ) + fadeIn(tween(200, easing = androidx.compose.animation.core.FastOutSlowInEasing)),
+            ) + fadeIn(tween(180, easing = androidx.compose.animation.core.FastOutSlowInEasing)),
             exit = shrinkVertically(
                 animationSpec = spring(
                     dampingRatio = 0.82f,
-                    stiffness = 280f
+                    stiffness = 320f
                 ),
                 shrinkTowards = Alignment.Top
-            ) + fadeOut(tween(180, easing = androidx.compose.animation.core.FastOutSlowInEasing))
+            ) + fadeOut(tween(150, easing = androidx.compose.animation.core.FastOutSlowInEasing))
         ) {
             Column(
                 modifier = Modifier
@@ -375,14 +380,14 @@ fun BookAccordionItem(
                     val isRowActiveTarget = (TransitionTargetTracker.isTransitionActive || LocalIsReturningFromPdf.current) &&
                             TransitionTargetTracker.activeTargetId == rowTargetKey
 
-                    val rowSharedModifier = if (sharedTransitionScope != null && screenVisibilityScope != null) {
+                    val rowSharedModifier = if (sharedTransitionScope != null && screenVisibilityScope != null && isRowActiveTarget) {
                         with(sharedTransitionScope) {
                             Modifier.sharedBounds(
                                 sharedContentState = rememberSharedContentState(key = rowTargetKey),
                                 animatedVisibilityScope = screenVisibilityScope,
                                 enter = fadeIn(animationSpec = tween(durationMillis = 150, delayMillis = 75, easing = LinearEasing)),
                                 exit = fadeOut(animationSpec = tween(durationMillis = 130, easing = LinearEasing)),
-                                renderInOverlayDuringTransition = false,
+                                renderInOverlayDuringTransition = true,
                                 clipInOverlayDuringTransition = OverlayClip(RoundedCornerShape(14.dp)),
                                 boundsTransform = { _, _ ->
                                     spring(dampingRatio = 0.82f, stiffness = 280f)

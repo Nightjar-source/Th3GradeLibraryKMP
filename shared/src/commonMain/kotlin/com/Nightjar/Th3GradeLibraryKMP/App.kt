@@ -526,6 +526,7 @@ fun AppContent(
                                 if (currentTransition.currentState == currentTransition.targetState &&
                                     page != "pdf"
                                 ) {
+                                    kotlinx.coroutines.delay(380)
                                     com.Nightjar.Th3GradeLibraryKMP.ui.TransitionTargetTracker.isTransitionActive = false
                                     com.Nightjar.Th3GradeLibraryKMP.ui.TransitionTargetTracker.activeTargetId = null
                                 }
@@ -1247,23 +1248,24 @@ fun AppContent(
                         }
                     }
 
-                    Spacer(modifier = Modifier.width(10.dp))
+                    Spacer(modifier = Modifier.width(8.dp))
 
-                    // 2. Separate Squircle Menu Button ("القائمة")
+                    // 2. Separate Squircle Menu Button ("القائمة") matching bar item proportions
                     val menuTint by animateColorAsState(
                         targetValue = if (isMenuButtonActive) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
                         animationSpec = tween(250)
                     )
                     Box(
                         modifier = Modifier
-                            .size(64.dp)
+                            .height(64.dp)
+                            .width(56.dp)
                             .border(
                                 width = 1.dp,
                                 brush = Brush.linearGradient(listOf(Color.White.copy(alpha = 0.25f), Color.White.copy(alpha = 0.05f))),
-                                shape = RoundedCornerShape(24.dp)
+                                shape = RoundedCornerShape(28.dp)
                             )
-                            .liquidGlass(isDark, borderRadius = 24.dp, alpha = 0.90f)
-                            .clip(RoundedCornerShape(24.dp))
+                            .liquidGlass(isDark, borderRadius = 28.dp, alpha = 0.90f)
+                            .clip(RoundedCornerShape(28.dp))
                             .bounceClick {
                                 isDrawerOpen = !isDrawerOpen
                             },
@@ -1273,8 +1275,8 @@ fun AppContent(
                             Box(
                                 modifier = Modifier
                                     .fillMaxSize()
-                                    .padding(8.dp)
-                                    .clip(RoundedCornerShape(16.dp))
+                                    .padding(vertical = 8.dp, horizontal = 4.dp)
+                                    .clip(RoundedCornerShape(20.dp))
                                     .background(
                                         Brush.radialGradient(
                                             listOf(

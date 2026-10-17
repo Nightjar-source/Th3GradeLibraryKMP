@@ -1,2 +1,36 @@
-# Baseline profile rules
-# Generates automatically via Macrobenchmark in a separate CI step.
+# Baseline profile rules for Android ART Ahead-Of-Time (AOT) compilation
+Lcom/Nightjar/Th3GradeLibraryKMP/**;
+HSPLcom/Nightjar/Th3GradeLibraryKMP/**;->**(**)**
+
+LTh3GradeLibraryKMP/shared/generated/**;
+HSPLTh3GradeLibraryKMP/shared/generated/**;->**(**)**
+
+Landroidx/compose/animation/**;
+HSPLandroidx/compose/animation/**;->**(**)**
+
+Landroidx/compose/animation/core/**;
+HSPLandroidx/compose/animation/core/**;->**(**)**
+
+Landroidx/compose/foundation/**;
+HSPLandroidx/compose/foundation/**;->**(**)**
+
+Landroidx/compose/foundation/lazy/**;
+HSPLandroidx/compose/foundation/lazy/**;->**(**)**
+
+Landroidx/compose/foundation/lazy/grid/**;
+HSPLandroidx/compose/foundation/lazy/grid/**;->**(**)**
+
+Landroidx/compose/material3/**;
+HSPLandroidx/compose/material3/**;->**(**)**
+
+Landroidx/compose/material3/adaptive/**;
+HSPLandroidx/compose/material3/adaptive/**;->**(**)**
+
+Landroidx/compose/ui/**;
+HSPLandroidx/compose/ui/**;->**(**)**
+
+Landroidx/compose/runtime/**;
+HSPLandroidx/compose/runtime/**;->**(**)**
+
+Lcoil3/**;
+HSPLcoil3/**;->**(**)**

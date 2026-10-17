@@ -314,6 +314,7 @@ class MainActivity : ComponentActivity() {
                     if (shortcutManager != null && shortcutManager.isRequestPinShortcutSupported) {
                         val shortcutIntent = Intent(this@MainActivity, MainActivity::class.java).apply {
                             action = Intent.ACTION_VIEW
+                            data = android.net.Uri.parse("th3books://library?book_id=${item.id}&is_note=${item.isNote}")
                             putExtra("book_id", item.id)
                             putExtra("is_note", item.isNote)
                             // Clear top flags to route correctly if activity exists
