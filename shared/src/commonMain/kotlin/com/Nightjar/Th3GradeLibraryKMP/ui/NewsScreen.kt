@@ -307,12 +307,13 @@ fun NewsScreen(
                             }
                         } else {
                             itemsIndexed(newsList, key = { _, it -> it.id }, contentType = { _, _ -> "news_item" }) { index, newsItem ->
+                                val isReturning = com.Nightjar.Th3GradeLibraryKMP.theme.LocalIsReturningFromPdf.current
                                 NewsCardSwipeable(
                                     modifier = Modifier
                                         .animateItem(
-                                            fadeInSpec = tween(500),
-                                            placementSpec = spring(stiffness = Spring.StiffnessMediumLow),
-                                            fadeOutSpec = tween(200)
+                                            fadeInSpec = null,
+                                            fadeOutSpec = tween(200),
+                                            placementSpec = if (isReturning) null else spring(stiffness = Spring.StiffnessMediumLow)
                                         )
                                         .adaptiveItemEntrance(index, itemId = newsItem.id),
                                     news = newsItem,

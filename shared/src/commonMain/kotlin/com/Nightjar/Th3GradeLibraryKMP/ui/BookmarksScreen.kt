@@ -172,6 +172,25 @@ fun BookmarksScreen(
                     }
                 }
 
+                // Explicit Scroll State Preservation across tab navigation and background recreation
+                var savedFirstVisibleItemIndex by androidx.compose.runtime.saveable.rememberSaveable { androidx.compose.runtime.mutableStateOf(0) }
+                var savedFirstVisibleItemScrollOffset by androidx.compose.runtime.saveable.rememberSaveable { androidx.compose.runtime.mutableStateOf(0) }
+
+                LaunchedEffect(lazyGridState.firstVisibleItemIndex, lazyGridState.firstVisibleItemScrollOffset) {
+                    if (lazyGridState.firstVisibleItemIndex > 0 || lazyGridState.firstVisibleItemScrollOffset > 0) {
+                        savedFirstVisibleItemIndex = lazyGridState.firstVisibleItemIndex
+                        savedFirstVisibleItemScrollOffset = lazyGridState.firstVisibleItemScrollOffset
+                    }
+                }
+
+                LaunchedEffect(sortedBookIds.isNotEmpty()) {
+                    if (sortedBookIds.isNotEmpty() && (savedFirstVisibleItemIndex > 0 || savedFirstVisibleItemScrollOffset > 0)) {
+                        if (lazyGridState.firstVisibleItemIndex == 0 && lazyGridState.firstVisibleItemScrollOffset == 0) {
+                            lazyGridState.scrollToItem(savedFirstVisibleItemIndex, savedFirstVisibleItemScrollOffset)
+                        }
+                    }
+                }
+
                 val dynamicBookmarkColumns = remember(widthClass, heightClass, screenWidthDp) {
                     when (widthClass) {
                         WindowWidthSizeClass.COMPACT -> GridCells.Fixed(1)
@@ -199,7 +218,11 @@ fun BookmarksScreen(
                     horizontalArrangement = Arrangement.spacedBy(16.dp),
                     contentPadding = PaddingValues(top = dynamicTopPadding, bottom = bottomPadding)
                 ) {
-                    itemsIndexed(sortedBookIds, key = { _, it -> it }) { index, bookId ->
+                    itemsIndexed(
+                        items = sortedBookIds,
+                        key = { _, it -> it },
+                        contentType = { _, _ -> "book_accordion" }
+                    ) { index, bookId ->
                         val book = remember(bookId, savedItems) { savedItems.find { it.id == bookId } }
                         if (book != null) {
                             val pages = groupedPages[bookId] ?: emptyList()
@@ -211,6 +234,12 @@ fun BookmarksScreen(
                                 isDark = isDark,
                                 isExpanded = expandedSet.contains(book.id),
                                 onToggleExpand = {
+                                    if (expandedSet.contains(book.id)) {
+                                        if (TransitionTargetTracker.activeTargetId?.startsWith("bookmark_${book.id}_") == true) {
+                                            TransitionTargetTracker.activeTargetId = null
+                                            TransitionTargetTracker.isTransitionActive = false
+                                        }
+                                    }
                                     SyncEngine.toggleExpandedBookmark(book.id)
                                 },
                                 onNavigateToPdf = { pageIdx -> onNavigateToPdf(book, pageIdx) },
@@ -377,29 +406,44 @@ fun BookAccordionItem(
                 sortedPages.forEach { pageIndex ->
                     val rowInteractionSource = remember { MutableInteractionSource() }
                     val rowTargetKey = "bookmark_${item.id}_$pageIndex"
-                    val isRowActiveTarget = (TransitionTargetTracker.isTransitionActive || LocalIsReturningFromPdf.current) &&
-                            TransitionTargetTracker.activeTargetId == rowTargetKey
+                    val isThisRowActive = (TransitionTargetTracker.activeTargetId == rowTargetKey) &&
+                            (TransitionTargetTracker.isTransitionActive || LocalIsReturningFromPdf.current)
 
-                    val rowSharedModifier = if (isRowActiveTarget && sharedTransitionScope != null && screenVisibilityScope != null) {
+                    val rowSharedModifier = if (sharedTransitionScope != null && screenVisibilityScope != null && isExpanded) {
                         with(sharedTransitionScope) {
                             Modifier.sharedBounds(
                                 sharedContentState = rememberSharedContentState(key = rowTargetKey),
                                 animatedVisibilityScope = screenVisibilityScope,
-                                renderInOverlayDuringTransition = false,
+                                enter = androidx.compose.animation.fadeIn(
+                                    animationSpec = androidx.compose.animation.core.tween(
+                                        durationMillis = 150,
+                                        delayMillis = 75,
+                                        easing = androidx.compose.animation.core.LinearEasing
+                                    )
+                                ),
+                                exit = androidx.compose.animation.fadeOut(
+                                    animationSpec = androidx.compose.animation.core.tween(
+                                        durationMillis = 130,
+                                        easing = androidx.compose.animation.core.LinearEasing
+                                    )
+                                ),
+                                renderInOverlayDuringTransition = isThisRowActive,
+                                clipInOverlayDuringTransition = OverlayClip(RoundedCornerShape(14.dp)),
+                                zIndexInOverlay = 10f,
                                 boundsTransform = { _, _ ->
-                                    spring(dampingRatio = 0.80f, stiffness = 280f)
+                                    spring(dampingRatio = 0.82f, stiffness = 280f)
                                 },
-                                resizeMode = SharedTransitionScope.ResizeMode.scaleToBounds(androidx.compose.ui.layout.ContentScale.Crop)
+                                resizeMode = SharedTransitionScope.ResizeMode.RemeasureToBounds
                             )
                         }
                     } else Modifier
 
                     val isSavedLocally = isPageSaved(pageIndex)
-                    val isVisible = isSavedLocally || isRowActiveTarget
+                    val isVisible = isSavedLocally || isThisRowActive
 
                     // Remove exited page from tracker after shrink animation completes
                     LaunchedEffect(isVisible) {
-                        if (!isVisible && !isRowActiveTarget) {
+                        if (!isVisible && !isThisRowActive) {
                             kotlinx.coroutines.delay(350)
                             if (!isPageSaved(pageIndex)) {
                                 trackedPages.remove(pageIndex)
@@ -422,15 +466,12 @@ fun BookAccordionItem(
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .then(rowSharedModifier)
-                                .expressiveButtonMorph(
-                                    restRadius = 14.dp,
-                                    pressedRadius = 8.dp,
-                                    pressedScale = 0.94f,
-                                    interactionSource = rowInteractionSource,
-                                    backgroundColor = if (isDark) MaterialTheme.colorScheme.surfaceVariant else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
-                                    borderWidth = 1.dp,
-                                    borderColor = if (isDark) Color.White.copy(alpha = 0.15f) else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.20f)
+                                .liquidGlass(
+                                    isDark = isDark,
+                                    borderRadius = 14.dp,
+                                    alpha = if (isDark) 0.60f else 0.45f
                                 )
+                                .clip(RoundedCornerShape(14.dp))
                                 .clickable(interactionSource = rowInteractionSource, indication = null) {
                                     TransitionTargetTracker.activeTargetId = rowTargetKey
                                     TransitionTargetTracker.isTransitionActive = true

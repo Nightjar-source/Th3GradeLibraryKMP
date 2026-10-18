@@ -328,11 +328,14 @@ fun LibraryScreen(
                     )
                 ) {
                     itemsIndexed(items = filteredList, key = { _, item -> item.id }, contentType = { _, _ -> "library_item" }) { index, item ->
+                        val isReturning = LocalIsReturningFromPdf.current
                         ContentCard(
                             modifier = Modifier
                                 .animateItem(
-                                    placementSpec = spring(
-                                        dampingRatio = 0.80f,
+                                    fadeInSpec = null,
+                                    fadeOutSpec = null,
+                                    placementSpec = if (isReturning) null else spring(
+                                        dampingRatio = 0.82f,
                                         stiffness = 300f
                                     )
                                 )
@@ -562,9 +565,24 @@ fun LazyGridItemScope.ContentCard(
             Modifier.sharedBounds(
                 sharedContentState = rememberSharedContentState(key = "card_${item.id}"),
                 animatedVisibilityScope = animatedVisibilityScope,
-                renderInOverlayDuringTransition = false,
-                boundsTransform = { _, _ -> spring(dampingRatio = 0.80f, stiffness = 280f) },
-                resizeMode = SharedTransitionScope.ResizeMode.scaleToBounds(androidx.compose.ui.layout.ContentScale.Crop)
+                enter = androidx.compose.animation.fadeIn(
+                    animationSpec = androidx.compose.animation.core.tween(
+                        durationMillis = 150,
+                        delayMillis = 75,
+                        easing = androidx.compose.animation.core.LinearEasing
+                    )
+                ),
+                exit = androidx.compose.animation.fadeOut(
+                    animationSpec = androidx.compose.animation.core.tween(
+                        durationMillis = 130,
+                        easing = androidx.compose.animation.core.LinearEasing
+                    )
+                ),
+                renderInOverlayDuringTransition = true,
+                clipInOverlayDuringTransition = OverlayClip(RoundedCornerShape(cardCornerRadius)),
+                zIndexInOverlay = 10f,
+                boundsTransform = { _, _ -> spring(dampingRatio = 0.82f, stiffness = 280f) },
+                resizeMode = SharedTransitionScope.ResizeMode.RemeasureToBounds
             )
         }
     } else Modifier
@@ -576,8 +594,8 @@ fun LazyGridItemScope.ContentCard(
             .then(sharedBoundsModifier)
             .animateContentSize(
                 animationSpec = spring(
-                    dampingRatio = 0.80f,
-                    stiffness = 340f
+                    dampingRatio = 0.82f,
+                    stiffness = 320f
                 )
             )
             .liquidGlass(isDark, borderRadius = cardCornerRadius, alpha = 0.5f)
@@ -589,7 +607,19 @@ fun LazyGridItemScope.ContentCard(
             }
             .padding(12.dp)
     ) {
-        if (isGridView) {
+        androidx.compose.animation.AnimatedContent(
+            targetState = isGridView,
+            transitionSpec = {
+                (fadeIn(animationSpec = tween(220, easing = LinearOutSlowInEasing)) +
+                 scaleIn(initialScale = 0.94f, animationSpec = spring(dampingRatio = 0.82f, stiffness = 340f)))
+                    .togetherWith(
+                        fadeOut(animationSpec = tween(180, easing = FastOutLinearInEasing)) +
+                        scaleOut(targetScale = 0.94f, animationSpec = tween(180))
+                    ).using(SizeTransform(clip = false))
+            },
+            label = "grid_list_fluid_transition"
+        ) { grid ->
+            if (grid) {
                 Column(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalAlignment = Alignment.Start
@@ -724,5 +754,6 @@ fun LazyGridItemScope.ContentCard(
             }
         }
     }
+}
 
 

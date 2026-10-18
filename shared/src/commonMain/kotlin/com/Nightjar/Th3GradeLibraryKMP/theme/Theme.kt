@@ -167,56 +167,79 @@ fun Modifier.expressiveButtonMorph(
  * Guaranteed never to flash an empty/blank screen: initial alpha is 0.85f and fluidly rises to 1.0f.
  * Respects low-end devices and returning from PDF states.
  */
-fun Modifier.popInOnInitialLoad(index: Int = 0, itemId: String? = null): Modifier = composed {
+/**
+ * Fluid staggered sliding animation on screen load and quick navigations (matching backup & caliq5).
+ * Replays smoothly on every screen entrance or tab switch with an elegant, moist (Fluid) spring motion.
+ * Protected by LocalSeenEntranceItems session cache to never re-trigger or flash during list scrolling, view mode toggles, or accordion operations.
+ */
+fun Modifier.screenEntranceStagger(index: Int = 0, itemId: String? = null): Modifier = composed {
     val isLowEnd = LocalIsLowEndDevice.current
-    if (isLowEnd) return@composed this
+    if (isLowEnd || index > 12) return@composed this
 
     val isReturningFromPdf = LocalIsReturningFromPdf.current
     val isNavigatingBack = LocalIsNavigatingBack.current
-    if (isReturningFromPdf || isNavigatingBack) return@composed this
+    val itemKey = itemId ?: index.toString()
+    val isActiveSharedTarget = com.Nightjar.Th3GradeLibraryKMP.ui.TransitionTargetTracker.isTransitionActive &&
+            (com.Nightjar.Th3GradeLibraryKMP.ui.TransitionTargetTracker.activeTargetId == "card_$itemKey" ||
+             com.Nightjar.Th3GradeLibraryKMP.ui.TransitionTargetTracker.activeTargetId == itemKey ||
+             com.Nightjar.Th3GradeLibraryKMP.ui.TransitionTargetTracker.activeTargetId?.startsWith("bookmark_$itemKey") == true)
 
     val screenKey = LocalScreenEntranceKey.current
-    var isLoaded by androidx.compose.runtime.remember(screenKey) { androidx.compose.runtime.mutableStateOf(false) }
-    androidx.compose.runtime.LaunchedEffect(screenKey) {
-        isLoaded = true
+    val seenMap = LocalSeenEntranceItems.current
+
+    // When returning from PDF or navigating back or on active shared target: keep 100% stationary with zero movement!
+    if (isReturningFromPdf || isNavigatingBack || isActiveSharedTarget) {
+        seenMap?.put(itemKey, true)
+        return@composed this
     }
-    val animProgress by androidx.compose.animation.core.animateFloatAsState(
-        targetValue = if (isLoaded) 1f else 0f,
-        animationSpec = androidx.compose.animation.core.tween(
-            durationMillis = 320,
-            delayMillis = (index.coerceAtMost(6) * 30),
-            easing = androidx.compose.animation.core.CubicBezierEasing(0.16f, 1f, 0.3f, 1f)
-        ),
-        label = "popIn_$index"
-    )
+
+    val alreadySeen = seenMap?.get(itemKey) == true
+    if (alreadySeen) return@composed this
+
+    val animProgress = androidx.compose.runtime.remember(screenKey, itemKey) { androidx.compose.animation.core.Animatable(0f) }
     val density = androidx.compose.ui.platform.LocalDensity.current
-    val offsetYPx = androidx.compose.runtime.remember(density) { with(density) { 16.dp.toPx() } }
+    val offsetYPx = androidx.compose.runtime.remember(density) { with(density) { 20.dp.toPx() } }
+
+    androidx.compose.runtime.LaunchedEffect(screenKey, itemKey) {
+        val staggerDelay = (index.coerceIn(0, 8) * 24L)
+        if (staggerDelay > 0) kotlinx.coroutines.delay(staggerDelay)
+        animProgress.animateTo(
+            targetValue = 1f,
+            animationSpec = androidx.compose.animation.core.spring(
+                dampingRatio = 0.76f, // Ultra-moist fluid organic spring (كالجبنة الحريرية)
+                stiffness = 320f
+            )
+        )
+        seenMap?.put(itemKey, true)
+    }
+
+    val p = animProgress.value
     this.graphicsLayer {
-        this.alpha = 0.85f + 0.15f * animProgress
-        this.translationY = (1f - animProgress) * offsetYPx
-        this.scaleX = 0.99f + 0.01f * animProgress
-        this.scaleY = 0.99f + 0.01f * animProgress
+        this.alpha = 0.25f + 0.75f * p // Base alpha 0.25f eliminates harsh dark/white flashes
+        this.translationY = (1f - p) * offsetYPx
+        this.scaleX = 0.97f + 0.03f * p
+        this.scaleY = 0.97f + 0.03f * p
         this.clip = false
     }
 }
 
 /**
- * Screen entrance stagger alias with item ID support.
- */
-fun Modifier.screenEntranceStagger(index: Int = 0, itemId: String? = null): Modifier = this.popInOnInitialLoad(index, itemId)
-
-/**
  * Screen entrance cascade alias with item ID support.
  */
-fun Modifier.screenEntranceCascade(index: Int = 0, itemId: String? = null): Modifier = this.popInOnInitialLoad(index, itemId)
+fun Modifier.screenEntranceCascade(index: Int = 0, itemId: String? = null): Modifier = this.screenEntranceStagger(index, itemId)
 
 /**
- * Unified adaptive entrance: Stagger for initial visible items (0..8).
+ * Pop-in animation on initial load (caliq5 / backup standard).
+ */
+fun Modifier.popInOnInitialLoad(index: Int = 0, itemId: String? = null): Modifier = this.screenEntranceStagger(index, itemId)
+
+/**
+ * Unified adaptive entrance: Screen Entrance Cascade for initial visible items (0..8).
  * Scrolled items (> 8) are rendered instantly without overhead to preserve 120 FPS scrolling.
  */
 fun Modifier.adaptiveItemEntrance(index: Int = 0, itemId: String? = null): Modifier = composed {
     if (index <= 8) {
-        this.popInOnInitialLoad(index, itemId)
+        this.screenEntranceCascade(index, itemId)
     } else {
         this
     }

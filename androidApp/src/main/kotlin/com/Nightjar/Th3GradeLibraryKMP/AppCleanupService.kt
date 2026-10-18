@@ -24,7 +24,11 @@ class AppCleanupService : Service() {
                 // Cancel any pending timers so background tasks don't hold file locks
                 com.Nightjar.Th3GradeLibraryKMP.ui.cancelAllPendingCacheCleanups()
 
-                // 1. Clean app cache directory
+                // NOTE: context.codeCacheDir MUST NEVER BE TOUCHED!
+                // Android ART Runtime stores pre-compiled DEX code, baseline profile artifacts,
+                // and compiled UI animations in codeCacheDir. Wiping it forces JIT recompilation and causes stutter.
+
+                // 1. Clean app cache directory (only temporary PDF and tmp files)
                 com.Nightjar.Th3GradeLibraryKMP.ui.clearPdfCache(context.cacheDir)
                 context.cacheDir?.listFiles()?.forEach { file ->
                     if (file.name.endsWith(".pdf") || file.name.endsWith(".tmp") || file.name.startsWith("pdf_")) {

@@ -705,171 +705,216 @@ fun AppContent(
                         } else Modifier
                     )
                 ) {
-                    val topBarHeight = if (isWide) 48.dp else 56.dp
-                    val topBarPaddingV = if (isWide) 4.dp else 8.dp
+                    val animatedEndPadding by animateDpAsState(
+                        targetValue = if (isWide) (railWidth + 16.dp) else 16.dp,
+                        animationSpec = spring(dampingRatio = 0.78f, stiffness = 300f),
+                        label = "topBarEndPadding"
+                    )
+                    val animatedTopPadding by animateDpAsState(
+                        targetValue = if (isWide) 4.dp else 8.dp,
+                        animationSpec = spring(dampingRatio = 0.78f, stiffness = 300f),
+                        label = "topBarTopPadding"
+                    )
+                    val animatedElementSize by animateDpAsState(
+                        targetValue = if (isWide) 40.dp else 44.dp,
+                        animationSpec = spring(dampingRatio = 0.78f, stiffness = 300f),
+                        label = "topBarElementSize"
+                    )
+
                     Box(
                         modifier = Modifier
                             .windowInsetsPadding(WindowInsets.statusBars.add(WindowInsets.captionBar))
                             .windowInsetsPadding(WindowInsets.safeDrawing.only(WindowInsetsSides.Horizontal))
                             .padding(
                                 start = 16.dp,
-                                end = if (isWide) 96.dp else 16.dp,
-                                top = topBarPaddingV,
-                                bottom = topBarPaddingV
-                            ),
+                                end = animatedEndPadding,
+                                top = animatedTopPadding,
+                                bottom = animatedTopPadding
+                            )
+                            .fillMaxWidth(),
                         contentAlignment = Alignment.Center
                     ) {
-                        Row(
-                            modifier = Modifier
-                                .widthIn(max = 608.dp)
-                                .fillMaxWidth()
-                                .defaultMinSize(minHeight = topBarHeight)
-                                .wrapContentHeight()
-                                .liquidGlass(isDark, borderRadius = 28.dp, alpha = 0.95f)
-                                .padding(horizontal = 8.dp, vertical = 2.dp),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
+                        // 1. Separate Floating Circular Back Button at Start Edge (caliq5 style)
+                        androidx.compose.animation.AnimatedVisibility(
+                            visible = (page != "home"),
+                            enter = fadeIn(tween(220)) + scaleIn(initialScale = 0.75f, animationSpec = spring(dampingRatio = 0.72f, stiffness = 300f)),
+                            exit = fadeOut(tween(180)) + scaleOut(targetScale = 0.75f, animationSpec = tween(180)),
+                            modifier = Modifier.align(Alignment.CenterStart)
                         ) {
-                            Row(
-                                verticalAlignment = Alignment.CenterVertically,
-                                modifier = Modifier.weight(1f).padding(start = 8.dp)
+                            Box(
+                                modifier = Modifier
+                                    .size(animatedElementSize)
+                                    .liquidGlass(isDark, borderRadius = 22.dp, alpha = 0.92f)
+                                    .clip(CircleShape)
+                                    .clickable { handleTopBarBack() },
+                                contentAlignment = Alignment.Center
                             ) {
-                                Box(
-                                    modifier = Modifier.size(44.dp),
-                                    contentAlignment = Alignment.Center
-                                ) {
-                                    androidx.compose.animation.AnimatedVisibility(
-                                        visible = (page != "home"),
-                                        enter = fadeIn(tween(220)) + scaleIn(initialScale = 0.75f, animationSpec = tween(220)),
-                                        exit = fadeOut(tween(200)) + scaleOut(targetScale = 0.75f, animationSpec = tween(200))
-                                    ) {
-                                        IconButton(
-                                            onClick = {
-                                                handleTopBarBack()
-                                            }
-                                        ) {
-                                            Icon(
-                                                imageVector = Icons.Default.ChevronRight,
-                                                contentDescription = "Back",
-                                                tint = MaterialTheme.colorScheme.onSurface
-                                            )
-                                        }
-                                    }
-
-                                    androidx.compose.animation.AnimatedVisibility(
-                                        visible = (page == "home"),
-                                        enter = fadeIn(tween(220)) + scaleIn(initialScale = 0.75f, animationSpec = tween(220)),
-                                        exit = fadeOut(tween(200)) + scaleOut(targetScale = 0.75f, animationSpec = tween(200))
-                                    ) {
-                                        Box(
-                                            modifier = Modifier
-                                                .size(40.dp)
-                                                .clip(CircleShape)
-                                                .background(
-                                                    Brush.radialGradient(
-                                                        listOf(
-                                                            parseHexColor(appSettings.primaryColor).copy(alpha = 0.5f),
-                                                            Color.Transparent
-                                                        )
-                                                    )
-                                                ),
-                                            contentAlignment = Alignment.Center
-                                        ) {
-                                            Image(
-                                                painter = painterResource(com.Nightjar.Th3GradeLibraryKMP.generated.resources.Res.drawable.app_icon),
-                                                contentDescription = "App Icon",
-                                                modifier = Modifier.size(28.dp).clip(CircleShape)
-                                            )
-                                        }
-                                    }
-                                }
-                                Spacer(modifier = Modifier.width(8.dp))
-
-                                var savedTitle by remember { mutableStateOf("مكتبة الثالث متوسط") }
-                                val appBarTitleRaw = when (page) {
-                                    "news" -> "آخر الأخبار"
-                                    "bookmarks" -> "المحفوظات"
-                                    "shortcuts" -> "إضافة اختصار"
-                                    "about" -> "حول التطبيق"
-                                    "list" -> if (selectedCategory == "books") "الكتب الرسمية" else "الملازم الدراسية"
-                                    else -> "مكتبة الثالث متوسط"
-                                }
-                                if (page != "pdf" && page != "error") {
-                                    savedTitle = appBarTitleRaw
-                                }
-
-                                AnimatedContent(
-                                    targetState = savedTitle,
-                                    transitionSpec = {
-                                        (slideInVertically { height -> height / 2 } + fadeIn(tween(220)))
-                                            .togetherWith(slideOutVertically { height -> -height / 2 } + fadeOut(tween(220)))
-                                    },
-                                    label = "titleTransition"
-                                ) { targetTitle ->
-                                    Text(
-                                        text = targetTitle,
-                                        fontSize = if (isWide) 16.sp else 18.sp,
-                                        fontWeight = FontWeight.Bold,
-                                        fontFamily = if (targetTitle == "مكتبة الثالث متوسط") com.Nightjar.Th3GradeLibraryKMP.theme.KufiReemFontFamily else null,
-                                        color = MaterialTheme.colorScheme.onSurface,
-                                        maxLines = 1,
-                                        overflow = TextOverflow.Ellipsis
-                                    )
-                                }
+                                Icon(
+                                    imageVector = Icons.Default.ChevronRight,
+                                    contentDescription = "Back",
+                                    tint = MaterialTheme.colorScheme.onSurface,
+                                    modifier = Modifier.size(if (isWide) 22.dp else 26.dp)
+                                )
                             }
+                        }
 
+                        // App Icon on Home Screen at Start Edge
+                        androidx.compose.animation.AnimatedVisibility(
+                            visible = (page == "home"),
+                            enter = fadeIn(tween(220)) + scaleIn(initialScale = 0.75f, animationSpec = tween(220)),
+                            exit = fadeOut(tween(200)) + scaleOut(targetScale = 0.75f, animationSpec = tween(200)),
+                            modifier = Modifier.align(Alignment.CenterStart)
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .size(animatedElementSize)
+                                    .clip(CircleShape)
+                                    .background(
+                                        Brush.radialGradient(
+                                            listOf(
+                                                parseHexColor(appSettings.primaryColor).copy(alpha = 0.5f),
+                                                Color.Transparent
+                                            )
+                                        )
+                                    ),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Image(
+                                    painter = painterResource(com.Nightjar.Th3GradeLibraryKMP.generated.resources.Res.drawable.app_icon),
+                                    contentDescription = "App Icon",
+                                    modifier = Modifier.size(28.dp).clip(CircleShape)
+                                )
+                            }
+                        }
+
+                        // 2. Separate Floating Oval Title Capsule in the Center (البيضوي بالوسط)
+                        var savedTitle by remember { mutableStateOf("مكتبة الثالث متوسط") }
+                        val appBarTitleRaw = when (page) {
+                            "news" -> "آخر الأخبار"
+                            "bookmarks" -> "المحفوظات"
+                            "shortcuts" -> "إضافة اختصار"
+                            "about" -> "حول التطبيق"
+                            "list" -> if (selectedCategory == "books") "الكتب الرسمية" else "الملازم الدراسية"
+                            else -> "مكتبة الثالث متوسط"
+                        }
+                        if (page != "pdf" && page != "error") {
+                            savedTitle = appBarTitleRaw
+                        }
+
+                        Box(
+                            modifier = Modifier
+                                .align(Alignment.Center)
+                                .padding(horizontal = if (isWide) 110.dp else 64.dp)
+                                .height(animatedElementSize)
+                                .wrapContentWidth()
+                                .widthIn(min = 100.dp, max = 420.dp)
+                                .liquidGlass(isDark, borderRadius = 24.dp, alpha = 0.92f)
+                                .clip(CircleShape)
+                                .animateContentSize(spring(dampingRatio = 0.76f, stiffness = 320f))
+                                .padding(horizontal = if (isWide) 16.dp else 20.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
                             AnimatedContent(
-                                targetState = page,
+                                targetState = savedTitle,
                                 transitionSpec = {
-                                    (scaleIn(initialScale = 0.8f, animationSpec = spring(dampingRatio = 0.72f, stiffness = 260f)) + fadeIn(tween(220)))
-                                        .togetherWith(scaleOut(targetScale = 0.8f, animationSpec = tween(180)) + fadeOut(tween(180)))
-                                        .using(SizeTransform(clip = false))
+                                    (slideInVertically { height -> height / 2 } + fadeIn(tween(220)))
+                                        .togetherWith(slideOutVertically { height -> -height / 2 } + fadeOut(tween(220)))
                                 },
-                                label = "topBarActions"
-                            ) { targetPage ->
+                                label = "titleTransition"
+                            ) { targetTitle ->
+                                Text(
+                                    text = targetTitle,
+                                    fontSize = if (isWide) 15.sp else 16.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    fontFamily = if (targetTitle == "مكتبة الثالث متوسط") com.Nightjar.Th3GradeLibraryKMP.theme.KufiReemFontFamily else null,
+                                    color = MaterialTheme.colorScheme.onSurface,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis
+                                )
+                            }
+                        }
+
+                        // 3. Floating Action Controls at End Edge (End of Header)
+                        AnimatedContent(
+                            targetState = page,
+                            transitionSpec = {
+                                (scaleIn(initialScale = 0.8f, animationSpec = spring(dampingRatio = 0.72f, stiffness = 260f)) + fadeIn(tween(220)))
+                                    .togetherWith(scaleOut(targetScale = 0.8f, animationSpec = tween(180)) + fadeOut(tween(180)))
+                                    .using(SizeTransform(clip = false))
+                            },
+                            modifier = Modifier.align(Alignment.CenterEnd),
+                            label = "topBarActions"
+                        ) { targetPage ->
+                            if (targetPage == "list") {
                                 Row(
                                     verticalAlignment = Alignment.CenterVertically,
-                                    horizontalArrangement = Arrangement.spacedBy(4.dp)
+                                    horizontalArrangement = Arrangement.spacedBy(8.dp)
                                 ) {
-                                    if (targetPage == "list") {
-                                        IconButton(onClick = { SyncEngine.saveGridView(!isGridView) }) {
-                                            androidx.compose.animation.AnimatedContent(
-                                                targetState = isGridView,
-                                                transitionSpec = {
-                                                    (fadeIn(tween(200)) + scaleIn(initialScale = 0.8f)).togetherWith(fadeOut(tween(160)) + scaleOut(targetScale = 0.8f))
-                                                },
-                                                label = "gridToggle"
-                                            ) { isGrid ->
-                                                Icon(
-                                                    imageVector = if (isGrid) Icons.Default.ViewList else Icons.Default.GridView,
-                                                    contentDescription = "Toggle Grid/List view",
-                                                    tint = MaterialTheme.colorScheme.onSurface
-                                                )
-                                            }
+                                    // Separate Floating Circle 1: Grid / List View Toggle
+                                    Box(
+                                        modifier = Modifier
+                                            .size(animatedElementSize)
+                                            .liquidGlass(isDark, borderRadius = 22.dp, alpha = 0.92f)
+                                            .clip(CircleShape)
+                                            .clickable { SyncEngine.saveGridView(!isGridView) },
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        androidx.compose.animation.AnimatedContent(
+                                            targetState = isGridView,
+                                            transitionSpec = {
+                                                (fadeIn(tween(200)) + scaleIn(initialScale = 0.8f)).togetherWith(fadeOut(tween(160)) + scaleOut(targetScale = 0.8f))
+                                            },
+                                            label = "gridToggle"
+                                        ) { isGrid ->
+                                            Icon(
+                                                imageVector = if (isGrid) Icons.Default.ViewList else Icons.Default.GridView,
+                                                contentDescription = "Toggle Grid/List view",
+                                                tint = MaterialTheme.colorScheme.onSurface,
+                                                modifier = Modifier.size(if (isWide) 20.dp else 22.dp)
+                                            )
                                         }
-                                        IconButton(onClick = { isSearchOpen = !isSearchOpen }) {
-                                            androidx.compose.animation.AnimatedContent(
-                                                targetState = isSearchOpen,
-                                                transitionSpec = {
-                                                    (fadeIn(tween(200)) + scaleIn(initialScale = 0.8f)).togetherWith(fadeOut(tween(160)) + scaleOut(targetScale = 0.8f))
-                                                },
-                                                label = "searchToggle"
-                                            ) { isOpen ->
-                                                Icon(
-                                                    imageVector = if (isOpen) Icons.Default.Close else Icons.Default.Search,
-                                                    contentDescription = "Toggle Search",
-                                                    tint = MaterialTheme.colorScheme.onSurface
-                                                )
-                                            }
-                                        }
-                                    } else if (targetPage == "news") {
-                                        IconButton(onClick = { isNewsSettingsOpen = true }) {
-                                            Icon(Icons.Default.Settings, contentDescription = "Settings", tint = MaterialTheme.colorScheme.onSurface)
-                                        }
-                                    } else {
-                                        // Empty spacer to maintain spacing for other pages
-                                        Spacer(modifier = Modifier.width(0.dp))
                                     }
+
+                                    // Separate Floating Circle 2: Search Toggle
+                                    Box(
+                                        modifier = Modifier
+                                            .size(animatedElementSize)
+                                            .liquidGlass(isDark, borderRadius = 22.dp, alpha = 0.92f)
+                                            .clip(CircleShape)
+                                            .clickable { isSearchOpen = !isSearchOpen },
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        androidx.compose.animation.AnimatedContent(
+                                            targetState = isSearchOpen,
+                                            transitionSpec = {
+                                                (fadeIn(tween(200)) + scaleIn(initialScale = 0.8f)).togetherWith(fadeOut(tween(160)) + scaleOut(targetScale = 0.8f))
+                                            },
+                                            label = "searchToggle"
+                                        ) { isOpen ->
+                                            Icon(
+                                                imageVector = if (isOpen) Icons.Default.Close else Icons.Default.Search,
+                                                contentDescription = "Toggle Search",
+                                                tint = MaterialTheme.colorScheme.onSurface,
+                                                modifier = Modifier.size(if (isWide) 20.dp else 22.dp)
+                                            )
+                                        }
+                                    }
+                                }
+                            } else if (targetPage == "news") {
+                                Box(
+                                    modifier = Modifier
+                                        .size(animatedElementSize)
+                                        .liquidGlass(isDark, borderRadius = 22.dp, alpha = 0.92f)
+                                        .clip(CircleShape)
+                                        .clickable { isNewsSettingsOpen = true },
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Icon(
+                                        Icons.Default.Settings,
+                                        contentDescription = "Settings",
+                                        tint = MaterialTheme.colorScheme.onSurface,
+                                        modifier = Modifier.size(20.dp)
+                                    )
                                 }
                             }
                         }
@@ -895,8 +940,21 @@ fun AppContent(
                         } else Modifier
                     )
                 ) {
-                    val searchBarHeight = if (isWide) 48.dp else 56.dp
-                    val topPadding = if (isWide) 64.dp else 80.dp
+                    val animatedSearchBarHeight by animateDpAsState(
+                        targetValue = if (isWide) 48.dp else 56.dp,
+                        animationSpec = spring(dampingRatio = 0.78f, stiffness = 300f),
+                        label = "searchBarHeight"
+                    )
+                    val animatedSearchBarTopPadding by animateDpAsState(
+                        targetValue = if (isWide) 64.dp else 80.dp,
+                        animationSpec = spring(dampingRatio = 0.78f, stiffness = 300f),
+                        label = "searchBarTopPadding"
+                    )
+                    val animatedSearchBarEndPadding by animateDpAsState(
+                        targetValue = if (isWide) (railWidth + 16.dp) else 16.dp,
+                        animationSpec = spring(dampingRatio = 0.78f, stiffness = 300f),
+                        label = "searchBarEndPadding"
+                    )
                     val searchFontSize = if (isWide) 14.sp else 15.sp
                     var isListening by remember { mutableStateOf(false) }
 
@@ -928,9 +986,9 @@ fun AppContent(
                             .statusBarsPadding()
                             .windowInsetsPadding(WindowInsets.safeDrawing.only(WindowInsetsSides.Horizontal))
                             .padding(
-                                top = topPadding,
+                                top = animatedSearchBarTopPadding,
                                 start = 16.dp,
-                                end = if (isWide) 96.dp else 16.dp
+                                end = animatedSearchBarEndPadding
                             ),
                         contentAlignment = Alignment.TopCenter
                     ) {
@@ -938,7 +996,7 @@ fun AppContent(
                             modifier = Modifier
                                 .widthIn(max = 608.dp)
                                 .fillMaxWidth()
-                                .defaultMinSize(minHeight = searchBarHeight)
+                                .defaultMinSize(minHeight = animatedSearchBarHeight)
                                 .wrapContentHeight()
                                 .liquidGlass(isDark, borderRadius = 28.dp, alpha = 0.95f)
                                 .animateContentSize(spring(dampingRatio = 0.65f, stiffness = 180f))
@@ -1236,9 +1294,8 @@ fun AppContent(
                                 }
                         ) {
                             mainNavItems.forEachIndexed { index, item ->
-                                val isActive = isMainActive[index]
                                 val tint by animateColorAsState(
-                                    targetValue = if (isActive) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
+                                    targetValue = if (isActive) MaterialTheme.colorScheme.primary else if (isDark) MaterialTheme.colorScheme.onSurface.copy(alpha = 0.75f) else MaterialTheme.colorScheme.onSurfaceVariant,
                                     animationSpec = tween(250)
                                 )
                                 Column(
@@ -1439,9 +1496,8 @@ fun AppContent(
                                 }
                         ) {
                             mainNavItems.forEachIndexed { index, item ->
-                                val isActive = isMainActive[index]
                                 val tint by animateColorAsState(
-                                    targetValue = if (isActive) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
+                                    targetValue = if (isActive) MaterialTheme.colorScheme.primary else if (isDark) MaterialTheme.colorScheme.onSurface.copy(alpha = 0.75f) else MaterialTheme.colorScheme.onSurfaceVariant,
                                     animationSpec = tween(250)
                                 )
                                 Column(
