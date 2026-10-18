@@ -12,10 +12,7 @@ import androidx.window.core.layout.WindowWidthSizeClass
 import androidx.window.core.layout.WindowHeightSizeClass
 import androidx.compose.ui.graphics.drawscope.translate
 import kotlinx.coroutines.launch
-import androidx.compose.animation.core.tween
-import androidx.compose.animation.core.Spring
-import androidx.compose.animation.core.spring
-import androidx.compose.animation.core.LinearOutSlowInEasing
+import androidx.compose.animation.core.*
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
