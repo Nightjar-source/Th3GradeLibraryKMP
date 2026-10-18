@@ -1294,6 +1294,7 @@ fun AppContent(
                                 }
                         ) {
                             mainNavItems.forEachIndexed { index, item ->
+                                val isActive = selectedIndex == index
                                 val tint by animateColorAsState(
                                     targetValue = if (isActive) MaterialTheme.colorScheme.primary else if (isDark) MaterialTheme.colorScheme.onSurface.copy(alpha = 0.75f) else MaterialTheme.colorScheme.onSurfaceVariant,
                                     animationSpec = tween(250)
@@ -1496,6 +1497,7 @@ fun AppContent(
                                 }
                         ) {
                             mainNavItems.forEachIndexed { index, item ->
+                                val isActive = selectedIndex == index
                                 val tint by animateColorAsState(
                                     targetValue = if (isActive) MaterialTheme.colorScheme.primary else if (isDark) MaterialTheme.colorScheme.onSurface.copy(alpha = 0.75f) else MaterialTheme.colorScheme.onSurfaceVariant,
                                     animationSpec = tween(250)
