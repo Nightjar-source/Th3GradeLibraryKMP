@@ -535,6 +535,10 @@ fun AppContent(
                                         durationMillis = 350,
                                         easing = fluidEasing
                                     )
+                                    val scaleSpec = androidx.compose.animation.core.tween<Float>(
+                                        durationMillis = 350,
+                                        easing = fluidEasing
+                                    )
                                     val fadeSpec = androidx.compose.animation.core.tween<Float>(
                                         durationMillis = 260,
                                         easing = androidx.compose.animation.core.FastOutSlowInEasing
@@ -545,11 +549,11 @@ fun AppContent(
                                     (slideInHorizontally(
                                         initialOffsetX = { fullWidth -> (fullWidth * parallaxOffset * direction).toInt() },
                                         animationSpec = slideSpec
-                                    ) + fadeIn(animationSpec = fadeSpec) + scaleIn(initialScale = 0.98f, animationSpec = slideSpec)).togetherWith(
+                                    ) + fadeIn(animationSpec = fadeSpec) + scaleIn(initialScale = 0.98f, animationSpec = scaleSpec)).togetherWith(
                                         slideOutHorizontally(
                                             targetOffsetX = { fullWidth -> (-fullWidth * parallaxOffset * direction).toInt() },
                                             animationSpec = slideSpec
-                                        ) + fadeOut(animationSpec = fadeSpec) + scaleOut(targetScale = 0.98f, animationSpec = slideSpec)
+                                        ) + fadeOut(animationSpec = fadeSpec) + scaleOut(targetScale = 0.98f, animationSpec = scaleSpec)
                                     )
                                 }
                             }
