@@ -81,8 +81,8 @@ fun Modifier.elasticOverscroll(
                     overscrollOffset.animateTo(
                         0f,
                         spring(
-                            dampingRatio = Spring.DampingRatioNoBouncy,
-                            stiffness = Spring.StiffnessMediumLow
+                            dampingRatio = 0.80f,
+                            stiffness = 320f
                         )
                     )
                     return available

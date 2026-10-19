@@ -502,16 +502,28 @@ fun AppContent(
                                 val isFromPdf = initialState == "pdf"
 
                                 if (isToPdf) {
-                                    (fadeIn(animationSpec = tween(durationMillis = 130, easing = androidx.compose.animation.core.LinearEasing))).togetherWith(
-                                        fadeOut(animationSpec = tween(durationMillis = 130, easing = androidx.compose.animation.core.LinearEasing))
+                                    // Liquid App Opening (Phone OS standard): Background recedes into depth (scale 1.0 -> 0.94) with soft fade,
+                                    // while the expanding window renders in SharedTransitionScope overlay
+                                    (fadeIn(animationSpec = tween(durationMillis = 350, easing = androidx.compose.animation.core.LinearOutSlowInEasing))).togetherWith(
+                                        fadeOut(animationSpec = tween(durationMillis = 300, easing = androidx.compose.animation.core.FastOutLinearInEasing)) +
+                                        scaleOut(
+                                            targetScale = 0.94f,
+                                            animationSpec = spring(dampingRatio = 0.82f, stiffness = 280f)
+                                        )
                                     ).apply {
-                                        targetContentZIndex = 50f
+                                        targetContentZIndex = 2f
                                     }
                                 } else if (isFromPdf) {
-                                    (fadeIn(animationSpec = tween(durationMillis = 150, delayMillis = 75, easing = androidx.compose.animation.core.LinearEasing))).togetherWith(
-                                        fadeOut(animationSpec = tween(durationMillis = 150, delayMillis = 75, easing = androidx.compose.animation.core.LinearEasing))
+                                    // Liquid App Closing (Phone OS standard): Background zooms forward (scale 0.94 -> 1.0) with gentle fade in,
+                                    // while the shrinking window in overlay seamlessly returns to the exact card geometry without premature cutoff
+                                    (fadeIn(animationSpec = tween(durationMillis = 380, easing = androidx.compose.animation.core.LinearOutSlowInEasing)) +
+                                     scaleIn(
+                                         initialScale = 0.94f,
+                                         animationSpec = spring(dampingRatio = 0.82f, stiffness = 280f)
+                                     )).togetherWith(
+                                        fadeOut(animationSpec = tween(durationMillis = 380, delayMillis = 40, easing = androidx.compose.animation.core.FastOutLinearInEasing))
                                     ).apply {
-                                        targetContentZIndex = -1f
+                                        targetContentZIndex = 0f
                                     }
                                 } else {
                                     val pageOrder = listOf("home", "list", "news", "bookmarks", "shortcuts", "about")
@@ -529,14 +541,15 @@ fun AppContent(
                                     )
                                     val direction = if (isNavigatingBack || targetIndex < initialIndex) 1 else -1 // RTL: Forward is -1 (from left), Backward is 1 (from right)
 
+                                    val parallaxOffset = 0.32f
                                     (slideInHorizontally(
-                                        initialOffsetX = { fullWidth -> fullWidth * direction },
+                                        initialOffsetX = { fullWidth -> (fullWidth * parallaxOffset * direction).toInt() },
                                         animationSpec = slideSpec
-                                    ) + fadeIn(animationSpec = fadeSpec)).togetherWith(
+                                    ) + fadeIn(animationSpec = fadeSpec) + scaleIn(initialScale = 0.98f, animationSpec = slideSpec)).togetherWith(
                                         slideOutHorizontally(
-                                            targetOffsetX = { fullWidth -> -fullWidth * direction },
+                                            targetOffsetX = { fullWidth -> (-fullWidth * parallaxOffset * direction).toInt() },
                                             animationSpec = slideSpec
-                                        ) + fadeOut(animationSpec = fadeSpec)
+                                        ) + fadeOut(animationSpec = fadeSpec) + scaleOut(targetScale = 0.98f, animationSpec = slideSpec)
                                     )
                                 }
                             }

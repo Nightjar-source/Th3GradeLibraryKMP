@@ -231,12 +231,6 @@ fun BookmarksScreen(
                                 isDark = isDark,
                                 isExpanded = expandedSet.contains(book.id),
                                 onToggleExpand = {
-                                    if (expandedSet.contains(book.id)) {
-                                        if (TransitionTargetTracker.activeTargetId?.startsWith("bookmark_${book.id}_") == true) {
-                                            TransitionTargetTracker.activeTargetId = null
-                                            TransitionTargetTracker.isTransitionActive = false
-                                        }
-                                    }
                                     SyncEngine.toggleExpandedBookmark(book.id)
                                 },
                                 onNavigateToPdf = { pageIdx -> onNavigateToPdf(book, pageIdx) },
@@ -391,7 +385,6 @@ fun BookAccordionItem(
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .clipToBounds()
                     .padding(horizontal = 16.dp)
                     .padding(top = 8.dp, bottom = 12.dp),
                 verticalArrangement = Arrangement.spacedBy(8.dp)
@@ -406,7 +399,7 @@ fun BookAccordionItem(
                     val isThisRowActive = (TransitionTargetTracker.activeTargetId == rowTargetKey) &&
                             (TransitionTargetTracker.isTransitionActive || LocalIsReturningFromPdf.current)
 
-                    val rowSharedModifier = if (sharedTransitionScope != null && screenVisibilityScope != null && isExpanded) {
+                    val rowSharedModifier = if (sharedTransitionScope != null && screenVisibilityScope != null) {
                         with(sharedTransitionScope) {
                             Modifier.sharedBounds(
                                 sharedContentState = rememberSharedContentState(key = rowTargetKey),
@@ -424,7 +417,7 @@ fun BookAccordionItem(
                                         easing = androidx.compose.animation.core.LinearEasing
                                     )
                                 ),
-                                renderInOverlayDuringTransition = isThisRowActive,
+                                renderInOverlayDuringTransition = true,
                                 clipInOverlayDuringTransition = OverlayClip(RoundedCornerShape(14.dp)),
                                 zIndexInOverlay = 10f,
                                 boundsTransform = { _, _ ->
