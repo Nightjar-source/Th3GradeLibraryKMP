@@ -116,8 +116,10 @@ fun RenderBookmarksDestination(
     lazyGridState: LazyGridState
 ) {
     val activeBookmarkKey = if ((isTransitionActive || isReturningFromPdf) && activeTargetId != null && activeTargetId.startsWith("bookmark_")) {
-        val parts = activeTargetId.removePrefix("bookmark_").split("_")
-        if (parts.size >= 2) "${parts[0]}:${parts[1]}" else null
+        val sub = activeTargetId.removePrefix("bookmark_")
+        val bookId = sub.substringBeforeLast("_")
+        val pageNum = sub.substringAfterLast("_")
+        if (bookId.isNotEmpty() && pageNum.isNotEmpty()) "$bookId:$pageNum" else null
     } else null
 
     val effectiveSavedPages = remember(savedItemIds, activeBookmarkKey) {

@@ -316,9 +316,9 @@ fun AppContent(
     val isTransitionActive = com.Nightjar.Th3GradeLibraryKMP.ui.TransitionTargetTracker.isTransitionActive
     val activeTargetId = com.Nightjar.Th3GradeLibraryKMP.ui.TransitionTargetTracker.activeTargetId
 
-    val savedItems = remember(savedItemIds, isTransitionActive, activeTargetId) {
+    val savedItems = remember(savedItemIds, isTransitionActive, isReturningFromPdf, activeTargetId) {
         val savedBookIds = savedItemIds.map { it.split(":")[0] }.toMutableSet()
-        if (isTransitionActive && activeTargetId != null && activeTargetId.startsWith("bookmark_")) {
+        if ((isTransitionActive || isReturningFromPdf) && activeTargetId != null && activeTargetId.startsWith("bookmark_")) {
             val activeBookId = activeTargetId.substringAfter("bookmark_").substringBeforeLast("_")
             if (activeBookId.isNotEmpty()) savedBookIds.add(activeBookId)
         }

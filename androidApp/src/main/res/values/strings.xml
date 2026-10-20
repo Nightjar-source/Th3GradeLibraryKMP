@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">مكتبة الثالث متوسط</string>
+    <string name="shortcut_books_short">الكتب</string>
+    <string name="shortcut_books_long">الكتب المدرسية</string>
+    <string name="shortcut_notes_short">الملازم</string>
+    <string name="shortcut_notes_long">الملازم والملخصات</string>
+    <string name="shortcut_bookmarks_short">المحفوظات</string>
+    <string name="shortcut_bookmarks_long">الصفحات المحفوظة</string>
+    <string name="shortcut_news_short">الأخبار</string>
+    <string name="shortcut_news_long">أخبار التربية والتعليم</string>
+    <string name="widget_name">مكتبة الثالث متوسط</string>
+    <string name="widget_description">الوصول السريع للكتب والملازم والمحفوظات ومتابعة القراءة</string>
+</resources>

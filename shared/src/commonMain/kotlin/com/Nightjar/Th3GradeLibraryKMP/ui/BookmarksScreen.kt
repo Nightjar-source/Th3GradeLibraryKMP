@@ -29,6 +29,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.zIndex
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.clipToBounds
@@ -257,13 +258,7 @@ fun BookAccordionItem(
     screenVisibilityScope: AnimatedVisibilityScope?,
     modifier: Modifier = Modifier
 ) {
-    // Dynamic page tracking: maintains pages being animated out so shrinkVertically runs smoothly
-    val trackedPages = remember { mutableStateListOf<Int>() }
-    LaunchedEffect(pages) {
-        pages.forEach { p ->
-            if (p !in trackedPages) trackedPages.add(p)
-        }
-    }
+    val sortedPages = remember(pages) { pages.distinct().sorted() }
 
     Column(
         modifier = modifier
@@ -289,9 +284,9 @@ fun BookAccordionItem(
                 AsyncImage(
                     model = ImageRequest.Builder(LocalPlatformContext.current)
                         .data(Res.getUri("drawable/${item.coverResName}." + if (item.coverResName in listOf("ayajaaa", "english", "englishactivity", "kss1")) "jpg" else "png"))
-                    .memoryCachePolicy(CachePolicy.ENABLED)
-                    .diskCachePolicy(CachePolicy.ENABLED)
-                    .build(),
+                        .memoryCachePolicy(CachePolicy.ENABLED)
+                        .diskCachePolicy(CachePolicy.ENABLED)
+                        .build(),
                     contentDescription = item.title,
                     contentScale = ContentScale.Crop,
                     modifier = Modifier.fillMaxSize()
@@ -310,7 +305,7 @@ fun BookAccordionItem(
                     overflow = TextOverflow.Ellipsis
                 )
                 Spacer(modifier = Modifier.height(4.dp))
-                val pagesCount = pages.size
+                val pagesCount = sortedPages.size
                 val pagesCountText = when {
                     pagesCount == 1 -> "صفحة واحدة محفوظة"
                     pagesCount == 2 -> "صفحتان محفوظتان"
@@ -391,8 +386,6 @@ fun BookAccordionItem(
             ) {
                 val sharedTransitionScope = LocalSharedTransitionScope.current
 
-                // Render all tracked pages sorted
-                val sortedPages = remember(trackedPages.toList()) { trackedPages.sorted() }
                 sortedPages.forEach { pageIndex ->
                     val rowInteractionSource = remember { MutableInteractionSource() }
                     val rowTargetKey = "bookmark_${item.id}_$pageIndex"
@@ -417,7 +410,7 @@ fun BookAccordionItem(
                                         easing = androidx.compose.animation.core.LinearEasing
                                     )
                                 ),
-                                renderInOverlayDuringTransition = true,
+                                renderInOverlayDuringTransition = isThisRowActive,
                                 clipInOverlayDuringTransition = OverlayClip(RoundedCornerShape(14.dp)),
                                 zIndexInOverlay = 10f,
                                 boundsTransform = { _, _ ->
@@ -428,61 +421,37 @@ fun BookAccordionItem(
                         }
                     } else Modifier
 
-                    val isSavedLocally = isPageSaved(pageIndex)
-                    val isVisible = isSavedLocally || isThisRowActive
-
-                    // Remove exited page from tracker after shrink animation completes
-                    LaunchedEffect(isVisible) {
-                        if (!isVisible && !isThisRowActive) {
-                            kotlinx.coroutines.delay(350)
-                            if (!isPageSaved(pageIndex)) {
-                                trackedPages.remove(pageIndex)
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .then(if (isThisRowActive) Modifier.zIndex(15f) else Modifier)
+                            .then(rowSharedModifier)
+                            .liquidGlass(
+                                isDark = isDark,
+                                borderRadius = 14.dp,
+                                alpha = if (isDark) 0.60f else 0.45f
+                            )
+                            .clip(RoundedCornerShape(14.dp))
+                            .clickable(interactionSource = rowInteractionSource, indication = null) {
+                                TransitionTargetTracker.activeTargetId = rowTargetKey
+                                TransitionTargetTracker.isTransitionActive = true
+                                onNavigateToPdf(pageIndex)
                             }
-                        }
-                    }
-
-                    AnimatedVisibility(
-                        visible = isVisible,
-                        enter = expandVertically(
-                            animationSpec = spring(dampingRatio = 0.82f, stiffness = 280f),
-                            expandFrom = Alignment.Top
-                        ) + fadeIn(tween(180)),
-                        exit = shrinkVertically(
-                            animationSpec = spring(dampingRatio = 0.82f, stiffness = 280f),
-                            shrinkTowards = Alignment.Top
-                        ) + fadeOut(tween(140))
+                            .padding(12.dp),
+                        verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .then(rowSharedModifier)
-                                .liquidGlass(
-                                    isDark = isDark,
-                                    borderRadius = 14.dp,
-                                    alpha = if (isDark) 0.60f else 0.45f
-                                )
-                                .clip(RoundedCornerShape(14.dp))
-                                .clickable(interactionSource = rowInteractionSource, indication = null) {
-                                    TransitionTargetTracker.activeTargetId = rowTargetKey
-                                    TransitionTargetTracker.isTransitionActive = true
-                                    onNavigateToPdf(pageIndex)
-                                }
-                                .padding(12.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.Bookmark,
-                                contentDescription = "Page",
-                                tint = MaterialTheme.colorScheme.primary,
-                                modifier = Modifier.size(20.dp)
-                            )
-                            Spacer(modifier = Modifier.width(12.dp))
-                            Text(
-                                text = "الصفحة رقم ${pageIndex + 1}",
-                                fontSize = 14.sp,
-                                color = MaterialTheme.colorScheme.onSurface
-                            )
-                        }
+                        Icon(
+                            imageVector = Icons.Default.Bookmark,
+                            contentDescription = "Page",
+                            tint = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.size(20.dp)
+                        )
+                        Spacer(modifier = Modifier.width(12.dp))
+                        Text(
+                            text = "الصفحة رقم ${pageIndex + 1}",
+                            fontSize = 14.sp,
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
                     }
                 }
             }

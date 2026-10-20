@@ -21,8 +21,8 @@ android {
         applicationId = "com.Nightjar.Th3GradeLibraryKMP"
         minSdk = libs.versions.android.minSdk.get().toInt()
         targetSdk = libs.versions.android.targetSdk.get().toInt()
-        versionCode = 15137
-        versionName = "1.51.37"
+        versionCode = 15138
+        versionName = "1.51.38"
     }
     
     val keystoreProperties = Properties()
@@ -92,6 +92,8 @@ dependencies {
 
     implementation(compose.material3)
     implementation("androidx.work:work-runtime-ktx:2.9.0")
+    implementation("androidx.glance:glance-appwidget:1.1.0")
+    implementation("androidx.glance:glance-material3:1.1.0")
     implementation("androidx.swiperefreshlayout:swiperefreshlayout:1.1.0")
     implementation("androidx.browser:browser:1.8.0")
     implementation(libs.coil.compose)

@@ -22,6 +22,7 @@
 -keep class androidx.sqlite.** { *; }
 -keep class androidx.startup.** { *; }
 -keep class androidx.datastore.** { *; }
+-keep class androidx.glance.** { *; }
 -keep class coil3.** { *; }
 -keepclassmembers class * extends androidx.compose.ui.graphics.painter.Painter { *; }
 

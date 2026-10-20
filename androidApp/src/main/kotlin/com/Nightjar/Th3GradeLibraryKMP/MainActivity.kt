@@ -770,12 +770,19 @@ class MainActivity : ComponentActivity() {
         var page = intent.getStringExtra("page")
         var searchQuery = intent.getStringExtra("search_query")
 
+        var category = intent.getStringExtra("category")
+
         val uri = intent.data
         if (uri != null && uri.scheme == "th3books" && uri.host == "library") {
             bookId = uri.getQueryParameter("book_id") ?: bookId
             isNote = uri.getQueryParameter("is_note")?.toBoolean() ?: isNote
             page = uri.getQueryParameter("page") ?: page
             searchQuery = uri.getQueryParameter("search_query") ?: searchQuery
+            category = uri.getQueryParameter("category") ?: category
+        }
+
+        if (category != null) {
+            com.Nightjar.Th3GradeLibraryKMP.network.SyncEngine.saveSelectedCategory(category)
         }
 
         if (bookId != null) {
