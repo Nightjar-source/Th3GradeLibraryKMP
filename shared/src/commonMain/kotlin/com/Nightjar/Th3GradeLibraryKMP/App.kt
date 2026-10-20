@@ -506,26 +506,16 @@ fun AppContent(
                                 val isFromPdf = initialState == "pdf"
 
                                 if (isToPdf) {
-                                    // Liquid App Opening (Phone OS standard): Background recedes into depth (scale 1.0 -> 0.94) with soft fade,
-                                    // while the expanding window renders in SharedTransitionScope overlay
-                                    (fadeIn(animationSpec = tween(durationMillis = 350, easing = androidx.compose.animation.core.LinearOutSlowInEasing))).togetherWith(
-                                        fadeOut(animationSpec = tween(durationMillis = 300, easing = androidx.compose.animation.core.FastOutLinearInEasing)) +
-                                        scaleOut(
-                                            targetScale = 0.94f,
-                                            animationSpec = spring(dampingRatio = 0.82f, stiffness = 280f)
-                                        )
+                                    // Liquid App Opening: Background stays stationary with soft fade, allowing sharedBounds overlay to morph smoothly
+                                    (fadeIn(animationSpec = tween(durationMillis = 300, easing = androidx.compose.animation.core.LinearOutSlowInEasing))).togetherWith(
+                                        fadeOut(animationSpec = tween(durationMillis = 250, easing = androidx.compose.animation.core.FastOutLinearInEasing))
                                     ).apply {
                                         targetContentZIndex = 2f
                                     }
                                 } else if (isFromPdf) {
-                                    // Liquid App Closing (Phone OS standard): Background zooms forward (scale 0.94 -> 1.0) with gentle fade in,
-                                    // while the shrinking window in overlay seamlessly returns to the exact card geometry without premature cutoff
-                                    (fadeIn(animationSpec = tween(durationMillis = 380, easing = androidx.compose.animation.core.LinearOutSlowInEasing)) +
-                                     scaleIn(
-                                         initialScale = 0.94f,
-                                         animationSpec = spring(dampingRatio = 0.82f, stiffness = 280f)
-                                     )).togetherWith(
-                                        fadeOut(animationSpec = tween(durationMillis = 380, delayMillis = 40, easing = androidx.compose.animation.core.FastOutLinearInEasing))
+                                    // Liquid App Closing: Background stays stationary with soft fade, preventing coordinate battles with sharedBounds
+                                    (fadeIn(animationSpec = tween(durationMillis = 300, easing = androidx.compose.animation.core.LinearOutSlowInEasing))).togetherWith(
+                                        fadeOut(animationSpec = tween(durationMillis = 250, easing = androidx.compose.animation.core.FastOutLinearInEasing))
                                     ).apply {
                                         targetContentZIndex = 0f
                                     }
@@ -713,19 +703,20 @@ fun AppContent(
                 }
                 }
 
-                // --- Floating App Bar (Always visible except PDF, WebView, and Onboarding) ---
-                androidx.compose.animation.AnimatedVisibility(
-                    visible = !showOnboarding && page != "pdf" && page != "web",
-                    enter = slideInVertically(animationSpec = spring(dampingRatio = 0.76f, stiffness = 280f)) { -it } + fadeIn(tween(260)),
-                    exit = slideOutVertically(animationSpec = spring(dampingRatio = 0.76f, stiffness = 280f)) { -it } + fadeOut(tween(220)),
-                    modifier = Modifier.align(Alignment.TopCenter).fillMaxWidth().zIndex(200f).then(
-                        if (LocalSharedTransitionScope.current != null) {
-                            with(LocalSharedTransitionScope.current!!) {
-                                Modifier.renderInSharedTransitionScopeOverlay(zIndexInOverlay = 50f)
-                            }
-                        } else Modifier
-                    )
+                // --- Floating Top Header (App Bar + Search Bar) in Unified Non-Overlapping Column ---
+                Column(
+                    modifier = Modifier
+                        .align(Alignment.TopCenter)
+                        .fillMaxWidth()
+                        .zIndex(200f)
                 ) {
+                    // Floating App Bar
+                    androidx.compose.animation.AnimatedVisibility(
+                        visible = !showOnboarding && page != "pdf" && page != "web",
+                        enter = slideInVertically(animationSpec = spring(dampingRatio = 0.76f, stiffness = 280f)) { -it } + fadeIn(tween(260)),
+                        exit = slideOutVertically(animationSpec = spring(dampingRatio = 0.76f, stiffness = 280f)) { -it } + fadeOut(tween(220)),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
                     val animatedEndPadding by animateDpAsState(
                         targetValue = if (isWide) (railWidth + 16.dp) else 16.dp,
                         animationSpec = spring(dampingRatio = 0.78f, stiffness = 300f),
@@ -958,77 +949,66 @@ fun AppContent(
                     }
                 }
 
-                // --- Floating Search Bar (Aligned inside the Main Content Area) ---
-                androidx.compose.animation.AnimatedVisibility(
-                    visible = !showOnboarding && page == "list" && isSearchOpen,
-                    enter = slideInVertically(
-                        initialOffsetY = { -it / 2 },
-                        animationSpec = spring(dampingRatio = 0.75f, stiffness = Spring.StiffnessLow)
-                    ) + fadeIn(animationSpec = tween(300)),
-                    exit = slideOutVertically(
-                        targetOffsetY = { -it / 2 },
-                        animationSpec = spring(dampingRatio = 0.75f, stiffness = Spring.StiffnessMediumLow)
-                    ) + fadeOut(animationSpec = tween(200)),
-                    modifier = Modifier.align(Alignment.TopCenter).zIndex(200f).then(
-                        if (LocalSharedTransitionScope.current != null) {
-                            with(LocalSharedTransitionScope.current!!) {
-                                Modifier.renderInSharedTransitionScopeOverlay(zIndexInOverlay = 50f)
-                            }
-                        } else Modifier
-                    )
-                ) {
-                    val animatedSearchBarHeight by animateDpAsState(
-                        targetValue = if (isWide) 48.dp else 56.dp,
-                        animationSpec = spring(dampingRatio = 0.78f, stiffness = 300f),
-                        label = "searchBarHeight"
-                    )
-                    val animatedSearchBarTopPadding by animateDpAsState(
-                        targetValue = if (isWide) 64.dp else 80.dp,
-                        animationSpec = spring(dampingRatio = 0.78f, stiffness = 300f),
-                        label = "searchBarTopPadding"
-                    )
-                    val animatedSearchBarEndPadding by animateDpAsState(
-                        targetValue = if (isWide) (railWidth + 16.dp) else 16.dp,
-                        animationSpec = spring(dampingRatio = 0.78f, stiffness = 300f),
-                        label = "searchBarEndPadding"
-                    )
-                    val searchFontSize = if (isWide) 14.sp else 15.sp
-                    var isListening by remember { mutableStateOf(false) }
+                    // Floating Search Bar (Naturally nested below App Bar in Column)
+                    androidx.compose.animation.AnimatedVisibility(
+                        visible = !showOnboarding && page == "list" && isSearchOpen,
+                        enter = slideInVertically(
+                            initialOffsetY = { -it / 2 },
+                            animationSpec = spring(dampingRatio = 0.75f, stiffness = Spring.StiffnessLow)
+                        ) + fadeIn(animationSpec = tween(300)),
+                        exit = slideOutVertically(
+                            targetOffsetY = { -it / 2 },
+                            animationSpec = spring(dampingRatio = 0.75f, stiffness = Spring.StiffnessMediumLow)
+                        ) + fadeOut(animationSpec = tween(200)),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        val animatedSearchBarHeight by animateDpAsState(
+                            targetValue = if (isWide) 48.dp else 56.dp,
+                            animationSpec = spring(dampingRatio = 0.78f, stiffness = 300f),
+                            label = "searchBarHeight"
+                        )
+                        val animatedSearchBarEndPadding by animateDpAsState(
+                            targetValue = if (isWide) (railWidth + 16.dp) else 16.dp,
+                            animationSpec = spring(dampingRatio = 0.78f, stiffness = 300f),
+                            label = "searchBarEndPadding"
+                        )
+                        val searchFontSize = if (isWide) 14.sp else 15.sp
+                        var isListening by remember { mutableStateOf(false) }
 
-                    var isClearingAnimation by remember { mutableStateOf(false) }
-                    var displayClearText by remember { mutableStateOf("") }
-                    val clearTextSlideOffset = remember { androidx.compose.animation.core.Animatable(0f) }
-                    val clearTextSlideAlpha = remember { androidx.compose.animation.core.Animatable(1f) }
-                    
-                    DisposableEffect(Unit) {
-                        onDispose {
-                            if (isListening) {
-                                platformActionHandler.stopVoiceSearch()
-                                isListening = false
+                        var isClearingAnimation by remember { mutableStateOf(false) }
+                        var displayClearText by remember { mutableStateOf("") }
+                        val clearTextSlideOffset = remember { androidx.compose.animation.core.Animatable(0f) }
+                        val clearTextSlideAlpha = remember { androidx.compose.animation.core.Animatable(1f) }
+                        
+                        DisposableEffect(Unit) {
+                            onDispose {
+                                if (isListening) {
+                                    platformActionHandler.stopVoiceSearch()
+                                    isListening = false
+                                }
                             }
                         }
-                    }
-                    
-                    val pulseAnim = animateFloatAsState(
-                        targetValue = if (isListening) 1.2f else 1f,
-                        animationSpec = infiniteRepeatable(
-                            animation = tween(500, easing = FastOutSlowInEasing),
-                            repeatMode = RepeatMode.Reverse
+                        
+                        val pulseAnim = animateFloatAsState(
+                            targetValue = if (isListening) 1.2f else 1f,
+                            animationSpec = infiniteRepeatable(
+                                animation = tween(500, easing = FastOutSlowInEasing),
+                                repeatMode = RepeatMode.Reverse
+                            )
                         )
-                    )
 
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .statusBarsPadding()
-                            .windowInsetsPadding(WindowInsets.safeDrawing.only(WindowInsetsSides.Horizontal))
-                            .padding(
-                                top = animatedSearchBarTopPadding,
-                                start = 16.dp,
-                                end = animatedSearchBarEndPadding
-                            ),
-                        contentAlignment = Alignment.TopCenter
-                    ) {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .windowInsetsPadding(WindowInsets.safeDrawing.only(WindowInsetsSides.Horizontal))
+                                .padding(
+                                    top = 4.dp,
+                                    bottom = 8.dp,
+                                    start = 16.dp,
+                                    end = animatedSearchBarEndPadding
+                                ),
+                            contentAlignment = Alignment.TopCenter
+                        ) {
                         Row(
                             modifier = Modifier
                                 .widthIn(max = 608.dp)
@@ -1211,6 +1191,7 @@ fun AppContent(
                             }
                         }
                     }
+                }
                 }
 
 

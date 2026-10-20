@@ -265,11 +265,12 @@ fun LibraryScreen(
                     val windowInfo = androidx.compose.ui.platform.LocalWindowInfo.current
                     val density = androidx.compose.ui.platform.LocalDensity.current
                     val screenWidthDp = with(density) { windowInfo.containerSize.width.toDp() }
-                    val dynamicTopPadding = if (isWide) {
-                        statusBarHeight + 64.dp
-                    } else {
-                        statusBarHeight + 76.dp
-                    }
+                    val searchBarOffset by animateDpAsState(
+                        targetValue = if (isSearchOpen) (if (isWide) 56.dp else 64.dp) else 0.dp,
+                        animationSpec = spring(dampingRatio = 0.78f, stiffness = 300f),
+                        label = "searchBarOffset"
+                    )
+                    val dynamicTopPadding = (if (isWide) statusBarHeight + 64.dp else statusBarHeight + 76.dp) + searchBarOffset
                     val dynamicGridColumns = remember(widthClass, heightClass, screenWidthDp, isGridView) {
                         if (isGridView) {
                             when (widthClass) {
@@ -556,9 +557,9 @@ fun LazyGridItemScope.ContentCard(
     val animatedVisibilityScope = LocalAnimatedVisibilityScope.current
     val isReturningFromPdf = com.Nightjar.Th3GradeLibraryKMP.theme.LocalIsReturningFromPdf.current
     val isThisCardTarget = (TransitionTargetTracker.activeTargetId == "card_${item.id}" || TransitionTargetTracker.activeTargetId == item.id)
-    val isSharedActive = isThisCardTarget && TransitionTargetTracker.isTransitionActive
+    val isSharedActive = isThisCardTarget && (TransitionTargetTracker.isTransitionActive || isReturningFromPdf)
 
-    val sharedBoundsModifier = if (sharedTransitionScope != null && animatedVisibilityScope != null && isSharedActive) {
+    val sharedBoundsModifier = if (sharedTransitionScope != null && animatedVisibilityScope != null) {
         with(sharedTransitionScope) {
             Modifier.sharedBounds(
                 sharedContentState = rememberSharedContentState(key = "card_${item.id}"),
@@ -576,7 +577,7 @@ fun LazyGridItemScope.ContentCard(
                         easing = androidx.compose.animation.core.LinearEasing
                     )
                 ),
-                renderInOverlayDuringTransition = true,
+                renderInOverlayDuringTransition = isSharedActive,
                 clipInOverlayDuringTransition = OverlayClip(RoundedCornerShape(cardCornerRadius)),
                 zIndexInOverlay = 10f,
                 boundsTransform = { _, _ -> spring(dampingRatio = 0.82f, stiffness = 280f) },

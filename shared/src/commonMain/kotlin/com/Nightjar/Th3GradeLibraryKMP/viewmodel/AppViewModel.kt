@@ -76,7 +76,8 @@ class AppViewModel : ViewModel() {
                 val target = AllItems.books.firstOrNull { it.id == initialBookId }
                     ?: AllItems.notes.firstOrNull { it.id == initialBookId }
                 if (target != null) {
-                    com.Nightjar.Th3GradeLibraryKMP.ui.TransitionTargetTracker.reset()
+                    com.Nightjar.Th3GradeLibraryKMP.ui.TransitionTargetTracker.activeTargetId = "card_${target.id}"
+                    com.Nightjar.Th3GradeLibraryKMP.ui.TransitionTargetTracker.isTransitionActive = true
                     selectedItem = target
                     pdfInitialPage = com.Nightjar.Th3GradeLibraryKMP.network.SyncEngine.lastReadPages.value[target.id]
                     com.Nightjar.Th3GradeLibraryKMP.network.SyncEngine.saveSelectedCategory(if (target.isNote) "notes" else "books")
@@ -103,7 +104,8 @@ class AppViewModel : ViewModel() {
             val target = AllItems.books.firstOrNull { it.id == initialBookId }
                 ?: AllItems.notes.firstOrNull { it.id == initialBookId }
             if (target != null) {
-                com.Nightjar.Th3GradeLibraryKMP.ui.TransitionTargetTracker.reset()
+                com.Nightjar.Th3GradeLibraryKMP.ui.TransitionTargetTracker.activeTargetId = "card_${target.id}"
+                com.Nightjar.Th3GradeLibraryKMP.ui.TransitionTargetTracker.isTransitionActive = true
                 selectedItem = target
                 pdfInitialPage = com.Nightjar.Th3GradeLibraryKMP.network.SyncEngine.lastReadPages.value[target.id]
                 com.Nightjar.Th3GradeLibraryKMP.network.SyncEngine.saveSelectedCategory(if (target.isNote) "notes" else "books")

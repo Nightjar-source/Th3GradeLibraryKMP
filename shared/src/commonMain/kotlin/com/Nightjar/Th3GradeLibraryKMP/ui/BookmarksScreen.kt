@@ -390,12 +390,11 @@ fun BookAccordionItem(
                 sortedPages.forEach { pageIndex ->
                     val rowInteractionSource = remember { MutableInteractionSource() }
                     val rowTargetKey = "bookmark_${item.id}_$pageIndex"
-                    val isScreenTransitioning = screenVisibilityScope?.transition?.isRunning == true
-                    val isThisRowActive = isScreenTransitioning &&
-                            (TransitionTargetTracker.activeTargetId == rowTargetKey) &&
-                            TransitionTargetTracker.isTransitionActive
+                    val isReturningFromPdf = LocalIsReturningFromPdf.current
+                    val isThisRowTarget = (TransitionTargetTracker.activeTargetId == rowTargetKey)
+                    val isThisRowActive = isThisRowTarget && (TransitionTargetTracker.isTransitionActive || isReturningFromPdf)
 
-                    val rowSharedModifier = if (sharedTransitionScope != null && screenVisibilityScope != null && isThisRowActive) {
+                    val rowSharedModifier = if (sharedTransitionScope != null && screenVisibilityScope != null) {
                         with(sharedTransitionScope) {
                             Modifier.sharedBounds(
                                 sharedContentState = rememberSharedContentState(key = rowTargetKey),
@@ -413,7 +412,7 @@ fun BookAccordionItem(
                                         easing = androidx.compose.animation.core.LinearEasing
                                     )
                                 ),
-                                renderInOverlayDuringTransition = true,
+                                renderInOverlayDuringTransition = isThisRowActive,
                                 clipInOverlayDuringTransition = OverlayClip(RoundedCornerShape(14.dp)),
                                 zIndexInOverlay = 10f,
                                 boundsTransform = { _, _ ->
