@@ -232,6 +232,7 @@ fun BookmarksScreen(
                                 isDark = isDark,
                                 isExpanded = expandedSet.contains(book.id),
                                 onToggleExpand = {
+                                    TransitionTargetTracker.reset()
                                     SyncEngine.toggleExpandedBookmark(book.id)
                                 },
                                 onNavigateToPdf = { pageIdx -> onNavigateToPdf(book, pageIdx) },
@@ -389,10 +390,12 @@ fun BookAccordionItem(
                 sortedPages.forEach { pageIndex ->
                     val rowInteractionSource = remember { MutableInteractionSource() }
                     val rowTargetKey = "bookmark_${item.id}_$pageIndex"
-                    val isThisRowActive = (TransitionTargetTracker.activeTargetId == rowTargetKey) &&
-                            (TransitionTargetTracker.isTransitionActive || LocalIsReturningFromPdf.current)
+                    val isScreenTransitioning = screenVisibilityScope?.transition?.isRunning == true
+                    val isThisRowActive = isScreenTransitioning &&
+                            (TransitionTargetTracker.activeTargetId == rowTargetKey) &&
+                            TransitionTargetTracker.isTransitionActive
 
-                    val rowSharedModifier = if (sharedTransitionScope != null && screenVisibilityScope != null) {
+                    val rowSharedModifier = if (sharedTransitionScope != null && screenVisibilityScope != null && isThisRowActive) {
                         with(sharedTransitionScope) {
                             Modifier.sharedBounds(
                                 sharedContentState = rememberSharedContentState(key = rowTargetKey),
@@ -410,7 +413,7 @@ fun BookAccordionItem(
                                         easing = androidx.compose.animation.core.LinearEasing
                                     )
                                 ),
-                                renderInOverlayDuringTransition = isThisRowActive,
+                                renderInOverlayDuringTransition = true,
                                 clipInOverlayDuringTransition = OverlayClip(RoundedCornerShape(14.dp)),
                                 zIndexInOverlay = 10f,
                                 boundsTransform = { _, _ ->

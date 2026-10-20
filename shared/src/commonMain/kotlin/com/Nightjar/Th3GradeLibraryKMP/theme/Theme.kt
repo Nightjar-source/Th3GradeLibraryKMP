@@ -135,12 +135,13 @@ fun Modifier.expressiveButtonMorph(
     restRadius: androidx.compose.ui.unit.Dp = 24.dp,
     pressedRadius: androidx.compose.ui.unit.Dp = 8.dp,
     pressedScale: Float = 0.92f,
-    interactionSource: androidx.compose.foundation.interaction.MutableInteractionSource,
+    interactionSource: androidx.compose.foundation.interaction.MutableInteractionSource? = null,
     backgroundColor: Color? = null,
     borderWidth: androidx.compose.ui.unit.Dp? = null,
     borderColor: Color? = null
 ): Modifier = composed {
-    val isPressed by interactionSource.collectIsPressedAsState()
+    val actualSource = interactionSource ?: androidx.compose.runtime.remember { androidx.compose.foundation.interaction.MutableInteractionSource() }
+    val isPressed by actualSource.collectIsPressedAsState()
     val cornerRadius by androidx.compose.animation.core.animateDpAsState(
         targetValue = if (isPressed) pressedRadius else restRadius,
         animationSpec = androidx.compose.animation.core.spring(dampingRatio = 0.52f, stiffness = 420f),
@@ -179,47 +180,45 @@ fun Modifier.screenEntranceStagger(index: Int = 0, itemId: String? = null): Modi
     val isReturningFromPdf = LocalIsReturningFromPdf.current
     val isNavigatingBack = LocalIsNavigatingBack.current
     val itemKey = itemId ?: index.toString()
-    val isActiveSharedTarget = com.Nightjar.Th3GradeLibraryKMP.ui.TransitionTargetTracker.isTransitionActive &&
-            (com.Nightjar.Th3GradeLibraryKMP.ui.TransitionTargetTracker.activeTargetId == "card_$itemKey" ||
-             com.Nightjar.Th3GradeLibraryKMP.ui.TransitionTargetTracker.activeTargetId == itemKey ||
-             com.Nightjar.Th3GradeLibraryKMP.ui.TransitionTargetTracker.activeTargetId?.startsWith("bookmark_$itemKey") == true)
+    val screenKey = LocalScreenEntranceKey.current ?: "screen"
 
-    val screenKey = LocalScreenEntranceKey.current
-    val seenMap = LocalSeenEntranceItems.current
-
-    // When returning from PDF or navigating back or on active shared target: keep 100% stationary with zero movement!
-    if (isReturningFromPdf || isNavigatingBack || isActiveSharedTarget) {
-        seenMap?.put(itemKey, true)
-        return@composed this
+    // Use rememberSaveable so each item remembers whether it has already entered,
+    // persisting across backstack pops, tab switches, and returning from PDF (matching caliq5)
+    var isLoaded by androidx.compose.runtime.saveable.rememberSaveable(key = "entrance_${screenKey}_$itemKey") {
+        androidx.compose.runtime.mutableStateOf(isReturningFromPdf || isNavigatingBack)
     }
 
-    val alreadySeen = seenMap?.get(itemKey) == true
-    if (alreadySeen) return@composed this
-
-    val animProgress = androidx.compose.runtime.remember(screenKey, itemKey) { androidx.compose.animation.core.Animatable(0f) }
-    val density = androidx.compose.ui.platform.LocalDensity.current
-    val offsetYPx = androidx.compose.runtime.remember(density) { with(density) { 20.dp.toPx() } }
-
-    androidx.compose.runtime.LaunchedEffect(screenKey, itemKey) {
-        val staggerDelay = (index.coerceIn(0, 8) * 24L)
-        if (staggerDelay > 0) kotlinx.coroutines.delay(staggerDelay)
-        animProgress.animateTo(
-            targetValue = 1f,
-            animationSpec = androidx.compose.animation.core.spring(
-                dampingRatio = 0.76f, // Ultra-moist fluid organic spring (كالجبنة الحريرية)
-                stiffness = 320f
-            )
-        )
-        seenMap?.put(itemKey, true)
+    androidx.compose.runtime.LaunchedEffect(isLoaded) {
+        if (!isLoaded) {
+            val staggerDelay = (index.coerceIn(0, 8) * 24L)
+            if (staggerDelay > 0) kotlinx.coroutines.delay(staggerDelay)
+            isLoaded = true
+        }
     }
 
-    val p = animProgress.value
-    this.graphicsLayer {
-        this.alpha = 0.25f + 0.75f * p // Base alpha 0.25f eliminates harsh dark/white flashes
-        this.translationY = (1f - p) * offsetYPx
-        this.scaleX = 0.97f + 0.03f * p
-        this.scaleY = 0.97f + 0.03f * p
-        this.clip = false
+    val animProgress by androidx.compose.animation.core.animateFloatAsState(
+        targetValue = if (isLoaded) 1f else 0f,
+        animationSpec = androidx.compose.animation.core.spring(
+            dampingRatio = 0.76f, // Ultra-moist fluid organic spring (سائل رطب كالحرير)
+            stiffness = 320f
+        ),
+        label = "entrance_$itemKey"
+    )
+
+    // Once fully loaded or when returning from PDF: return pure stationary Modifier with ZERO graphicsLayer overhead!
+    if (animProgress >= 1f || (isLoaded && animProgress > 0.99f)) {
+        Modifier
+    } else {
+        val density = androidx.compose.ui.platform.LocalDensity.current
+        val offsetYPx = androidx.compose.runtime.remember(density) { with(density) { 20.dp.toPx() } }
+        this.graphicsLayer {
+            val p = animProgress.coerceIn(0f, 1f)
+            this.alpha = 0.25f + 0.75f * p
+            this.translationY = (1f - p) * offsetYPx
+            this.scaleX = 0.97f + 0.03f * p
+            this.scaleY = 0.97f + 0.03f * p
+            this.clip = false
+        }
     }
 }
 

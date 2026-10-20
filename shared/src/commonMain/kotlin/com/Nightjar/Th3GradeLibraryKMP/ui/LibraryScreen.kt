@@ -556,8 +556,9 @@ fun LazyGridItemScope.ContentCard(
     val animatedVisibilityScope = LocalAnimatedVisibilityScope.current
     val isReturningFromPdf = com.Nightjar.Th3GradeLibraryKMP.theme.LocalIsReturningFromPdf.current
     val isThisCardTarget = (TransitionTargetTracker.activeTargetId == "card_${item.id}" || TransitionTargetTracker.activeTargetId == item.id)
+    val isSharedActive = isThisCardTarget && TransitionTargetTracker.isTransitionActive
 
-    val sharedBoundsModifier = if (sharedTransitionScope != null && animatedVisibilityScope != null) {
+    val sharedBoundsModifier = if (sharedTransitionScope != null && animatedVisibilityScope != null && isSharedActive) {
         with(sharedTransitionScope) {
             Modifier.sharedBounds(
                 sharedContentState = rememberSharedContentState(key = "card_${item.id}"),

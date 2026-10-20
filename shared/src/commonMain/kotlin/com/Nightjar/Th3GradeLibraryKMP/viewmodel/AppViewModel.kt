@@ -76,8 +76,7 @@ class AppViewModel : ViewModel() {
                 val target = AllItems.books.firstOrNull { it.id == initialBookId }
                     ?: AllItems.notes.firstOrNull { it.id == initialBookId }
                 if (target != null) {
-                    com.Nightjar.Th3GradeLibraryKMP.ui.TransitionTargetTracker.activeTargetId = "card_${target.id}"
-                    com.Nightjar.Th3GradeLibraryKMP.ui.TransitionTargetTracker.isTransitionActive = true
+                    com.Nightjar.Th3GradeLibraryKMP.ui.TransitionTargetTracker.reset()
                     selectedItem = target
                     pdfInitialPage = com.Nightjar.Th3GradeLibraryKMP.network.SyncEngine.lastReadPages.value[target.id]
                     com.Nightjar.Th3GradeLibraryKMP.network.SyncEngine.saveSelectedCategory(if (target.isNote) "notes" else "books")
@@ -104,8 +103,7 @@ class AppViewModel : ViewModel() {
             val target = AllItems.books.firstOrNull { it.id == initialBookId }
                 ?: AllItems.notes.firstOrNull { it.id == initialBookId }
             if (target != null) {
-                com.Nightjar.Th3GradeLibraryKMP.ui.TransitionTargetTracker.activeTargetId = "card_${target.id}"
-                com.Nightjar.Th3GradeLibraryKMP.ui.TransitionTargetTracker.isTransitionActive = true
+                com.Nightjar.Th3GradeLibraryKMP.ui.TransitionTargetTracker.reset()
                 selectedItem = target
                 pdfInitialPage = com.Nightjar.Th3GradeLibraryKMP.network.SyncEngine.lastReadPages.value[target.id]
                 com.Nightjar.Th3GradeLibraryKMP.network.SyncEngine.saveSelectedCategory(if (target.isNote) "notes" else "books")
@@ -285,6 +283,14 @@ class AppViewModel : ViewModel() {
     /**
      * Clears selected item with 450ms delay for close cover spring animation, protected against race conditions.
      */
+    /**
+     * Resets transition and navigation states immediately when AnimatedContent finishes its transition.
+     */
+    fun onTransitionFinished() {
+        isReturningFromPdf = false
+        isNavigatingBack = false
+    }
+
     fun clearSelectedItem() {
         clearSelectedItemJob?.cancel()
         popPage()

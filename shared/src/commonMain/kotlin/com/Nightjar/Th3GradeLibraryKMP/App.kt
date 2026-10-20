@@ -430,14 +430,18 @@ fun AppContent(
             ) {
         val adaptiveInfo = androidx.compose.material3.adaptive.currentWindowAdaptiveInfo()
         val widthClass = adaptiveInfo.windowSizeClass.windowWidthSizeClass
+        val heightClass = adaptiveInfo.windowSizeClass.windowHeightSizeClass
         val isWide = widthClass != androidx.window.core.layout.WindowWidthSizeClass.COMPACT
-        val railWidth = when (widthClass) {
-            androidx.window.core.layout.WindowWidthSizeClass.EXPANDED -> 72.dp
-            else -> 64.dp
+        val isCompactHeight = heightClass == androidx.window.core.layout.WindowHeightSizeClass.COMPACT
+        val railWidth = when {
+            isCompactHeight -> 52.dp // Compact navigation rail for phone landscape (M3 Adaptive Standard)
+            widthClass == androidx.window.core.layout.WindowWidthSizeClass.EXPANDED -> 64.dp
+            else -> 56.dp
         }
         
         val currentNavBar = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
-        val currentStatusBar = WindowInsets.statusBars.add(WindowInsets.captionBar).asPaddingValues().calculateTopPadding()
+        val systemBarsInsets = WindowInsets.statusBars.union(WindowInsets.captionBar).union(WindowInsets.displayCutout)
+        val currentStatusBar = systemBarsInsets.asPaddingValues().calculateTopPadding()
         
         val listBottomPadding = if (isWide) 24.dp + currentNavBar else 110.dp + currentNavBar
 
@@ -563,8 +567,8 @@ fun AppContent(
                                 if (currentTransition.currentState == currentTransition.targetState &&
                                     page != "pdf"
                                 ) {
-                                    com.Nightjar.Th3GradeLibraryKMP.ui.TransitionTargetTracker.isTransitionActive = false
-                                    com.Nightjar.Th3GradeLibraryKMP.ui.TransitionTargetTracker.activeTargetId = null
+                                    com.Nightjar.Th3GradeLibraryKMP.ui.TransitionTargetTracker.reset()
+                                    viewModel.onTransitionFinished()
                                 }
                             }
                             val pageContentPadding = PaddingValues(
@@ -740,7 +744,7 @@ fun AppContent(
 
                     Box(
                         modifier = Modifier
-                            .windowInsetsPadding(WindowInsets.statusBars.add(WindowInsets.captionBar))
+                            .windowInsetsPadding(WindowInsets.statusBars.union(WindowInsets.captionBar).union(WindowInsets.displayCutout))
                             .windowInsetsPadding(WindowInsets.safeDrawing.only(WindowInsetsSides.Horizontal))
                             .padding(
                                 start = 16.dp,
@@ -763,7 +767,7 @@ fun AppContent(
                                     .size(animatedElementSize)
                                     .liquidGlass(isDark, borderRadius = 22.dp, alpha = 0.92f)
                                     .clip(CircleShape)
-                                    .clickable { handleTopBarBack() },
+                                    .bounceClick { handleTopBarBack() },
                                 contentAlignment = Alignment.Center
                             ) {
                                 Icon(
@@ -867,19 +871,25 @@ fun AppContent(
                                     verticalAlignment = Alignment.CenterVertically,
                                     horizontalArrangement = Arrangement.spacedBy(8.dp)
                                 ) {
-                                    // Separate Floating Circle 1: Grid / List View Toggle
+                                    // Separate Floating Circle 1: Grid / List View Toggle with fluid liquid rotation
+                                    val gridRotation by animateFloatAsState(
+                                        targetValue = if (isGridView) 180f else 0f,
+                                        animationSpec = spring(dampingRatio = 0.74f, stiffness = 320f),
+                                        label = "gridRotation"
+                                    )
                                     Box(
                                         modifier = Modifier
                                             .size(animatedElementSize)
                                             .liquidGlass(isDark, borderRadius = 22.dp, alpha = 0.92f)
                                             .clip(CircleShape)
-                                            .clickable { SyncEngine.saveGridView(!isGridView) },
+                                            .bounceClick { SyncEngine.saveGridView(!isGridView) },
                                         contentAlignment = Alignment.Center
                                     ) {
                                         androidx.compose.animation.AnimatedContent(
                                             targetState = isGridView,
                                             transitionSpec = {
-                                                (fadeIn(tween(200)) + scaleIn(initialScale = 0.8f)).togetherWith(fadeOut(tween(160)) + scaleOut(targetScale = 0.8f))
+                                                (fadeIn(tween(220)) + scaleIn(initialScale = 0.75f, animationSpec = spring(0.74f, 320f)))
+                                                    .togetherWith(fadeOut(tween(160)) + scaleOut(targetScale = 0.75f, animationSpec = tween(160)))
                                             },
                                             label = "gridToggle"
                                         ) { isGrid ->
@@ -887,24 +897,32 @@ fun AppContent(
                                                 imageVector = if (isGrid) Icons.Default.ViewList else Icons.Default.GridView,
                                                 contentDescription = "Toggle Grid/List view",
                                                 tint = MaterialTheme.colorScheme.onSurface,
-                                                modifier = Modifier.size(if (isWide) 20.dp else 22.dp)
+                                                modifier = Modifier
+                                                    .size(if (isWide) 20.dp else 22.dp)
+                                                    .graphicsLayer { rotationZ = gridRotation }
                                             )
                                         }
                                     }
 
-                                    // Separate Floating Circle 2: Search Toggle
+                                    // Separate Floating Circle 2: Search Toggle with fluid liquid morph
+                                    val searchRotation by animateFloatAsState(
+                                        targetValue = if (isSearchOpen) 90f else 0f,
+                                        animationSpec = spring(dampingRatio = 0.74f, stiffness = 320f),
+                                        label = "searchRotation"
+                                    )
                                     Box(
                                         modifier = Modifier
                                             .size(animatedElementSize)
                                             .liquidGlass(isDark, borderRadius = 22.dp, alpha = 0.92f)
                                             .clip(CircleShape)
-                                            .clickable { isSearchOpen = !isSearchOpen },
+                                            .bounceClick { isSearchOpen = !isSearchOpen },
                                         contentAlignment = Alignment.Center
                                     ) {
                                         androidx.compose.animation.AnimatedContent(
                                             targetState = isSearchOpen,
                                             transitionSpec = {
-                                                (fadeIn(tween(200)) + scaleIn(initialScale = 0.8f)).togetherWith(fadeOut(tween(160)) + scaleOut(targetScale = 0.8f))
+                                                (fadeIn(tween(220)) + scaleIn(initialScale = 0.75f, animationSpec = spring(0.74f, 320f)))
+                                                    .togetherWith(fadeOut(tween(160)) + scaleOut(targetScale = 0.75f, animationSpec = tween(160)))
                                             },
                                             label = "searchToggle"
                                         ) { isOpen ->
@@ -912,7 +930,9 @@ fun AppContent(
                                                 imageVector = if (isOpen) Icons.Default.Close else Icons.Default.Search,
                                                 contentDescription = "Toggle Search",
                                                 tint = MaterialTheme.colorScheme.onSurface,
-                                                modifier = Modifier.size(if (isWide) 20.dp else 22.dp)
+                                                modifier = Modifier
+                                                    .size(if (isWide) 20.dp else 22.dp)
+                                                    .graphicsLayer { rotationZ = searchRotation }
                                             )
                                         }
                                     }
@@ -923,7 +943,7 @@ fun AppContent(
                                         .size(animatedElementSize)
                                         .liquidGlass(isDark, borderRadius = 22.dp, alpha = 0.92f)
                                         .clip(CircleShape)
-                                        .clickable { isNewsSettingsOpen = true },
+                                        .bounceClick { isNewsSettingsOpen = true },
                                     contentAlignment = Alignment.Center
                                 ) {
                                     Icon(
@@ -1780,7 +1800,7 @@ fun AppContent(
                 modifier = Modifier
                     .fillMaxSize()
                     .background(Color.Black.copy(alpha = 0.5f))
-                    .windowInsetsPadding(WindowInsets.statusBars.add(WindowInsets.captionBar))
+                    .windowInsetsPadding(WindowInsets.statusBars.union(WindowInsets.captionBar).union(WindowInsets.displayCutout))
                     .windowInsetsPadding(WindowInsets.safeDrawing.only(WindowInsetsSides.Horizontal + WindowInsetsSides.Bottom))
                     .clickable(
                         interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() },

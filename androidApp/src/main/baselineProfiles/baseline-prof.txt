@@ -1,36 +1,82 @@
 # Baseline profile rules for Android ART Ahead-Of-Time (AOT) compilation
+# Main Application & Base Packages
 Lcom/Nightjar/Th3GradeLibraryKMP/**;
 HSPLcom/Nightjar/Th3GradeLibraryKMP/**;->**(**)**
 
-LTh3GradeLibraryKMP/shared/generated/**;
-HSPLTh3GradeLibraryKMP/shared/generated/**;->**(**)**
+# Screens & UI Destinations (Home, List, News, Bookmarks, Shortcuts, About, PdfViewer)
+Lcom/Nightjar/Th3GradeLibraryKMP/ui/**;
+HSPLcom/Nightjar/Th3GradeLibraryKMP/ui/**;->**(**)**
+Lcom/Nightjar/Th3GradeLibraryKMP/ui/BookmarksScreenKt;
+HSPLcom/Nightjar/Th3GradeLibraryKMP/ui/BookmarksScreenKt;->**(**)**
+Lcom/Nightjar/Th3GradeLibraryKMP/ui/LibraryScreenKt;
+HSPLcom/Nightjar/Th3GradeLibraryKMP/ui/LibraryScreenKt;->**(**)**
+Lcom/Nightjar/Th3GradeLibraryKMP/ui/NewsScreenKt;
+HSPLcom/Nightjar/Th3GradeLibraryKMP/ui/NewsScreenKt;->**(**)**
+Lcom/Nightjar/Th3GradeLibraryKMP/ui/ShortcutsScreenKt;
+HSPLcom/Nightjar/Th3GradeLibraryKMP/ui/ShortcutsScreenKt;->**(**)**
+Lcom/Nightjar/Th3GradeLibraryKMP/ui/AboutScreenKt;
+HSPLcom/Nightjar/Th3GradeLibraryKMP/ui/AboutScreenKt;->**(**)**
+Lcom/Nightjar/Th3GradeLibraryKMP/ui/PdfViewerScreenKt;
+HSPLcom/Nightjar/Th3GradeLibraryKMP/ui/PdfViewerScreenKt;->**(**)**
+Lcom/Nightjar/Th3GradeLibraryKMP/ui/TransitionTargetTracker;
+HSPLcom/Nightjar/Th3GradeLibraryKMP/ui/TransitionTargetTracker;->**(**)**
 
+# Animations & Motion Effects (adaptiveItemEntrance, expressiveButtonMorph, screenEntranceStagger, liquidGlass)
+Lcom/Nightjar/Th3GradeLibraryKMP/theme/**;
+HSPLcom/Nightjar/Th3GradeLibraryKMP/theme/**;->**(**)**
+Lcom/Nightjar/Th3GradeLibraryKMP/theme/ThemeKt;
+HSPLcom/Nightjar/Th3GradeLibraryKMP/theme/ThemeKt;->**(**)**
+
+# Glance Material 3 Responsive Widgets
+Lcom/Nightjar/Th3GradeLibraryKMP/widget/**;
+HSPLcom/Nightjar/Th3GradeLibraryKMP/widget/**;->**(**)**
+Landroidx/glance/**;
+HSPLandroidx/glance/**;->**(**)**
+Landroidx/glance/appwidget/**;
+HSPLandroidx/glance/appwidget/**;->**(**)**
+
+# ViewModels & Architecture State Preservation
+Lcom/Nightjar/Th3GradeLibraryKMP/viewmodel/**;
+HSPLcom/Nightjar/Th3GradeLibraryKMP/viewmodel/**;->**(**)**
+Lcom/Nightjar/Th3GradeLibraryKMP/navigation/**;
+HSPLcom/Nightjar/Th3GradeLibraryKMP/navigation/**;->**(**)**
+Lcom/Nightjar/Th3GradeLibraryKMP/network/**;
+HSPLcom/Nightjar/Th3GradeLibraryKMP/network/**;->**(**)**
+Lcom/Nightjar/Th3GradeLibraryKMP/data/**;
+HSPLcom/Nightjar/Th3GradeLibraryKMP/data/**;->**(**)**
+
+# Compose Animation Framework & Shared Transitions
 Landroidx/compose/animation/**;
 HSPLandroidx/compose/animation/**;->**(**)**
-
 Landroidx/compose/animation/core/**;
 HSPLandroidx/compose/animation/core/**;->**(**)**
+Landroidx/compose/animation/SharedTransitionScope;
+HSPLandroidx/compose/animation/SharedTransitionScope;->**(**)**
+Landroidx/compose/animation/SharedTransitionLayoutKt;
+HSPLandroidx/compose/animation/SharedTransitionLayoutKt;->**(**)**
 
+# Compose Foundation, Lazy Grids & Remeasurement
 Landroidx/compose/foundation/**;
 HSPLandroidx/compose/foundation/**;->**(**)**
-
 Landroidx/compose/foundation/lazy/**;
 HSPLandroidx/compose/foundation/lazy/**;->**(**)**
-
 Landroidx/compose/foundation/lazy/grid/**;
 HSPLandroidx/compose/foundation/lazy/grid/**;->**(**)**
 
+# Material 3 & Adaptive Window Layout (October 2026 / 2027 Standards)
 Landroidx/compose/material3/**;
 HSPLandroidx/compose/material3/**;->**(**)**
-
 Landroidx/compose/material3/adaptive/**;
 HSPLandroidx/compose/material3/adaptive/**;->**(**)**
+Landroidx/compose/material3/adaptive/layout/**;
+HSPLandroidx/compose/material3/adaptive/layout/**;->**(**)**
 
+# Compose UI Core & Runtime
 Landroidx/compose/ui/**;
 HSPLandroidx/compose/ui/**;->**(**)**
-
 Landroidx/compose/runtime/**;
 HSPLandroidx/compose/runtime/**;->**(**)**
 
+# Image Loading & Caching (Coil 3)
 Lcoil3/**;
 HSPLcoil3/**;->**(**)**
