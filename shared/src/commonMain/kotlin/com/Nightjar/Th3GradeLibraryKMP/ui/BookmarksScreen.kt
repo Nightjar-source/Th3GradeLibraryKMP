@@ -247,16 +247,7 @@ fun BookmarksScreen(
                         if (book != null) {
                             val pages = groupedPages[bookId] ?: emptyList()
                             BookAccordionItem(
-                                modifier = Modifier
-                                    .animateItem(
-                                        fadeInSpec = null,
-                                        fadeOutSpec = null,
-                                        placementSpec = if (isReturningFromPdf) null else spring(
-                                            dampingRatio = 0.82f,
-                                            stiffness = 320f
-                                        )
-                                    )
-                                    .adaptiveItemEntrance(index, itemId = bookId),
+                                modifier = Modifier,
                                 item = book,
                                 pages = pages,
                                 isPageSaved = { pageIdx -> savedPages.contains("${book.id}:$pageIdx") },
@@ -295,12 +286,6 @@ fun BookAccordionItem(
     Column(
         modifier = modifier
             .fillMaxWidth()
-            .animateContentSize(
-                animationSpec = spring(
-                    dampingRatio = 0.82f,
-                    stiffness = 320f
-                )
-            )
             .liquidGlass(isDark, borderRadius = 20.dp, alpha = 0.96f)
             .clip(RoundedCornerShape(20.dp))
     ) {
@@ -420,12 +405,6 @@ fun BookAccordionItem(
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .animateContentSize(
-                        animationSpec = spring(
-                            dampingRatio = 0.82f,
-                            stiffness = 320f
-                        )
-                    )
                     .padding(horizontal = 16.dp)
                     .padding(top = 8.dp, bottom = 12.dp),
                 verticalArrangement = Arrangement.spacedBy(8.dp)

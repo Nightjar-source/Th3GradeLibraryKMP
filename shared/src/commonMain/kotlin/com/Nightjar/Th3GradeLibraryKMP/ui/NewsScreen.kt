@@ -312,8 +312,7 @@ fun NewsScreen(
                                             fadeInSpec = null,
                                             fadeOutSpec = tween(200),
                                             placementSpec = if (isReturning) null else spring(stiffness = Spring.StiffnessMediumLow)
-                                        )
-                                        .adaptiveItemEntrance(index, itemId = newsItem.id),
+                                        ),
                                     news = newsItem,
                                     isDark = isDark,
                                     isRead = readNewsIds.contains(newsItem.id) || (newsItem.link.isNotEmpty() && readNewsIds.contains(newsItem.link)),

@@ -158,7 +158,6 @@ fun ShortcutItemCard(
     Column(
         modifier = modifier
             .fillMaxWidth()
-            .adaptiveItemEntrance(index, itemId = item.id)
             .clip(RoundedCornerShape(28.dp))
             .background(if (isDark) Color.White.copy(alpha = 0.05f) else Color.Black.copy(alpha = 0.03f))
             .clickable { onClick() }

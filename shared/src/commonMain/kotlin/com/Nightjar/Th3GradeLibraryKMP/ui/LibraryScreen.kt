@@ -159,6 +159,7 @@ fun LibraryScreen(
                         ) {
                             Box(modifier = Modifier.weight(1f)) {
                                 CategoryMenuCard(
+                                    modifier = Modifier.popInOnInitialLoad(0),
                                     title = "الملازم الدراسية",
                                     desc = "أفضل الملخصات لأساتذة العراق",
                                     brush = Brush.linearGradient(listOf(Color(0xFF2DD4BF), Color(0xFF059669))),
@@ -169,6 +170,7 @@ fun LibraryScreen(
                             }
                             Box(modifier = Modifier.weight(1f)) {
                                 CategoryMenuCard(
+                                    modifier = Modifier.popInOnInitialLoad(1),
                                     title = "الكتب الرسمية",
                                     desc = "المنهج الوزاري المعتمد 2027",
                                     brush = Brush.linearGradient(listOf(Color(0xFF6366F1), Color(0xFF1D4ED8))),
@@ -180,6 +182,7 @@ fun LibraryScreen(
                         }
                     } else {
                         CategoryMenuCard(
+                            modifier = Modifier.popInOnInitialLoad(0),
                             title = "الملازم الدراسية",
                             desc = "أفضل الملخصات لأساتذة العراق",
                             brush = Brush.linearGradient(listOf(Color(0xFF2DD4BF), Color(0xFF059669))),
@@ -189,6 +192,7 @@ fun LibraryScreen(
                         )
 
                         CategoryMenuCard(
+                            modifier = Modifier.popInOnInitialLoad(1),
                             title = "الكتب الرسمية",
                             desc = "المنهج الوزاري المعتمد 2027",
                             brush = Brush.linearGradient(listOf(Color(0xFF6366F1), Color(0xFF1D4ED8))),
@@ -336,8 +340,7 @@ fun LibraryScreen(
                                         dampingRatio = 0.82f,
                                         stiffness = 300f
                                     )
-                                )
-                                .adaptiveItemEntrance(index, itemId = item.id),
+                                ),
                             item = item,
                             isGridView = isGridView,
                             isDark = isDark,
@@ -368,26 +371,11 @@ fun CategoryMenuCard(
     val isReturningFromPdf = LocalIsReturningFromPdf.current
     val screenKey = LocalScreenEntranceKey.current
 
-    var isCardVisible by androidx.compose.runtime.saveable.rememberSaveable { mutableStateOf(false) }
-    LaunchedEffect(Unit) {
-        isCardVisible = true
-    }
-    val cardProgress by animateFloatAsState(
-        targetValue = if (isCardVisible || isReturningFromPdf) 1f else 0f,
-        animationSpec = tween(
-            durationMillis = 450,
-            delayMillis = if (isReturningFromPdf || isCardVisible) 0 else index * 80,
-            easing = androidx.compose.animation.core.CubicBezierEasing(0.16f, 1f, 0.3f, 1f)
-        ),
-        label = "categoryCardProgress_$index"
-    )
-
-    val density = androidx.compose.ui.platform.LocalDensity.current
-    val slideOffsetPx = remember(density) { with(density) { 28.dp.toPx() } }
     val orb1Brush = remember { Brush.radialGradient(listOf(Color.White.copy(alpha = 0.22f), Color.Transparent)) }
     val orb2Brush = remember { Brush.radialGradient(listOf(Color.Black.copy(alpha = 0.12f), Color.Transparent)) }
     val borderBrush = remember { Brush.linearGradient(listOf(Color.White.copy(alpha = 0.4f), Color.White.copy(alpha = 0.05f))) }
 
+    val density = androidx.compose.ui.platform.LocalDensity.current
     val p48 = remember(density) { with(density) { 48.dp.toPx() } }
     val p96 = remember(density) { with(density) { 96.dp.toPx() } }
     val p80 = remember(density) { with(density) { 80.dp.toPx() } }
@@ -424,13 +412,6 @@ fun CategoryMenuCard(
             .fillMaxWidth()
             .then(if (isWide) Modifier.aspectRatio(1.6f) else if (screenWidthDp < 360.dp) Modifier.height(150.dp) else Modifier.height(190.dp))
             .graphicsLayer {
-                if (cardProgress < 0.999f) {
-                    translationY = (1f - cardProgress) * slideOffsetPx
-                    alpha = if (isReturningFromPdf) 1f else (0.85f + 0.15f * cardProgress)
-                    val s = 0.98f + 0.02f * cardProgress
-                    scaleX = s
-                    scaleY = s
-                }
                 ambientShadowColor = Color.Black.copy(alpha = 0.5f)
                 spotShadowColor = Color.Black.copy(alpha = 0.5f)
             }

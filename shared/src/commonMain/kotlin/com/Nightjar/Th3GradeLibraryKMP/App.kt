@@ -546,12 +546,7 @@ fun AppContent(
                                         targetContentZIndex = 0f
                                     }
                                 } else {
-                                    val pageOrder = listOf("home", "list", "news", "bookmarks", "shortcuts", "about")
-                                    val initialIndex = pageOrder.indexOf(initialState).takeIf { it >= 0 } ?: 0
-                                    val targetIndex = pageOrder.indexOf(targetState).takeIf { it >= 0 } ?: 0
-
-                                    val isBack = isNavigatingBack || (targetIndex < initialIndex)
-                                    val direction = if (isBack) -1 else 1
+                                    val direction = if (isNavigatingBack) -1 else 1
 
                                     val fluidEasing = androidx.compose.animation.core.CubicBezierEasing(0.16f, 1f, 0.3f, 1f)
                                     val slideSpec = androidx.compose.animation.core.tween<androidx.compose.ui.unit.IntOffset>(

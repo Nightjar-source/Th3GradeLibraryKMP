@@ -237,16 +237,9 @@ fun Modifier.screenEntranceCascade(index: Int = 0, itemId: String? = null): Modi
 fun Modifier.popInOnInitialLoad(index: Int = 0, itemId: String? = null): Modifier = this.screenEntranceStagger(index, itemId)
 
 /**
- * Unified adaptive entrance: Screen Entrance Cascade for initial visible items (0..8).
- * Scrolled items (> 8) are rendered instantly without overhead to preserve 120 FPS scrolling.
+ * Unified adaptive entrance: Zero overhead for dynamic list items to maintain 120 FPS scrolling without re-triggering.
  */
-fun Modifier.adaptiveItemEntrance(index: Int = 0, itemId: String? = null): Modifier = composed {
-    if (index <= 8) {
-        this.screenEntranceCascade(index, itemId)
-    } else {
-        this
-    }
-}
+fun Modifier.adaptiveItemEntrance(index: Int = 0, itemId: String? = null): Modifier = this
 
 val KufiReemFontFamily: FontFamily
     @Composable
