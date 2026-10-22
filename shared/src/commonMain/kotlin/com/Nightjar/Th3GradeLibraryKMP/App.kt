@@ -550,30 +550,27 @@ fun AppContent(
                                     val initialIndex = pageOrder.indexOf(initialState).takeIf { it >= 0 } ?: 0
                                     val targetIndex = pageOrder.indexOf(targetState).takeIf { it >= 0 } ?: 0
 
+                                    val isBack = isNavigatingBack || (targetIndex < initialIndex)
+                                    val direction = if (isBack) -1 else 1
+
                                     val fluidEasing = androidx.compose.animation.core.CubicBezierEasing(0.16f, 1f, 0.3f, 1f)
                                     val slideSpec = androidx.compose.animation.core.tween<androidx.compose.ui.unit.IntOffset>(
-                                        durationMillis = 350,
-                                        easing = fluidEasing
-                                    )
-                                    val scaleSpec = androidx.compose.animation.core.tween<Float>(
-                                        durationMillis = 350,
+                                        durationMillis = 380,
                                         easing = fluidEasing
                                     )
                                     val fadeSpec = androidx.compose.animation.core.tween<Float>(
-                                        durationMillis = 260,
-                                        easing = androidx.compose.animation.core.FastOutSlowInEasing
+                                        durationMillis = 280,
+                                        easing = androidx.compose.animation.core.LinearOutSlowInEasing
                                     )
-                                    val direction = if (isNavigatingBack || targetIndex < initialIndex) 1 else -1 // RTL: Forward is -1 (from left), Backward is 1 (from right)
 
-                                    val parallaxOffset = 0.32f
                                     (slideInHorizontally(
-                                        initialOffsetX = { fullWidth -> (fullWidth * parallaxOffset * direction).toInt() },
+                                        initialOffsetX = { fullWidth -> fullWidth * direction },
                                         animationSpec = slideSpec
-                                    ) + fadeIn(animationSpec = fadeSpec) + scaleIn(initialScale = 0.98f, animationSpec = scaleSpec)).togetherWith(
+                                    ) + fadeIn(animationSpec = fadeSpec)).togetherWith(
                                         slideOutHorizontally(
-                                            targetOffsetX = { fullWidth -> (-fullWidth * parallaxOffset * direction).toInt() },
+                                            targetOffsetX = { fullWidth -> -fullWidth * direction },
                                             animationSpec = slideSpec
-                                        ) + fadeOut(animationSpec = fadeSpec) + scaleOut(targetScale = 0.98f, animationSpec = scaleSpec)
+                                        ) + fadeOut(animationSpec = fadeSpec)
                                     )
                                 }
                             }

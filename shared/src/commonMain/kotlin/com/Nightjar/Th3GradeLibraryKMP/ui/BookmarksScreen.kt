@@ -21,9 +21,11 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Bookmark
+import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.*
@@ -234,7 +236,16 @@ fun BookmarksScreen(
                         if (book != null) {
                             val pages = groupedPages[bookId] ?: emptyList()
                             BookAccordionItem(
-                                modifier = Modifier.adaptiveItemEntrance(index, itemId = bookId),
+                                modifier = Modifier
+                                    .animateItem(
+                                        fadeInSpec = null,
+                                        fadeOutSpec = null,
+                                        placementSpec = if (isReturningFromPdf) null else spring(
+                                            dampingRatio = 0.82f,
+                                            stiffness = 320f
+                                        )
+                                    )
+                                    .adaptiveItemEntrance(index, itemId = bookId),
                                 item = book,
                                 pages = pages,
                                 isPageSaved = { pageIdx -> savedPages.contains("${book.id}:$pageIdx") },
@@ -273,6 +284,12 @@ fun BookAccordionItem(
     Column(
         modifier = modifier
             .fillMaxWidth()
+            .animateContentSize(
+                animationSpec = spring(
+                    dampingRatio = 0.82f,
+                    stiffness = 320f
+                )
+            )
             .liquidGlass(isDark, borderRadius = 20.dp, alpha = 0.96f)
             .clip(RoundedCornerShape(20.dp))
     ) {
@@ -425,11 +442,11 @@ fun BookAccordionItem(
                         enter = expandVertically(
                             animationSpec = spring(dampingRatio = 0.82f, stiffness = 320f),
                             expandFrom = Alignment.Top
-                        ) + fadeIn(tween(180)),
+                        ) + fadeIn(tween(200, easing = androidx.compose.animation.core.FastOutSlowInEasing)) + scaleIn(initialScale = 0.94f, animationSpec = spring(dampingRatio = 0.82f, stiffness = 320f)),
                         exit = shrinkVertically(
                             animationSpec = spring(dampingRatio = 0.82f, stiffness = 320f),
                             shrinkTowards = Alignment.Top
-                        ) + fadeOut(tween(180))
+                        ) + fadeOut(tween(180, easing = androidx.compose.animation.core.FastOutSlowInEasing)) + scaleOut(targetScale = 0.94f, animationSpec = tween(180))
                     ) {
                         val rowSharedModifier = if (sharedTransitionScope != null && screenVisibilityScope != null) {
                             with(sharedTransitionScope) {
@@ -469,7 +486,7 @@ fun BookAccordionItem(
                                     TransitionTargetTracker.isTransitionActive = true
                                     onNavigateToPdf(pageIndex)
                                 }
-                                .padding(12.dp),
+                                .padding(horizontal = 12.dp, vertical = 8.dp),
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             Icon(
@@ -482,8 +499,22 @@ fun BookAccordionItem(
                             Text(
                                 text = "الصفحة رقم ${pageIndex + 1}",
                                 fontSize = 14.sp,
-                                color = MaterialTheme.colorScheme.onSurface
+                                color = MaterialTheme.colorScheme.onSurface,
+                                modifier = Modifier.weight(1f)
                             )
+                            IconButton(
+                                onClick = {
+                                    SyncEngine.toggleBookmark("${item.id}:$pageIndex")
+                                },
+                                modifier = Modifier.size(32.dp)
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Delete,
+                                    contentDescription = "حذف الصفحة من المحفوظات",
+                                    tint = MaterialTheme.colorScheme.error.copy(alpha = 0.80f),
+                                    modifier = Modifier.size(18.dp)
+                                )
+                            }
                         }
                     }
                 }

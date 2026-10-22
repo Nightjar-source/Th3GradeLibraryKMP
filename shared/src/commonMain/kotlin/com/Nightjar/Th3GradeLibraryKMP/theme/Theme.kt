@@ -183,55 +183,44 @@ fun Modifier.expressiveButtonMorph(
  * Respects low-end devices and returning from PDF states.
  */
 /**
- * Fluid staggered sliding animation on screen load and quick navigations (matching backup & caliq5).
+ * Fluid staggered sliding animation on screen load and quick navigations (matching caliq5).
  * Replays smoothly on every screen entrance or tab switch with an elegant, moist (Fluid) spring motion.
- * Protected by LocalSeenEntranceItems session cache to never re-trigger or flash during list scrolling, view mode toggles, or accordion operations.
  */
 fun Modifier.screenEntranceStagger(index: Int = 0, itemId: String? = null): Modifier = composed {
     val isLowEnd = LocalIsLowEndDevice.current
-    if (isLowEnd || index > 12) return@composed this
-
     val isReturningFromPdf = LocalIsReturningFromPdf.current
-    val isNavigatingBack = LocalIsNavigatingBack.current
-    val itemKey = itemId ?: index.toString()
-    val screenKey = LocalScreenEntranceKey.current ?: "screen"
+    if (isLowEnd || isReturningFromPdf || index > 12) return@composed this
 
-    // Use rememberSaveable so each item remembers whether it has already entered,
-    // persisting across backstack pops, tab switches, and returning from PDF (matching caliq5)
-    val stableScreenKey = screenKey.substringBefore("_")
-    var isLoaded by androidx.compose.runtime.saveable.rememberSaveable(key = "entrance_${stableScreenKey}_$itemKey") {
-        androidx.compose.runtime.mutableStateOf(isReturningFromPdf || isNavigatingBack)
-    }
+    var isLoaded by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf(false) }
 
-    androidx.compose.runtime.LaunchedEffect(isLoaded) {
-        if (!isLoaded) {
-            val staggerDelay = (index.coerceIn(0, 8) * 24L)
-            if (staggerDelay > 0) kotlinx.coroutines.delay(staggerDelay)
-            isLoaded = true
+    androidx.compose.runtime.LaunchedEffect(Unit) {
+        if (index > 0) {
+            val staggerDelay = (index.coerceIn(0, 8) * 36L).coerceAtMost(240L)
+            kotlinx.coroutines.delay(staggerDelay)
         }
+        isLoaded = true
     }
 
     val animProgress by androidx.compose.animation.core.animateFloatAsState(
         targetValue = if (isLoaded) 1f else 0f,
         animationSpec = androidx.compose.animation.core.spring(
-            dampingRatio = 0.76f, // Ultra-moist fluid organic spring (سائل رطب كالحرير)
-            stiffness = 320f
+            dampingRatio = 0.72f,
+            stiffness = androidx.compose.animation.core.Spring.StiffnessLow
         ),
-        label = "entrance_$itemKey"
+        label = "fluidSlide_$index"
     )
 
-    // Once fully loaded or when returning from PDF: return pure stationary Modifier with ZERO graphicsLayer overhead!
-    if (animProgress >= 1f || (isLoaded && animProgress > 0.99f)) {
+    if (animProgress >= 1f && isLoaded) {
         Modifier
     } else {
         val density = androidx.compose.ui.platform.LocalDensity.current
-        val offsetYPx = androidx.compose.runtime.remember(density) { with(density) { 20.dp.toPx() } }
+        val offsetYPx = androidx.compose.runtime.remember(density) { with(density) { 28.dp.toPx() } }
         this.graphicsLayer {
-            val p = animProgress.coerceIn(0f, 1f)
-            this.alpha = 0.25f + 0.75f * p
-            this.translationY = (1f - p) * offsetYPx
-            this.scaleX = 0.97f + 0.03f * p
-            this.scaleY = 0.97f + 0.03f * p
+            val progress = animProgress.coerceIn(0f, 1f)
+            this.alpha = progress
+            this.translationY = (1f - progress) * offsetYPx
+            this.scaleX = 0.95f + 0.05f * progress
+            this.scaleY = 0.95f + 0.05f * progress
             this.clip = false
         }
     }
