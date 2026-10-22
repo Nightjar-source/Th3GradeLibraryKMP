@@ -7,6 +7,7 @@ import androidx.compose.animation.core.*
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -357,46 +358,21 @@ fun AppContent(
         handleTopBarBack()
     }
 
-    // Handle deep link / shortcut / notification parameters reactively
-    LaunchedEffect(initialBookId, initialIsNote, initialPage, initialSearchQuery) {
-        var consumed = false
+    // Align LazyGrid position for initial book or shortcut without racing AppViewModel
+    LaunchedEffect(initialBookId) {
         if (initialBookId != null) {
             val target = AllItems.books.firstOrNull { it.id == initialBookId }
                 ?: AllItems.notes.firstOrNull { it.id == initialBookId }
             if (target != null) {
-                val cat = if (target.isNote) "notes" else "books"
-                SyncEngine.saveSelectedCategory(cat)
                 val list = if (target.isNote) AllItems.notes else AllItems.books
                 val targetIdx = list.indexOfFirst { it.id == target.id }
-                
                 if (targetIdx >= 0) {
                     val state = if (target.isNote) libraryNotesLazyGridState else libraryBooksLazyGridState
                     try {
                         state.scrollToItem(targetIdx)
                     } catch (_: Exception) {}
                 }
-
-                // Configure backstack so returning from PDF smoothly lands on the book card in "list"
-                viewModel.pageHistory.value = listOf("home", "list")
-                viewModel.page = "list"
-                
-                // Open directly into PDF reader with shared element transition
-                com.Nightjar.Th3GradeLibraryKMP.ui.TransitionTargetTracker.activeTargetId = "card_${target.id}"
-                com.Nightjar.Th3GradeLibraryKMP.ui.TransitionTargetTracker.isTransitionActive = true
-                viewModel.selectItem(target, SyncEngine.lastReadPages.value[target.id])
-                consumed = true
             }
-        } else if (initialPage != null) {
-            navigateTo(initialPage)
-            consumed = true
-        }
-        if (initialSearchQuery != null) {
-            searchQuery = initialSearchQuery
-            isSearchOpen = true
-            consumed = true
-        }
-        if (consumed) {
-            onIntentConsumed()
         }
     }
 
@@ -428,16 +404,63 @@ fun AppContent(
             BoxWithConstraints(
                 modifier = Modifier.fillMaxSize()
             ) {
-        val adaptiveInfo = androidx.compose.material3.adaptive.currentWindowAdaptiveInfo()
-        val widthClass = adaptiveInfo.windowSizeClass.windowWidthSizeClass
-        val heightClass = adaptiveInfo.windowSizeClass.windowHeightSizeClass
-        val isWide = widthClass != androidx.window.core.layout.WindowWidthSizeClass.COMPACT
-        val isCompactHeight = heightClass == androidx.window.core.layout.WindowHeightSizeClass.COMPACT
-        val railWidth = when {
-            isCompactHeight -> 52.dp // Compact navigation rail for phone landscape (M3 Adaptive Standard)
-            widthClass == androidx.window.core.layout.WindowWidthSizeClass.EXPANDED -> 64.dp
-            else -> 56.dp
+        val screenWidth = maxWidth
+        val screenHeight = maxHeight
+        val isLandscape = screenWidth > screenHeight
+
+        val widthClass = when {
+            screenWidth < 600.dp -> androidx.window.core.layout.WindowWidthSizeClass.COMPACT
+            screenWidth < 840.dp -> androidx.window.core.layout.WindowWidthSizeClass.MEDIUM
+            else -> androidx.window.core.layout.WindowWidthSizeClass.EXPANDED
         }
+
+        val heightClass = when {
+            screenHeight < 480.dp -> androidx.window.core.layout.WindowHeightSizeClass.COMPACT
+            screenHeight < 900.dp -> androidx.window.core.layout.WindowHeightSizeClass.MEDIUM
+            else -> androidx.window.core.layout.WindowHeightSizeClass.EXPANDED
+        }
+
+        // Real-time Material 3 Adaptive Layout:
+        // A device is considered wide (side navigation rail) ONLY if:
+        // 1. Phone held in landscape: (screenWidth >= 600.dp && isLandscape)
+        // 2. Large tablet / foldable inner screen / desktop: (screenWidth >= 720.dp)
+        // A mobile phone held in portrait is NEVER wide!
+        val isWide = (screenWidth >= 600.dp) && (isLandscape || screenWidth >= 720.dp)
+
+        val railWidth = when {
+            screenHeight < 480.dp -> 52.dp // Compact navigation rail for phone landscape (M3 Adaptive Standard)
+            widthClass == androidx.window.core.layout.WindowWidthSizeClass.EXPANDED -> 72.dp // Official M3 expanded rail
+            else -> 60.dp
+        }
+            screenHeight < 480.dp -> 52.dp // Compact navigation rail for phone landscape (M3 Adaptive Standard)
+
+        // Micro/narrow window flags for pop-up, split-screen, and DeX window resizing
+        val isMicroWindow = screenWidth < 360.dp
+        val isNarrowWindow = screenWidth < 480.dp
+
+        // Adaptive Grid Columns for Books & Study Notes (Strict Compose Adaptive standards):
+        val libraryColumns = when {
+            screenWidth < 340.dp -> 1 // Micro pop-up / 1/3 split-screen: exactly 1 column
+            !isWide -> 2              // Phone portrait / compact window: exactly 2 columns!
+            screenHeight < 480.dp -> 4 // Phone landscape: exactly 4 columns
+            screenWidth >= 1440.dp -> 6 // Large desktop / 4K / wide monitor: 6 columns
+            screenWidth >= 1080.dp -> 5 // Tablet landscape / Samsung DeX expanded (1200px+): 5 columns
+            screenWidth >= 840.dp -> 4  // Tablet portrait / medium DeX: 4 columns
+            else -> 3                  // Foldable inner screen / small tablet: 3 columns
+        }
+
+        val isPhoneLandscape = isLandscape && screenHeight < 480.dp
+        val responsiveInfo = com.Nightjar.Th3GradeLibraryKMP.theme.ResponsiveLayoutInfo(
+            width = screenWidth,
+            height = screenHeight,
+            isLandscape = isLandscape,
+            isWide = isWide,
+            isPhoneLandscape = isPhoneLandscape,
+            widthClass = widthClass,
+            heightClass = heightClass,
+            gridColumns = libraryColumns,
+            railWidth = railWidth
+        )
         
         val currentNavBar = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
         val systemBarsInsets = WindowInsets.statusBars.union(WindowInsets.captionBar).union(WindowInsets.displayCutout)
@@ -445,7 +468,10 @@ fun AppContent(
         
         val listBottomPadding = if (isWide) 24.dp + currentNavBar else 110.dp + currentNavBar
 
-        CompositionLocalProvider(LocalStableStatusBarHeight provides currentStatusBar) {
+        CompositionLocalProvider(
+            LocalStableStatusBarHeight provides currentStatusBar,
+            com.Nightjar.Th3GradeLibraryKMP.theme.LocalResponsiveLayoutInfo provides responsiveInfo
+        ) {
         Box(
             modifier = Modifier
                 .fillMaxSize()
@@ -539,15 +565,15 @@ fun AppContent(
                                     )
                                     val direction = if (isNavigatingBack || targetIndex < initialIndex) 1 else -1 // RTL: Forward is -1 (from left), Backward is 1 (from right)
 
-                                    val parallaxOffset = 0.32f
+                                    val parallaxOffset = 0.28f
                                     (slideInHorizontally(
                                         initialOffsetX = { fullWidth -> (fullWidth * parallaxOffset * direction).toInt() },
                                         animationSpec = slideSpec
-                                    ) + fadeIn(animationSpec = fadeSpec) + scaleIn(initialScale = 0.98f, animationSpec = scaleSpec)).togetherWith(
+                                    ) + fadeIn(initialAlpha = 0.70f, animationSpec = fadeSpec)).togetherWith(
                                         slideOutHorizontally(
                                             targetOffsetX = { fullWidth -> (-fullWidth * parallaxOffset * direction).toInt() },
                                             animationSpec = slideSpec
-                                        ) + fadeOut(animationSpec = fadeSpec) + scaleOut(targetScale = 0.98f, animationSpec = scaleSpec)
+                                        ) + fadeOut(targetAlpha = 0.30f, animationSpec = fadeSpec)
                                     )
                                 }
                             }
@@ -704,11 +730,48 @@ fun AppContent(
                 }
 
                 // --- Floating Top Header (App Bar + Search Bar) in Unified Non-Overlapping Column ---
+                val topHeaderSharedScope = LocalSharedTransitionScope.current
+                var isVoiceListening by remember { mutableStateOf(false) }
+
+                val stopVoiceAndClearSearch = {
+                    if (isVoiceListening) {
+                        try {
+                            platformActionHandler.stopVoiceSearch()
+                        } catch (_: Exception) {}
+                        isVoiceListening = false
+                    }
+                    searchQuery = ""
+                }
+
+                LaunchedEffect(page) {
+                    if (page != "list") {
+                        stopVoiceAndClearSearch()
+                        isSearchOpen = false
+                    }
+                }
+
+                DisposableEffect(isVoiceListening) {
+                    onDispose {
+                        if (isVoiceListening) {
+                            try {
+                                platformActionHandler.stopVoiceSearch()
+                            } catch (_: Exception) {}
+                        }
+                    }
+                }
+
                 Column(
                     modifier = Modifier
                         .align(Alignment.TopCenter)
                         .fillMaxWidth()
                         .zIndex(200f)
+                        .then(
+                            if (topHeaderSharedScope != null) {
+                                with(topHeaderSharedScope) {
+                                    Modifier.renderInSharedTransitionScopeOverlay(zIndexInOverlay = 50f)
+                                }
+                            } else Modifier
+                        )
                 ) {
                     // Floating App Bar
                     androidx.compose.animation.AnimatedVisibility(
@@ -717,18 +780,35 @@ fun AppContent(
                         exit = slideOutVertically(animationSpec = spring(dampingRatio = 0.76f, stiffness = 280f)) { -it } + fadeOut(tween(220)),
                         modifier = Modifier.fillMaxWidth()
                     ) {
+                    val isPhoneLandscape = isLandscape && screenHeight < 480.dp
+                    val isExpandedScreen = widthClass == androidx.window.core.layout.WindowWidthSizeClass.EXPANDED && screenHeight >= 480.dp
                     val animatedEndPadding by animateDpAsState(
-                        targetValue = if (isWide) (railWidth + 16.dp) else 16.dp,
+                        targetValue = if (isWide) (railWidth + 16.dp) else if (isMicroWindow) 8.dp else 16.dp,
                         animationSpec = spring(dampingRatio = 0.78f, stiffness = 300f),
                         label = "topBarEndPadding"
                     )
+                    val animatedStartPadding by animateDpAsState(
+                        targetValue = if (isMicroWindow) 8.dp else 16.dp,
+                        animationSpec = spring(dampingRatio = 0.78f, stiffness = 300f),
+                        label = "topBarStartPadding"
+                    )
                     val animatedTopPadding by animateDpAsState(
-                        targetValue = if (isWide) 4.dp else 8.dp,
+                        targetValue = when {
+                            isPhoneLandscape -> 2.dp      // Phone landscape: total 38dp (< 46dp)
+                            isMicroWindow -> 3.dp         // Micro window: total 42dp (< 46dp)
+                            isExpandedScreen -> 8.dp      // Tablets / DeX: official M3 64dp
+                            else -> 4.dp                  // Normal portrait phone: total 50dp (< 56dp)
+                        },
                         animationSpec = spring(dampingRatio = 0.78f, stiffness = 300f),
                         label = "topBarTopPadding"
                     )
                     val animatedElementSize by animateDpAsState(
-                        targetValue = if (isWide) 40.dp else 44.dp,
+                        targetValue = when {
+                            isPhoneLandscape -> 34.dp     // Phone landscape: under 46dp
+                            isMicroWindow -> 36.dp
+                            isExpandedScreen -> 48.dp     // Tablets / DeX: standard
+                            else -> 42.dp                 // Normal portrait phone: under 56dp (42dp + 8dp padding = 50dp)
+                        },
                         animationSpec = spring(dampingRatio = 0.78f, stiffness = 300f),
                         label = "topBarElementSize"
                     )
@@ -738,7 +818,7 @@ fun AppContent(
                             .windowInsetsPadding(WindowInsets.statusBars.union(WindowInsets.captionBar).union(WindowInsets.displayCutout))
                             .windowInsetsPadding(WindowInsets.safeDrawing.only(WindowInsetsSides.Horizontal))
                             .padding(
-                                start = 16.dp,
+                                start = animatedStartPadding,
                                 end = animatedEndPadding,
                                 top = animatedTopPadding,
                                 bottom = animatedTopPadding
@@ -765,7 +845,7 @@ fun AppContent(
                                     imageVector = Icons.Default.ChevronRight,
                                     contentDescription = "Back",
                                     tint = MaterialTheme.colorScheme.onSurface,
-                                    modifier = Modifier.size(if (isWide) 22.dp else 26.dp)
+                                    modifier = Modifier.size(if (isPhoneLandscape) 18.dp else if (isMicroWindow) 20.dp else if (isWide) 22.dp else 26.dp)
                                 )
                             }
                         }
@@ -794,12 +874,12 @@ fun AppContent(
                                 Image(
                                     painter = painterResource(com.Nightjar.Th3GradeLibraryKMP.generated.resources.Res.drawable.app_icon),
                                     contentDescription = "App Icon",
-                                    modifier = Modifier.size(28.dp).clip(CircleShape)
+                                    modifier = Modifier.size(if (isMicroWindow) 24.dp else 28.dp).clip(CircleShape)
                                 )
                             }
                         }
 
-                        // 2. Separate Floating Oval Title Capsule in the Center (البيضوي بالوسط)
+                        // 2. Separate Floating Oval Title Capsule in the Center with Dynamic Safe Margins
                         var savedTitle by remember { mutableStateOf("مكتبة الثالث متوسط") }
                         val appBarTitleRaw = when (page) {
                             "news" -> "آخر الأخبار"
@@ -813,17 +893,29 @@ fun AppContent(
                             savedTitle = appBarTitleRaw
                         }
 
+                        val titleStartMargin = if (isWide) 110.dp else (animatedElementSize + (if (isMicroWindow) 6.dp else 12.dp))
+                        val titleEndMargin = if (isWide) {
+                            110.dp
+                        } else {
+                            when (page) {
+                                "list" -> animatedElementSize * 2 + (if (isMicroWindow) 12.dp else 20.dp)
+                                "news" -> animatedElementSize + (if (isMicroWindow) 6.dp else 12.dp)
+                                else -> animatedElementSize + (if (isMicroWindow) 6.dp else 12.dp)
+                            }
+                        }
+
                         Box(
                             modifier = Modifier
                                 .align(Alignment.Center)
-                                .padding(horizontal = if (isWide) 110.dp else 64.dp)
+                                .padding(start = titleStartMargin, end = titleEndMargin)
                                 .height(animatedElementSize)
                                 .wrapContentWidth()
-                                .widthIn(min = 100.dp, max = 420.dp)
+                                .widthIn(max = 420.dp)
                                 .liquidGlass(isDark, borderRadius = 24.dp, alpha = 0.92f)
                                 .clip(CircleShape)
+                                .clickable(interactionSource = remember { MutableInteractionSource() }, indication = null) { /* Touch shield */ }
                                 .animateContentSize(spring(dampingRatio = 0.76f, stiffness = 320f))
-                                .padding(horizontal = if (isWide) 16.dp else 20.dp),
+                                .padding(horizontal = if (isMicroWindow) 8.dp else if (isWide) 16.dp else 20.dp),
                             contentAlignment = Alignment.Center
                         ) {
                             AnimatedContent(
@@ -836,7 +928,7 @@ fun AppContent(
                             ) { targetTitle ->
                                 Text(
                                     text = targetTitle,
-                                    fontSize = if (isWide) 15.sp else 16.sp,
+                                    fontSize = if (isPhoneLandscape) 12.sp else if (isMicroWindow) 12.sp else if (isWide) 15.sp else 16.sp,
                                     fontWeight = FontWeight.Bold,
                                     fontFamily = if (targetTitle == "مكتبة الثالث متوسط") com.Nightjar.Th3GradeLibraryKMP.theme.KufiReemFontFamily else null,
                                     color = MaterialTheme.colorScheme.onSurface,
@@ -906,7 +998,15 @@ fun AppContent(
                                             .size(animatedElementSize)
                                             .liquidGlass(isDark, borderRadius = 22.dp, alpha = 0.92f)
                                             .clip(CircleShape)
-                                            .bounceClick { isSearchOpen = !isSearchOpen },
+                                            .bounceClick {
+                                                if (isSearchOpen) {
+                                                    stopVoiceAndClearSearch()
+                                                    isSearchOpen = false
+                                                } else {
+                                                    stopVoiceAndClearSearch()
+                                                    isSearchOpen = true
+                                                }
+                                            },
                                         contentAlignment = Alignment.Center
                                     ) {
                                         androidx.compose.animation.AnimatedContent(
@@ -963,34 +1063,34 @@ fun AppContent(
                         modifier = Modifier.fillMaxWidth()
                     ) {
                         val animatedSearchBarHeight by animateDpAsState(
-                            targetValue = if (isWide) 48.dp else 56.dp,
+                            targetValue = when {
+                                isPhoneLandscape -> 36.dp // Phone landscape: compact under 46dp
+                                isMicroWindow -> 40.dp
+                                isExpandedScreen -> 54.dp // Tablets / DeX: official M3 SearchBar
+                                else -> 46.dp             // Normal portrait phone: sleek under 56dp
+                            },
                             animationSpec = spring(dampingRatio = 0.78f, stiffness = 300f),
                             label = "searchBarHeight"
                         )
                         val animatedSearchBarEndPadding by animateDpAsState(
-                            targetValue = if (isWide) (railWidth + 16.dp) else 16.dp,
+                            targetValue = if (isWide) (railWidth + 16.dp) else if (isMicroWindow) 8.dp else 16.dp,
                             animationSpec = spring(dampingRatio = 0.78f, stiffness = 300f),
                             label = "searchBarEndPadding"
                         )
-                        val searchFontSize = if (isWide) 14.sp else 15.sp
-                        var isListening by remember { mutableStateOf(false) }
+                        val animatedSearchBarStartPadding by animateDpAsState(
+                            targetValue = if (isMicroWindow) 8.dp else 16.dp,
+                            animationSpec = spring(dampingRatio = 0.78f, stiffness = 300f),
+                            label = "searchBarStartPadding"
+                        )
+                        val searchFontSize = if (isPhoneLandscape || isMicroWindow) 12.sp else if (isWide) 14.sp else 15.sp
 
                         var isClearingAnimation by remember { mutableStateOf(false) }
                         var displayClearText by remember { mutableStateOf("") }
                         val clearTextSlideOffset = remember { androidx.compose.animation.core.Animatable(0f) }
                         val clearTextSlideAlpha = remember { androidx.compose.animation.core.Animatable(1f) }
                         
-                        DisposableEffect(Unit) {
-                            onDispose {
-                                if (isListening) {
-                                    platformActionHandler.stopVoiceSearch()
-                                    isListening = false
-                                }
-                            }
-                        }
-                        
                         val pulseAnim = animateFloatAsState(
-                            targetValue = if (isListening) 1.2f else 1f,
+                            targetValue = if (isVoiceListening) 1.2f else 1f,
                             animationSpec = infiniteRepeatable(
                                 animation = tween(500, easing = FastOutSlowInEasing),
                                 repeatMode = RepeatMode.Reverse
@@ -1004,7 +1104,7 @@ fun AppContent(
                                 .padding(
                                     top = 4.dp,
                                     bottom = 8.dp,
-                                    start = 16.dp,
+                                    start = animatedSearchBarStartPadding,
                                     end = animatedSearchBarEndPadding
                                 ),
                             contentAlignment = Alignment.TopCenter
@@ -1016,6 +1116,8 @@ fun AppContent(
                                 .defaultMinSize(minHeight = animatedSearchBarHeight)
                                 .wrapContentHeight()
                                 .liquidGlass(isDark, borderRadius = 28.dp, alpha = 0.95f)
+                                .clip(RoundedCornerShape(28.dp))
+                                .clickable(interactionSource = remember { MutableInteractionSource() }, indication = null) { /* Touch shield */ }
                                 .animateContentSize(spring(dampingRatio = 0.65f, stiffness = 180f))
                                 .padding(horizontal = 16.dp, vertical = if (isWide) 4.dp else 6.dp),
                             verticalAlignment = Alignment.CenterVertically
@@ -1032,8 +1134,8 @@ fun AppContent(
                                 contentAlignment = Alignment.CenterStart
                             ) {
                                 BasicTextField(
-                                    value = if (isListening) "جاري الاستماع..." else searchQuery,
-                                    onValueChange = { if (!isListening && !isClearingAnimation) searchQuery = it },
+                                    value = if (isVoiceListening) "جاري الاستماع..." else searchQuery,
+                                    onValueChange = { if (!isVoiceListening && !isClearingAnimation) searchQuery = it },
                                     textStyle = LocalTextStyle.current.copy(
                                         color = MaterialTheme.colorScheme.onSurface,
                                         fontSize = searchFontSize
@@ -1041,14 +1143,14 @@ fun AppContent(
                                     cursorBrush = SolidColor(MaterialTheme.colorScheme.primary),
                                     modifier = Modifier.fillMaxWidth(),
                                     singleLine = true,
-                                    readOnly = isListening || isClearingAnimation,
+                                    readOnly = isVoiceListening || isClearingAnimation,
                                     decorationBox = { innerTextField ->
                                         Box(
                                             modifier = Modifier.fillMaxWidth(),
                                             contentAlignment = Alignment.CenterStart
                                         ) {
                                             androidx.compose.animation.AnimatedVisibility(
-                                                visible = searchQuery.isEmpty() && !isListening && !isClearingAnimation,
+                                                visible = searchQuery.isEmpty() && !isVoiceListening && !isClearingAnimation,
                                                 enter = androidx.compose.animation.fadeIn(animationSpec = tween(220, delayMillis = 150)),
                                                 exit = androidx.compose.animation.fadeOut(animationSpec = tween(120))
                                             ) {
@@ -1089,35 +1191,35 @@ fun AppContent(
                             
                             IconButton(
                                 onClick = {
-                                    if (!isListening) {
-                                        isListening = true
+                                    if (!isVoiceListening) {
+                                        isVoiceListening = true
                                         platformActionHandler.startVoiceSearch(
                                             onResult = { text ->
                                                 searchQuery = text
                                             },
                                             onEnd = {
-                                                isListening = false
+                                                isVoiceListening = false
                                             }
                                         )
                                     } else {
                                         platformActionHandler.stopVoiceSearch()
-                                        isListening = false
+                                        isVoiceListening = false
                                     }
                                 },
                                 modifier = Modifier
                                     .size(if (isWide) 36.dp else 40.dp)
                                     .graphicsLayer {
-                                        val s = if (isListening) pulseAnim.value else 1f
+                                        val s = if (isVoiceListening) pulseAnim.value else 1f
                                         scaleX = s
                                         scaleY = s
                                     }
                                     .background(
-                                        color = if (isListening) MaterialTheme.colorScheme.primary.copy(alpha = 0.2f) else Color.Transparent,
+                                        color = if (isVoiceListening) MaterialTheme.colorScheme.primary.copy(alpha = 0.2f) else Color.Transparent,
                                         shape = CircleShape
                                     )
                             ) {
                                 androidx.compose.animation.AnimatedContent(
-                                    targetState = isListening,
+                                    targetState = isVoiceListening,
                                     transitionSpec = {
                                         (androidx.compose.animation.scaleIn(initialScale = 0.7f) + androidx.compose.animation.fadeIn()) togetherWith
                                         (androidx.compose.animation.scaleOut(targetScale = 1.3f) + androidx.compose.animation.fadeOut())
@@ -1133,7 +1235,7 @@ fun AppContent(
                             }
 
                             androidx.compose.animation.AnimatedVisibility(
-                                visible = (searchQuery.isNotEmpty() || isClearingAnimation) && !isListening,
+                                visible = (searchQuery.isNotEmpty() || isClearingAnimation) && !isVoiceListening,
                                 enter = androidx.compose.animation.fadeIn(animationSpec = tween(220)) + 
                                         androidx.compose.animation.scaleIn(initialScale = 0.8f, animationSpec = spring(dampingRatio = 0.7f, stiffness = 200f)) +
                                         androidx.compose.animation.expandHorizontally(expandFrom = Alignment.End, animationSpec = spring(dampingRatio = 0.8f, stiffness = 250f)),
@@ -1236,11 +1338,12 @@ fun AppContent(
                 val selectedIndex = lastValidIndex
                 val isMenuButtonActive = isDrawerOpen || page == "about" || page == "shortcuts"
 
+                val bottomBarHeight = if (screenHeight < 560.dp || isMicroWindow) 56.dp else 64.dp
                 Row(
                     modifier = Modifier
                         .widthIn(max = 480.dp)
                         .fillMaxWidth()
-                        .height(64.dp),
+                        .height(bottomBarHeight),
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.Center
                 ) {
@@ -1410,10 +1513,10 @@ fun AppContent(
             visible = !showOnboarding && page in mainTabs && isWide,
             enter = slideInHorizontally(animationSpec = spring(dampingRatio = 0.76f, stiffness = 280f)) { -it } + fadeIn(tween(260)),
             exit = slideOutHorizontally(animationSpec = spring(dampingRatio = 0.76f, stiffness = 280f)) { -it } + fadeOut(tween(220)),
-            modifier = Modifier.align(Alignment.CenterEnd).fillMaxHeight().zIndex(200f).then(
+            modifier = Modifier.align(Alignment.CenterEnd).fillMaxHeight().zIndex(250f).then(
                 if (LocalSharedTransitionScope.current != null) {
                     with(LocalSharedTransitionScope.current!!) {
-                        Modifier.renderInSharedTransitionScopeOverlay(zIndexInOverlay = 50f)
+                        Modifier.renderInSharedTransitionScopeOverlay(zIndexInOverlay = 60f)
                     }
                 } else Modifier
             )
@@ -1630,7 +1733,8 @@ fun AppContent(
                 Box(
                     modifier = Modifier
                         .fillMaxHeight()
-                        .width(280.dp)
+                        .widthIn(max = 280.dp)
+                        .fillMaxWidth(0.82f)
                         .clickable(enabled = false) {}
                         .align(Alignment.TopStart)
                         .clip(RoundedCornerShape(topEnd = 32.dp, bottomEnd = 32.dp))

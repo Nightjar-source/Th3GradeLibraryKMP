@@ -88,6 +88,12 @@ class AppViewModel : ViewModel() {
                     page = "pdf"
                     persistState()
                 }
+            } else if (initialPage != null && initialPage != page) {
+                navigateTo(initialPage)
+            }
+            if (!initialSearchQuery.isNullOrEmpty()) {
+                searchQuery = initialSearchQuery
+                isSearchOpen = true
             }
             return
         }
@@ -217,9 +223,6 @@ class AppViewModel : ViewModel() {
             val updated = current.dropLast(1)
             pageHistory.value = updated
             page = updated.last()
-            if (!wasOnPdf) {
-                screenNavCounter++
-            }
             persistState()
             viewModelScope.launch {
                 delay(450)

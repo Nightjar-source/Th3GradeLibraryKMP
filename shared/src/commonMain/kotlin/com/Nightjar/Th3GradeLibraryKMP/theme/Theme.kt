@@ -69,6 +69,20 @@ val LocalSeenEntranceItems = compositionLocalOf<androidx.compose.runtime.snapsho
 val LocalScreenEntranceKey = compositionLocalOf { "default_screen" }
 val LocalIsReturningFromPdf = compositionLocalOf { false }
 
+data class ResponsiveLayoutInfo(
+    val width: Dp = 360.dp,
+    val height: Dp = 640.dp,
+    val isLandscape: Boolean = false,
+    val isWide: Boolean = false,
+    val isPhoneLandscape: Boolean = false,
+    val widthClass: androidx.window.core.layout.WindowWidthSizeClass = androidx.window.core.layout.WindowWidthSizeClass.COMPACT,
+    val heightClass: androidx.window.core.layout.WindowHeightSizeClass = androidx.window.core.layout.WindowHeightSizeClass.MEDIUM,
+    val gridColumns: Int = 2,
+    val railWidth: Dp = 52.dp
+)
+
+val LocalResponsiveLayoutInfo = compositionLocalOf { ResponsiveLayoutInfo() }
+
 // Glassmorphism modifier optimized with hardware-accelerated drawWithCache
 fun Modifier.liquidGlass(
     isDark: Boolean,
@@ -184,7 +198,8 @@ fun Modifier.screenEntranceStagger(index: Int = 0, itemId: String? = null): Modi
 
     // Use rememberSaveable so each item remembers whether it has already entered,
     // persisting across backstack pops, tab switches, and returning from PDF (matching caliq5)
-    var isLoaded by androidx.compose.runtime.saveable.rememberSaveable(key = "entrance_${screenKey}_$itemKey") {
+    val stableScreenKey = screenKey.substringBefore("_")
+    var isLoaded by androidx.compose.runtime.saveable.rememberSaveable(key = "entrance_${stableScreenKey}_$itemKey") {
         androidx.compose.runtime.mutableStateOf(isReturningFromPdf || isNavigatingBack)
     }
 

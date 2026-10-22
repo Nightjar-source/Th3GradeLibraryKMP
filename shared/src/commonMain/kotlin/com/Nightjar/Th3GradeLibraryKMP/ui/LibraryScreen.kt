@@ -126,7 +126,7 @@ fun LibraryScreen(
                     onScrollableStateChanged(canScroll)
                 }
 
-                val dynamicTopPadding = if (isWide) statusBarHeight + 64.dp else statusBarHeight + 76.dp
+                val dynamicTopPadding = when { responsiveInfo.isPhoneLandscape -> statusBarHeight + 44.dp; isWide -> statusBarHeight + 72.dp; else -> statusBarHeight + 58.dp }
                     
                 Box(
                     modifier = Modifier.fillMaxSize(),
@@ -270,13 +270,17 @@ fun LibraryScreen(
                         animationSpec = spring(dampingRatio = 0.78f, stiffness = 300f),
                         label = "searchBarOffset"
                     )
-                    val dynamicTopPadding = (if (isWide) statusBarHeight + 64.dp else statusBarHeight + 76.dp) + searchBarOffset
+                    val dynamicTopPadding = (when { responsiveInfo.isPhoneLandscape -> statusBarHeight + 44.dp; isWide -> statusBarHeight + 72.dp; else -> statusBarHeight + 58.dp }) + searchBarOffset
                     val dynamicGridColumns = remember(widthClass, heightClass, screenWidthDp, isGridView) {
                         if (isGridView) {
                             when (widthClass) {
                                 WindowWidthSizeClass.COMPACT -> {
-                                    // Official Material 3 Compact: Phone in vertical portrait (< 600dp) -> 2 columns
-                                    GridCells.Fixed(2)
+                                    // Official Material 3 Compact: Micro window (<340dp) -> 1 column; Standard phone -> 2 columns
+                                    if (screenWidthDp < 340.dp) {
+                                        GridCells.Fixed(1)
+                                    } else {
+                                        GridCells.Fixed(2)
+                                    }
                                 }
                                 WindowWidthSizeClass.MEDIUM -> {
                                     // Official Material 3 Medium (600dp - 840dp):
@@ -368,15 +372,15 @@ fun CategoryMenuCard(
     val isReturningFromPdf = LocalIsReturningFromPdf.current
     val screenKey = LocalScreenEntranceKey.current
 
-    var isCardVisible by remember(screenKey) { mutableStateOf(isReturningFromPdf) }
-    LaunchedEffect(screenKey) {
+    var isCardVisible by androidx.compose.runtime.saveable.rememberSaveable { mutableStateOf(false) }
+    LaunchedEffect(Unit) {
         isCardVisible = true
     }
     val cardProgress by animateFloatAsState(
         targetValue = if (isCardVisible || isReturningFromPdf) 1f else 0f,
         animationSpec = tween(
-            durationMillis = 500,
-            delayMillis = if (isReturningFromPdf) 0 else index * 90,
+            durationMillis = 450,
+            delayMillis = if (isReturningFromPdf || isCardVisible) 0 else index * 80,
             easing = androidx.compose.animation.core.CubicBezierEasing(0.16f, 1f, 0.3f, 1f)
         ),
         label = "categoryCardProgress_$index"
@@ -422,13 +426,15 @@ fun CategoryMenuCard(
     Card(
         modifier = modifier
             .fillMaxWidth()
-            .then(if (isWide) Modifier.aspectRatio(1.6f) else Modifier.height(190.dp))
+            .then(if (isWide) Modifier.aspectRatio(1.6f) else if (screenWidthDp < 360.dp) Modifier.height(150.dp) else Modifier.height(190.dp))
             .graphicsLayer {
-                translationY = (1f - cardProgress) * slideOffsetPx
-                alpha = if (isReturningFromPdf) 1f else (0.85f + 0.15f * cardProgress)
-                val s = 0.98f + 0.02f * cardProgress
-                scaleX = s
-                scaleY = s
+                if (cardProgress < 0.999f) {
+                    translationY = (1f - cardProgress) * slideOffsetPx
+                    alpha = if (isReturningFromPdf) 1f else (0.85f + 0.15f * cardProgress)
+                    val s = 0.98f + 0.02f * cardProgress
+                    scaleX = s
+                    scaleY = s
+                }
                 ambientShadowColor = Color.Black.copy(alpha = 0.5f)
                 spotShadowColor = Color.Black.copy(alpha = 0.5f)
             }
@@ -482,8 +488,9 @@ fun CategoryMenuCard(
                 )
             }
 
+            val cardPadding = if (screenWidthDp < 360.dp) 16.dp else 28.dp
             Column(
-                modifier = Modifier.fillMaxSize().padding(28.dp),
+                modifier = Modifier.fillMaxSize().padding(cardPadding),
                 verticalArrangement = Arrangement.SpaceBetween,
                 horizontalAlignment = Alignment.Start
             ) {
@@ -507,7 +514,7 @@ fun CategoryMenuCard(
                     Text(
                         text = title,
                         color = Color.White,
-                        fontSize = 28.sp,
+                        fontSize = if (screenWidthDp < 360.dp) 20.sp else 28.sp,
                         fontWeight = FontWeight.Black,
                         style = androidx.compose.ui.text.TextStyle(
                             shadow = androidx.compose.ui.graphics.Shadow(
@@ -565,22 +572,15 @@ fun LazyGridItemScope.ContentCard(
                 sharedContentState = rememberSharedContentState(key = "card_${item.id}"),
                 animatedVisibilityScope = animatedVisibilityScope,
                 enter = androidx.compose.animation.fadeIn(
-                    animationSpec = androidx.compose.animation.core.tween(
-                        durationMillis = 150,
-                        delayMillis = 75,
-                        easing = androidx.compose.animation.core.LinearEasing
-                    )
+                    animationSpec = spring(dampingRatio = 0.82f, stiffness = 320f)
                 ),
                 exit = androidx.compose.animation.fadeOut(
-                    animationSpec = androidx.compose.animation.core.tween(
-                        durationMillis = 130,
-                        easing = androidx.compose.animation.core.LinearEasing
-                    )
+                    animationSpec = spring(dampingRatio = 0.82f, stiffness = 320f)
                 ),
                 renderInOverlayDuringTransition = isSharedActive,
                 clipInOverlayDuringTransition = OverlayClip(RoundedCornerShape(cardCornerRadius)),
                 zIndexInOverlay = 10f,
-                boundsTransform = { _, _ -> spring(dampingRatio = 0.82f, stiffness = 280f) },
+                boundsTransform = { _, _ -> spring(dampingRatio = 0.82f, stiffness = 320f) },
                 resizeMode = SharedTransitionScope.ResizeMode.RemeasureToBounds
             )
         }
@@ -682,13 +682,15 @@ fun LazyGridItemScope.ContentCard(
                     }
                 }
             } else {
+                val layoutInfo = com.Nightjar.Th3GradeLibraryKMP.theme.LocalResponsiveLayoutInfo.current
+                val isMicro = layoutInfo.width < 360.dp
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Box(
                         modifier = Modifier
-                            .size(width = 72.dp, height = 96.dp)
+                            .size(width = if (isMicro) 56.dp else 72.dp, height = if (isMicro) 75.dp else 96.dp)
                             .clip(RoundedCornerShape(14.dp))
                             .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
                     ) {
@@ -705,18 +707,18 @@ fun LazyGridItemScope.ContentCard(
                         )
                     }
 
-                    Spacer(modifier = Modifier.width(16.dp))
+                    Spacer(modifier = Modifier.width(if (isMicro) 10.dp else 16.dp))
 
                     Column(modifier = Modifier.weight(1f)) {
                         Text(
                             text = item.title,
-                            fontSize = 16.sp,
+                            fontSize = if (isMicro) 14.sp else 16.sp,
                             fontWeight = FontWeight.Bold,
                             maxLines = 2,
                             overflow = TextOverflow.Ellipsis,
                             color = MaterialTheme.colorScheme.onSurface
                         )
-                        Spacer(modifier = Modifier.height(6.dp))
+                        Spacer(modifier = Modifier.height(if (isMicro) 4.dp else 6.dp))
                         Row(
                             verticalAlignment = Alignment.CenterVertically,
                             horizontalArrangement = Arrangement.spacedBy(6.dp)

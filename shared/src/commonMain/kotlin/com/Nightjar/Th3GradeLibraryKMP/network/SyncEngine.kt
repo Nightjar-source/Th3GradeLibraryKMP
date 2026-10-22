@@ -144,6 +144,15 @@ object SyncEngine {
         settings.putString("expanded_bookmarks", current.joinToString(","))
     }
 
+    fun setBookmarkExpanded(key: String, expanded: Boolean) {
+        val current = _expandedBookmarks.value.toMutableSet()
+        val changed = if (expanded) current.add(key) else current.remove(key)
+        if (changed) {
+            _expandedBookmarks.value = current
+            settings.putString("expanded_bookmarks", current.joinToString(","))
+        }
+    }
+
     private fun loadGridView() {
         _isGridView.value = settings.getBoolean("is_grid_view", true)
     }

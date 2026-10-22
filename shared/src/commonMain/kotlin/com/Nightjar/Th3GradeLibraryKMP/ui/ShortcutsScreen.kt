@@ -64,22 +64,16 @@ fun ShortcutsScreen(
         onScrollableStateChanged(canScroll)
     }
 
-    val adaptiveInfo = currentWindowAdaptiveInfo()
-    val windowSizeClass = adaptiveInfo.windowSizeClass
-    val widthClass = windowSizeClass.windowWidthSizeClass
-    val heightClass = windowSizeClass.windowHeightSizeClass
+    val responsiveInfo = com.Nightjar.Th3GradeLibraryKMP.theme.LocalResponsiveLayoutInfo.current
 
     BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
-        val windowInfo = androidx.compose.ui.platform.LocalWindowInfo.current
-        val density = androidx.compose.ui.platform.LocalDensity.current
-        val screenWidthDp = with(density) { windowInfo.containerSize.width.toDp() }
-        val isWide = widthClass != WindowWidthSizeClass.COMPACT
+        val isWide = responsiveInfo.isWide
         Column(
             modifier = Modifier
                 .fillMaxSize()
         ) {
             val statusBarHeight = WindowInsets.statusBars.add(WindowInsets.captionBar).asPaddingValues().calculateTopPadding()
-            val dynamicTopPadding = if (isWide) statusBarHeight + 64.dp else statusBarHeight + 76.dp
+            val dynamicTopPadding = when { responsiveInfo.isPhoneLandscape -> statusBarHeight + 44.dp; isWide -> statusBarHeight + 72.dp; else -> statusBarHeight + 58.dp }
 
             val isNavigatingBack = com.Nightjar.Th3GradeLibraryKMP.theme.LocalIsNavigatingBack.current
             LaunchedEffect(isNavigatingBack) {
@@ -88,21 +82,23 @@ fun ShortcutsScreen(
                 }
             }
 
-            val dynamicShortcutColumns = remember(widthClass, heightClass, screenWidthDp) {
-                when (widthClass) {
-                    WindowWidthSizeClass.COMPACT -> GridCells.Fixed(2)
-                    WindowWidthSizeClass.MEDIUM -> {
-                        if (heightClass == WindowHeightSizeClass.COMPACT) GridCells.Fixed(4) else GridCells.Fixed(3)
+            val dynamicShortcutColumns = remember(responsiveInfo) {
+                if (!responsiveInfo.isWide) {
+                    if (responsiveInfo.width < 340.dp) {
+                        GridCells.Fixed(1)
+                    } else {
+                        GridCells.Fixed(2)
                     }
-                    WindowWidthSizeClass.EXPANDED -> {
-                        when {
-                            screenWidthDp >= 1800.dp -> GridCells.Fixed(8)
-                            screenWidthDp >= 1440.dp -> GridCells.Fixed(6)
-                            screenWidthDp >= 1080.dp -> GridCells.Fixed(5)
-                            else                     -> GridCells.Fixed(4)
-                        }
-                    }
-                    else -> GridCells.Fixed(2)
+                } else if (responsiveInfo.height < 480.dp) {
+                    GridCells.Fixed(4)
+                } else if (responsiveInfo.width >= 1800.dp) {
+                    GridCells.Fixed(8)
+                } else if (responsiveInfo.width >= 1440.dp) {
+                    GridCells.Fixed(6)
+                } else if (responsiveInfo.width >= 1080.dp) {
+                    GridCells.Fixed(5)
+                } else {
+                    GridCells.Fixed(4)
                 }
             }
 

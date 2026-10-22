@@ -54,11 +54,11 @@ fun AboutScreen(
         modifier = Modifier.fillMaxSize(),
         contentAlignment = Alignment.TopCenter
     ) {
-        val screenWidthDp = with(androidx.compose.ui.platform.LocalDensity.current) { androidx.compose.ui.platform.LocalWindowInfo.current.containerSize.width.toDp() }
-        val isWide = screenWidthDp >= 600.dp
+        val responsiveInfo = com.Nightjar.Th3GradeLibraryKMP.theme.LocalResponsiveLayoutInfo.current
+        val isWide = responsiveInfo.isWide
         
         val statusBarHeight = WindowInsets.statusBars.add(WindowInsets.captionBar).asPaddingValues().calculateTopPadding()
-        val dynamicTopPadding = if (isWide) statusBarHeight + 64.dp else statusBarHeight + 76.dp
+        val dynamicTopPadding = when { responsiveInfo.isPhoneLandscape -> statusBarHeight + 44.dp; isWide -> statusBarHeight + 72.dp; else -> statusBarHeight + 58.dp }
 
         Column(
             modifier = Modifier
