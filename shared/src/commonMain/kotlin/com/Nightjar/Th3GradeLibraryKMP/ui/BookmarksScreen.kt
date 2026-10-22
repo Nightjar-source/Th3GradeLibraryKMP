@@ -158,23 +158,10 @@ fun BookmarksScreen(
                 val statusBarHeight = WindowInsets.statusBars.add(WindowInsets.captionBar).asPaddingValues().calculateTopPadding()
                 val dynamicTopPadding = when { responsiveInfo.isPhoneLandscape -> statusBarHeight + 44.dp; isMedium -> statusBarHeight + 72.dp; else -> statusBarHeight + 58.dp }
 
-                var persistentBookIds by remember { mutableStateOf(groupedPages.keys.sortedBy { bookId ->
-                    savedItems.indexOfFirst { it.id == bookId }.takeIf { it >= 0 } ?: Int.MAX_VALUE
-                }) }
-
-                LaunchedEffect(groupedPages) {
-                    val newIds = groupedPages.keys.sortedBy { bookId ->
+                val sortedBookIds = remember(groupedPages, savedItems) {
+                    groupedPages.keys.sortedBy { bookId ->
                         savedItems.indexOfFirst { it.id == bookId }.takeIf { it >= 0 } ?: Int.MAX_VALUE
                     }
-                    if (newIds.size < persistentBookIds.size) {
-                        // Delay removal slightly so the deleted bookmark row smoothly shrinks out first
-                        kotlinx.coroutines.delay(400)
-                    }
-                    persistentBookIds = newIds
-                }
-
-                val sortedBookIds = if (persistentBookIds.isNotEmpty()) persistentBookIds else groupedPages.keys.sortedBy { bookId ->
-                    savedItems.indexOfFirst { it.id == bookId }.takeIf { it >= 0 } ?: Int.MAX_VALUE
                 }
 
                 // Ensure target bookmark is expanded and in viewport when returning from PDF
@@ -247,16 +234,7 @@ fun BookmarksScreen(
                         if (book != null) {
                             val pages = groupedPages[bookId] ?: emptyList()
                             BookAccordionItem(
-                                modifier = Modifier
-                                    .animateItem(
-                                        fadeInSpec = null,
-                                        fadeOutSpec = androidx.compose.animation.core.tween(250),
-                                        placementSpec = androidx.compose.animation.core.spring(
-                                            dampingRatio = 0.82f,
-                                            stiffness = 320f
-                                        )
-                                    )
-                                    .adaptiveItemEntrance(index, itemId = bookId),
+                                modifier = Modifier.adaptiveItemEntrance(index, itemId = bookId),
                                 item = book,
                                 pages = pages,
                                 isPageSaved = { pageIdx -> savedPages.contains("${book.id}:$pageIdx") },

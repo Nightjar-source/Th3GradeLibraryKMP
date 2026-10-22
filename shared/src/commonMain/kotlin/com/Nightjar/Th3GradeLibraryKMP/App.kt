@@ -565,15 +565,15 @@ fun AppContent(
                                     )
                                     val direction = if (isNavigatingBack || targetIndex < initialIndex) 1 else -1 // RTL: Forward is -1 (from left), Backward is 1 (from right)
 
-                                    val parallaxOffset = 0.28f
+                                    val parallaxOffset = 0.32f
                                     (slideInHorizontally(
                                         initialOffsetX = { fullWidth -> (fullWidth * parallaxOffset * direction).toInt() },
                                         animationSpec = slideSpec
-                                    ) + fadeIn(initialAlpha = 0.70f, animationSpec = fadeSpec)).togetherWith(
+                                    ) + fadeIn(animationSpec = fadeSpec) + scaleIn(initialScale = 0.98f, animationSpec = scaleSpec)).togetherWith(
                                         slideOutHorizontally(
                                             targetOffsetX = { fullWidth -> (-fullWidth * parallaxOffset * direction).toInt() },
                                             animationSpec = slideSpec
-                                        ) + fadeOut(targetAlpha = 0.30f, animationSpec = fadeSpec)
+                                        ) + fadeOut(animationSpec = fadeSpec) + scaleOut(targetScale = 0.98f, animationSpec = scaleSpec)
                                     )
                                 }
                             }
@@ -1733,8 +1733,7 @@ fun AppContent(
                 Box(
                     modifier = Modifier
                         .fillMaxHeight()
-                        .widthIn(max = 280.dp)
-                        .fillMaxWidth(0.82f)
+                        .width(300.dp)
                         .clickable(enabled = false) {}
                         .align(Alignment.TopStart)
                         .clip(RoundedCornerShape(topEnd = 32.dp, bottomEnd = 32.dp))
@@ -2229,7 +2228,9 @@ fun DrawerItem(
             text = label,
             fontSize = 15.sp,
             fontWeight = FontWeight.Bold,
-            color = tint
+            color = tint,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis
         )
     }
 }

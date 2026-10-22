@@ -266,12 +266,7 @@ fun LibraryScreen(
                     val windowInfo = androidx.compose.ui.platform.LocalWindowInfo.current
                     val density = androidx.compose.ui.platform.LocalDensity.current
                     val screenWidthDp = with(density) { windowInfo.containerSize.width.toDp() }
-                    val searchBarOffset by animateDpAsState(
-                        targetValue = if (isSearchOpen) (if (isWide) 56.dp else 64.dp) else 0.dp,
-                        animationSpec = spring(dampingRatio = 0.78f, stiffness = 300f),
-                        label = "searchBarOffset"
-                    )
-                    val dynamicTopPadding = (when { responsiveInfo.isPhoneLandscape -> statusBarHeight + 44.dp; isWide -> statusBarHeight + 72.dp; else -> statusBarHeight + 58.dp }) + searchBarOffset
+                    val dynamicTopPadding = when { responsiveInfo.isPhoneLandscape -> statusBarHeight + 44.dp; isWide -> statusBarHeight + 72.dp; else -> statusBarHeight + 58.dp }
                     val dynamicGridColumns = remember(widthClass, heightClass, screenWidthDp, isGridView) {
                         if (isGridView) {
                             when (widthClass) {

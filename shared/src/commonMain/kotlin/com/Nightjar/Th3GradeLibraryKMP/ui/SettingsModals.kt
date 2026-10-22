@@ -148,8 +148,7 @@ fun AppSettingsModal(
                 modifier = Modifier
                     .widthIn(max = 480.dp) // Responsive capsule for tablets/DeX
                     .fillMaxWidth()
-                    .fillMaxHeight(0.92f)
-                    .clickable(enabled = false) {}
+                                        .clickable(enabled = false) {}
                     .clip(RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp))
                     .background(MaterialTheme.colorScheme.surface)
                     .animateEnterExit(
@@ -459,8 +458,7 @@ fun NewsSettingsModal(
                 modifier = Modifier
                     .widthIn(max = 480.dp) // Responsive capsule for tablets/DeX
                     .fillMaxWidth()
-                    .fillMaxHeight(0.92f)
-                    .clickable(enabled = false) {}
+                                        .clickable(enabled = false) {}
                     .clip(RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp))
                     .background(MaterialTheme.colorScheme.surface)
                     .animateEnterExit(
