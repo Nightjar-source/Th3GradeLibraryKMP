@@ -432,7 +432,6 @@ fun AppContent(
             widthClass == androidx.window.core.layout.WindowWidthSizeClass.EXPANDED -> 72.dp // Official M3 expanded rail
             else -> 60.dp
         }
-            screenHeight < 480.dp -> 52.dp // Compact navigation rail for phone landscape (M3 Adaptive Standard)
 
         // Micro/narrow window flags for pop-up, split-screen, and DeX window resizing
         val isMicroWindow = screenWidth < 360.dp
@@ -450,6 +449,7 @@ fun AppContent(
         }
 
         val isPhoneLandscape = isLandscape && screenHeight < 480.dp
+        val isExpandedScreen = widthClass == androidx.window.core.layout.WindowWidthSizeClass.EXPANDED && screenHeight >= 480.dp
         val responsiveInfo = com.Nightjar.Th3GradeLibraryKMP.theme.ResponsiveLayoutInfo(
             width = screenWidth,
             height = screenHeight,
