@@ -21,11 +21,9 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Bookmark
-import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.*
@@ -160,10 +158,23 @@ fun BookmarksScreen(
                 val statusBarHeight = WindowInsets.statusBars.add(WindowInsets.captionBar).asPaddingValues().calculateTopPadding()
                 val dynamicTopPadding = when { responsiveInfo.isPhoneLandscape -> statusBarHeight + 44.dp; isMedium -> statusBarHeight + 72.dp; else -> statusBarHeight + 58.dp }
 
-                val sortedBookIds = remember(groupedPages, savedItems) {
-                    groupedPages.keys.sortedBy { bookId ->
+                var persistentBookIds by remember { mutableStateOf(groupedPages.keys.sortedBy { bookId ->
+                    savedItems.indexOfFirst { it.id == bookId }.takeIf { it >= 0 } ?: Int.MAX_VALUE
+                }) }
+
+                LaunchedEffect(groupedPages) {
+                    val newIds = groupedPages.keys.sortedBy { bookId ->
                         savedItems.indexOfFirst { it.id == bookId }.takeIf { it >= 0 } ?: Int.MAX_VALUE
                     }
+                    if (newIds.size < persistentBookIds.size) {
+                        // Delay removal so the deleted bookmark row smoothly shrinks out first
+                        kotlinx.coroutines.delay(450)
+                    }
+                    persistentBookIds = newIds
+                }
+
+                val sortedBookIds = if (persistentBookIds.isNotEmpty()) persistentBookIds else groupedPages.keys.sortedBy { bookId ->
+                    savedItems.indexOfFirst { it.id == bookId }.takeIf { it >= 0 } ?: Int.MAX_VALUE
                 }
 
                 // Ensure target bookmark is expanded and in viewport when returning from PDF
@@ -486,7 +497,7 @@ fun BookAccordionItem(
                                     TransitionTargetTracker.isTransitionActive = true
                                     onNavigateToPdf(pageIndex)
                                 }
-                                .padding(horizontal = 12.dp, vertical = 8.dp),
+                                .padding(12.dp),
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             Icon(
@@ -499,22 +510,8 @@ fun BookAccordionItem(
                             Text(
                                 text = "الصفحة رقم ${pageIndex + 1}",
                                 fontSize = 14.sp,
-                                color = MaterialTheme.colorScheme.onSurface,
-                                modifier = Modifier.weight(1f)
+                                color = MaterialTheme.colorScheme.onSurface
                             )
-                            IconButton(
-                                onClick = {
-                                    SyncEngine.toggleBookmark("${item.id}:$pageIndex")
-                                },
-                                modifier = Modifier.size(32.dp)
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Default.Delete,
-                                    contentDescription = "حذف الصفحة من المحفوظات",
-                                    tint = MaterialTheme.colorScheme.error.copy(alpha = 0.80f),
-                                    modifier = Modifier.size(18.dp)
-                                )
-                            }
                         }
                     }
                 }
