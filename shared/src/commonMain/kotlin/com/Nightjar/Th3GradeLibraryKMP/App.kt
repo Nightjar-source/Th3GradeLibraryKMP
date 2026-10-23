@@ -1722,10 +1722,11 @@ fun AppContent(
                     .background(Color.Black.copy(alpha = 0.4f))
                     .clickable { isDrawerOpen = false }
             ) {
+                val drawerWidth = if (responsiveInfo.isPhoneLandscape) 330.dp else 300.dp
                 Box(
                     modifier = Modifier
                         .fillMaxHeight()
-                        .width(300.dp)
+                        .width(drawerWidth)
                         .clickable(enabled = false) {}
                         .align(Alignment.TopStart)
                         .clip(RoundedCornerShape(topEnd = 32.dp, bottomEnd = 32.dp))
@@ -2196,6 +2197,8 @@ fun DrawerItem(
     isActive: Boolean,
     onClick: () -> Unit
 ) {
+    val responsiveInfo = com.Nightjar.Th3GradeLibraryKMP.theme.LocalResponsiveLayoutInfo.current
+    val isPhoneLandscape = responsiveInfo.isPhoneLandscape
     val bg = if (isActive) MaterialTheme.colorScheme.primary.copy(alpha = 0.12f) else Color.Transparent
     val tint = if (isActive) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
 
@@ -2206,7 +2209,7 @@ fun DrawerItem(
             .clip(RoundedCornerShape(16.dp))
             .background(bg)
             .clickable { onClick() }
-            .padding(horizontal = 16.dp, vertical = 12.dp),
+            .padding(horizontal = if (isPhoneLandscape) 12.dp else 16.dp, vertical = 12.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
         Icon(
@@ -2215,13 +2218,14 @@ fun DrawerItem(
             tint = tint,
             modifier = Modifier.size(20.dp)
         )
-        Spacer(modifier = Modifier.width(16.dp))
+        Spacer(modifier = Modifier.width(if (isPhoneLandscape) 10.dp else 14.dp))
         Text(
             text = label,
-            fontSize = 15.sp,
+            fontSize = if (isPhoneLandscape) 14.sp else 15.sp,
             fontWeight = FontWeight.Bold,
             color = tint,
             maxLines = 1,
+            softWrap = false,
             overflow = TextOverflow.Ellipsis
         )
     }

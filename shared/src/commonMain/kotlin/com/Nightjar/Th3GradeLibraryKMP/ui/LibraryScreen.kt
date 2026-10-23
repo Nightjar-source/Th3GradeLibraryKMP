@@ -543,31 +543,10 @@ fun LazyGridItemScope.ContentCard(
     val isThisCardTarget = (TransitionTargetTracker.activeTargetId == "card_${item.id}" || TransitionTargetTracker.activeTargetId == item.id)
     val isSharedActive = isThisCardTarget && (TransitionTargetTracker.isTransitionActive || isReturningFromPdf)
 
-    val sharedBoundsModifier = if (sharedTransitionScope != null && animatedVisibilityScope != null) {
-        with(sharedTransitionScope) {
-            Modifier.sharedBounds(
-                sharedContentState = rememberSharedContentState(key = "card_${item.id}"),
-                animatedVisibilityScope = animatedVisibilityScope,
-                enter = androidx.compose.animation.fadeIn(
-                    animationSpec = spring(dampingRatio = 0.82f, stiffness = 320f)
-                ),
-                exit = androidx.compose.animation.fadeOut(
-                    animationSpec = spring(dampingRatio = 0.82f, stiffness = 320f)
-                ),
-                renderInOverlayDuringTransition = isSharedActive,
-                clipInOverlayDuringTransition = OverlayClip(RoundedCornerShape(cardCornerRadius)),
-                zIndexInOverlay = 10f,
-                boundsTransform = { _, _ -> spring(dampingRatio = 0.82f, stiffness = 320f) },
-                resizeMode = SharedTransitionScope.ResizeMode.RemeasureToBounds
-            )
-        }
-    } else Modifier
-
     Box(
         modifier = modifier
             .zIndex(if (isThisCardTarget) 15f else if (com.Nightjar.Th3GradeLibraryKMP.theme.LocalIsNavigatingBack.current) 1f else 0f)
             .fillMaxWidth()
-            .then(sharedBoundsModifier)
             .animateContentSize(
                 animationSpec = spring(
                     dampingRatio = 0.82f,

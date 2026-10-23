@@ -432,39 +432,16 @@ fun BookAccordionItem(
                         enter = expandVertically(
                             animationSpec = spring(dampingRatio = 0.82f, stiffness = 320f),
                             expandFrom = Alignment.Top
-                        ) + fadeIn(tween(200, easing = androidx.compose.animation.core.FastOutSlowInEasing)) + scaleIn(initialScale = 0.94f, animationSpec = spring(dampingRatio = 0.82f, stiffness = 320f)),
+                        ) + fadeIn(tween(200, easing = androidx.compose.animation.core.FastOutSlowInEasing)),
                         exit = shrinkVertically(
                             animationSpec = spring(dampingRatio = 0.82f, stiffness = 320f),
                             shrinkTowards = Alignment.Top
-                        ) + fadeOut(tween(180, easing = androidx.compose.animation.core.FastOutSlowInEasing)) + scaleOut(targetScale = 0.94f, animationSpec = tween(180))
+                        ) + fadeOut(tween(180, easing = androidx.compose.animation.core.FastOutSlowInEasing))
                     ) {
-                        val rowSharedModifier = if (sharedTransitionScope != null && screenVisibilityScope != null) {
-                            with(sharedTransitionScope) {
-                                Modifier.sharedBounds(
-                                    sharedContentState = rememberSharedContentState(key = rowTargetKey),
-                                    animatedVisibilityScope = screenVisibilityScope,
-                                    enter = androidx.compose.animation.fadeIn(
-                                        animationSpec = spring(dampingRatio = 0.82f, stiffness = 320f)
-                                    ),
-                                    exit = androidx.compose.animation.fadeOut(
-                                        animationSpec = spring(dampingRatio = 0.82f, stiffness = 320f)
-                                    ),
-                                    renderInOverlayDuringTransition = isThisRowActive,
-                                    clipInOverlayDuringTransition = OverlayClip(RoundedCornerShape(14.dp)),
-                                    zIndexInOverlay = 10f,
-                                    boundsTransform = { _, _ ->
-                                        spring(dampingRatio = 0.82f, stiffness = 320f)
-                                    },
-                                    resizeMode = SharedTransitionScope.ResizeMode.RemeasureToBounds
-                                )
-                            }
-                        } else Modifier
-
                         Row(
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .then(if (isThisRowActive) Modifier.zIndex(15f) else Modifier)
-                                .then(rowSharedModifier)
                                 .liquidGlass(
                                     isDark = isDark,
                                     borderRadius = 14.dp,
