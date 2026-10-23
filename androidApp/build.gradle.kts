@@ -97,6 +97,8 @@ dependencies {
     implementation("androidx.swiperefreshlayout:swiperefreshlayout:1.1.0")
     implementation("androidx.browser:browser:1.8.0")
     implementation(libs.coil.compose)
+    // Official Google Mobile Ads SDK dependency ready (zero active ad calls in UI)
+    implementation(libs.play.services.ads)
 }
 
 tasks.matching { it.name.startsWith("merge") && it.name.endsWith("Assets") }.configureEach {

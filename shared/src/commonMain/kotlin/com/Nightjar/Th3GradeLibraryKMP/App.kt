@@ -466,7 +466,9 @@ fun AppContent(
         val systemBarsInsets = WindowInsets.statusBars.union(WindowInsets.captionBar).union(WindowInsets.displayCutout)
         val currentStatusBar = systemBarsInsets.asPaddingValues().calculateTopPadding()
         
-        val listBottomPadding = if (isWide) 24.dp + currentNavBar else 110.dp + currentNavBar
+        // Dynamic bottom padding reserving space for system navigation bars, bottom bar, and standard AdMob banner height (50dp ~ 60dp) to prevent any UI overlapping
+        // Dynamic bottom padding reserving space for system navigation bars, bottom bar, and official AdMob banner heights (50~60dp on phones, 90dp on tablets)
+        val listBottomPadding = if (isWide) (110.dp + currentNavBar) else (160.dp + currentNavBar)
 
         CompositionLocalProvider(
             LocalStableStatusBarHeight provides currentStatusBar,
@@ -546,7 +548,7 @@ fun AppContent(
                                         targetContentZIndex = 0f
                                     }
                                 } else {
-                                    val direction = if (isNavigatingBack) -1 else 1
+                                    val direction = viewModel.navigationDirection
 
                                     val fluidEasing = androidx.compose.animation.core.CubicBezierEasing(0.16f, 1f, 0.3f, 1f)
                                     val slideSpec = androidx.compose.animation.core.tween<androidx.compose.ui.unit.IntOffset>(

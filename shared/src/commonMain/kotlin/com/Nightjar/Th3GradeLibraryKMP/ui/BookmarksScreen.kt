@@ -247,7 +247,7 @@ fun BookmarksScreen(
                         if (book != null) {
                             val pages = groupedPages[bookId] ?: emptyList()
                             BookAccordionItem(
-                                modifier = Modifier,
+                                modifier = Modifier.animateItem(),
                                 item = book,
                                 pages = pages,
                                 isPageSaved = { pageIdx -> savedPages.contains("${book.id}:$pageIdx") },
@@ -419,6 +419,7 @@ fun BookAccordionItem(
                 }
 
                 renderedPages.forEach { pageIndex ->
+                    key(pageIndex) {
                     val isPageStillSaved = isPageSaved(pageIndex)
                     val rowInteractionSource = remember { MutableInteractionSource() }
                     val rowTargetKey = "bookmark_${item.id}_$pageIndex"
@@ -438,10 +439,39 @@ fun BookAccordionItem(
                             shrinkTowards = Alignment.Top
                         ) + fadeOut(tween(180, easing = androidx.compose.animation.core.FastOutSlowInEasing))
                     ) {
+                        val rowSharedModifier = if (sharedTransitionScope != null && screenVisibilityScope != null) {
+                            with(sharedTransitionScope) {
+                                Modifier.sharedBounds(
+                                    sharedContentState = rememberSharedContentState(key = rowTargetKey),
+                                    animatedVisibilityScope = screenVisibilityScope,
+                                    enter = androidx.compose.animation.fadeIn(
+                                        animationSpec = androidx.compose.animation.core.tween(
+                                            durationMillis = 130,
+                                            easing = androidx.compose.animation.core.LinearEasing
+                                        )
+                                    ),
+                                    exit = androidx.compose.animation.fadeOut(
+                                        animationSpec = androidx.compose.animation.core.tween(
+                                            durationMillis = 150,
+                                            delayMillis = 75,
+                                            easing = androidx.compose.animation.core.FastOutLinearInEasing
+                                        )
+                                    ),
+                                    renderInOverlayDuringTransition = isThisRowActive,
+                                    clipInOverlayDuringTransition = OverlayClip(RoundedCornerShape(14.dp)),
+                                    boundsTransform = { _, _ ->
+                                        spring(dampingRatio = 0.82f, stiffness = 280f)
+                                    },
+                                    resizeMode = SharedTransitionScope.ResizeMode.RemeasureToBounds
+                                )
+                            }
+                        } else Modifier
+
                         Row(
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .then(if (isThisRowActive) Modifier.zIndex(15f) else Modifier)
+                                .then(rowSharedModifier)
                                 .liquidGlass(
                                     isDark = isDark,
                                     borderRadius = 14.dp,
@@ -469,6 +499,7 @@ fun BookAccordionItem(
                                 color = MaterialTheme.colorScheme.onSurface
                             )
                         }
+                    }
                     }
                 }
             }

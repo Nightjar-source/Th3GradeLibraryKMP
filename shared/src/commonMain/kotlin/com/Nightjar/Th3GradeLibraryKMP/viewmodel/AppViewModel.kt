@@ -27,6 +27,7 @@ class AppViewModel : ViewModel() {
     var isNavigatingBack by mutableStateOf(false)
     var isReturningFromPdf by mutableStateOf(false)
     var screenNavCounter by mutableStateOf(0)
+    var navigationDirection by mutableStateOf(1)
 
     // ===== Content Selection =====
     var selectedItem by mutableStateOf<BookItem?>(null)
@@ -214,6 +215,7 @@ class AppViewModel : ViewModel() {
      */
     fun popPage(): Boolean {
         isNavigatingBack = true
+        navigationDirection = -1
         val current = pageHistory.value
         val wasOnPdf = current.lastOrNull() == "pdf"
         if (wasOnPdf) {
@@ -253,6 +255,11 @@ class AppViewModel : ViewModel() {
         }
         isAppSettingsOpen = false
         isNewsSettingsOpen = false
+        val tabOrder = listOf("home", "list", "news", "bookmarks", "shortcuts", "about")
+        val oldIdx = tabOrder.indexOf(page).takeIf { it >= 0 } ?: 0
+        val newIdx = tabOrder.indexOf(newPage).takeIf { it >= 0 } ?: 0
+        navigationDirection = if (newIdx >= oldIdx) 1 else -1
+
         if (newPage == "home") {
             if (page != "home") screenNavCounter++
             pageHistory.value = listOf("home")
