@@ -45,6 +45,13 @@
             android:launchMode="singleTop"
             android:theme="@style/Theme.App.Starting">
 
+            <!-- Multi-window, Foldable & Freeform safe boundary constraints -->
+            <layout
+                android:defaultWidth="600dp"
+                android:defaultHeight="800dp"
+                android:minWidth="280dp"
+                android:minHeight="320dp" />
+
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
