@@ -393,11 +393,7 @@ actual fun PdfViewerScreen(
                        androidx.compose.animation.scaleOut(
                            targetScale = 0.28f, 
                            animationSpec = spring(dampingRatio = 0.78f, stiffness = Spring.StiffnessMediumLow)
-                       ) + 
-                       androidx.compose.animation.slideOutVertically(
-                           targetOffsetY = { it },
-                           animationSpec = spring(dampingRatio = 0.78f, stiffness = Spring.StiffnessMediumLow)
-                       )
+                       ) 
             )
         }
     } else Modifier

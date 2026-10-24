@@ -526,6 +526,7 @@ fun AppContent(
                             .zIndex(10f)
                     ) {
                         val screenEntranceSeenMap = remember { mutableMapOf<String, androidx.compose.runtime.snapshots.SnapshotStateMap<String, Boolean>>() }
+                        val isAppRtl = androidx.compose.ui.platform.LocalLayoutDirection.current == androidx.compose.ui.unit.LayoutDirection.Rtl
                         AnimatedContent(
                             targetState = page,
                             modifier = Modifier.fillMaxSize(),
@@ -548,7 +549,7 @@ fun AppContent(
                                         targetContentZIndex = 0f
                                     }
                                 } else {
-                                    val direction = viewModel.navigationDirection
+                                    val direction = if (isAppRtl) -viewModel.navigationDirection else viewModel.navigationDirection
 
                                     val fluidEasing = androidx.compose.animation.core.CubicBezierEasing(0.16f, 1f, 0.3f, 1f)
                                     val slideSpec = androidx.compose.animation.core.tween<androidx.compose.ui.unit.IntOffset>(

@@ -593,8 +593,14 @@ class MainActivity : ComponentActivity() {
                         // 3. Evict PDF page bitmap cache
                         com.Nightjar.Th3GradeLibraryKMP.ui.PdfBitmapCache.cache.evictAll()
                         System.gc()
+                        withContext(Dispatchers.Main) {
+                            showToast("تم تفريغ الذاكرة المؤقتة والكاش بنجاح")
+                        }
                     } catch (e: Exception) {
                         e.printStackTrace()
+                        withContext(Dispatchers.Main) {
+                            showToast("حدث خطأ أثناء تفريغ الكاش")
+                        }
                     }
                 }
             }
