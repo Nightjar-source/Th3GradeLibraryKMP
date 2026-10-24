@@ -333,6 +333,8 @@ fun LibraryScreen(
                         val isReturning = LocalIsReturningFromPdf.current
                         ContentCard(
                             modifier = Modifier
+                                .fillMaxWidth()
+                                .screenEntranceCascade(index, item.id)
                                 .animateItem(
                                     fadeInSpec = null,
                                     fadeOutSpec = null,
@@ -593,11 +595,9 @@ fun LazyGridItemScope.ContentCard(
         androidx.compose.animation.AnimatedContent(
             targetState = isGridView,
             transitionSpec = {
-                (fadeIn(animationSpec = tween(220, easing = LinearOutSlowInEasing)) +
-                 scaleIn(initialScale = 0.94f, animationSpec = spring(dampingRatio = 0.82f, stiffness = 340f)))
+                fadeIn(animationSpec = tween(160, easing = LinearOutSlowInEasing))
                     .togetherWith(
-                        fadeOut(animationSpec = tween(180, easing = FastOutLinearInEasing)) +
-                        scaleOut(targetScale = 0.94f, animationSpec = tween(180))
+                        fadeOut(animationSpec = tween(140, easing = FastOutLinearInEasing))
                     ).using(SizeTransform(clip = false))
             },
             label = "grid_list_fluid_transition"
@@ -617,7 +617,7 @@ fun LazyGridItemScope.ContentCard(
                         coil3.compose.AsyncImage(
                             model = coil3.request.ImageRequest.Builder(coil3.compose.LocalPlatformContext.current)
                                 .data(com.Nightjar.Th3GradeLibraryKMP.generated.resources.Res.getUri("drawable/${item.coverResName}." + if (item.coverResName in listOf("ayajaaa", "english", "englishactivity", "kss1")) "jpg" else "png"))
-                                .crossfade(!isReturningFromPdf)
+                                .crossfade(false)
                                 .memoryCachePolicy(coil3.request.CachePolicy.ENABLED)
                                 .diskCachePolicy(coil3.request.CachePolicy.ENABLED)
                                 .build(),
@@ -681,7 +681,7 @@ fun LazyGridItemScope.ContentCard(
                         coil3.compose.AsyncImage(
                             model = coil3.request.ImageRequest.Builder(coil3.compose.LocalPlatformContext.current)
                                 .data(com.Nightjar.Th3GradeLibraryKMP.generated.resources.Res.getUri("drawable/${item.coverResName}." + if (item.coverResName in listOf("ayajaaa", "english", "englishactivity", "kss1")) "jpg" else "png"))
-                                .crossfade(!isReturningFromPdf)
+                                .crossfade(false)
                                 .memoryCachePolicy(coil3.request.CachePolicy.ENABLED)
                                 .diskCachePolicy(coil3.request.CachePolicy.ENABLED)
                                 .build(),

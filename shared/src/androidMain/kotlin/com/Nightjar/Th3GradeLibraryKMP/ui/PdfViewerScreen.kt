@@ -914,16 +914,18 @@ actual fun PdfViewerScreen(
         // --- Fluid Cover Morph Underlay / Overlay during exit and launch ---
         // Sits inside the root sharedBounds Box so when closing and shrinking,
         // it transforms smoothly back into the book card cover before 10% collapse!
-        val coverAlpha by if (animatedVisibilityScope != null) {
+        val shouldMorphCover = !isFromBookmarksEffective
+        val coverAlpha by if (animatedVisibilityScope != null && shouldMorphCover) {
             animatedVisibilityScope.transition.animateFloat(
                 transitionSpec = {
                     if (this.targetState == androidx.compose.animation.EnterExitState.Visible) {
-                        // Opening: cover fades out quickly as reader content is ready
-                        tween(durationMillis = 180, easing = FastOutLinearInEasing)
+                        // Opening: cover dissolves in the FIRST 10% of expansion time (~28ms)
+                        // then reveals the reader / loading indicator for the remaining 90%
+                        tween(durationMillis = 28, easing = FastOutLinearInEasing)
                     } else {
-                        // Closing: cover fades in early (before reaching 10% remaining collapse),
-                        // turning seamlessly into the book cover before arriving at original card bounds
-                        tween(durationMillis = 160, delayMillis = 20, easing = LinearOutSlowInEasing)
+                        // Closing: reader contracts for 90% of collapse, and in the LAST 10% (~32ms),
+                        // the cover fades in smoothly, transforming back into the book card cover
+                        tween(durationMillis = 32, delayMillis = 190, easing = LinearOutSlowInEasing)
                     }
                 },
                 targetValueByState = { state: androidx.compose.animation.EnterExitState ->
@@ -943,6 +945,7 @@ actual fun PdfViewerScreen(
                 coil3.compose.AsyncImage(
                     model = coil3.request.ImageRequest.Builder(coil3.compose.LocalPlatformContext.current)
                         .data(com.Nightjar.Th3GradeLibraryKMP.generated.resources.Res.getUri("drawable/${item.coverResName}." + if (item.coverResName in listOf("ayajaaa", "english", "englishactivity", "kss1")) "jpg" else "png"))
+                        .crossfade(false)
                         .memoryCachePolicy(coil3.request.CachePolicy.ENABLED)
                         .diskCachePolicy(coil3.request.CachePolicy.ENABLED)
                         .build(),

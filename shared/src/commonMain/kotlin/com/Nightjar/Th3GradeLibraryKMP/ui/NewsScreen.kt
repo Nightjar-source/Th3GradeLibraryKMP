@@ -309,7 +309,7 @@ fun NewsScreen(
                                 NewsCardSwipeable(
                                     modifier = Modifier
                                         .fillMaxWidth()
-                                        .screenEntranceCascade(index)
+                                        .screenEntranceCascade(index, newsItem.id)
                                         .animateItem(
                                             fadeInSpec = null,
                                             fadeOutSpec = tween(200),
@@ -536,18 +536,9 @@ fun NewsCardSwipeable(
     val sharedTransitionScope = LocalSharedTransitionScope.current
     val animatedVisibilityScope = LocalAnimatedVisibilityScope.current
 
-    var cardModifier = Modifier
+    val cardModifier = Modifier
         .graphicsLayer { translationX = animatedOffset }
         .clip(RoundedCornerShape(24.dp))
-
-    if (sharedTransitionScope != null && animatedVisibilityScope != null) {
-        with(sharedTransitionScope) {
-            cardModifier = cardModifier.sharedBounds(
-                sharedContentState = rememberSharedContentState(key = "news-${news.link}"),
-                animatedVisibilityScope = animatedVisibilityScope, renderInOverlayDuringTransition = false
-            )
-        }
-    }
 
     Box(modifier = modifier.fillMaxWidth()) {
         // Delete background

@@ -250,7 +250,7 @@ fun BookmarksScreen(
                             BookAccordionItem(
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .screenEntranceCascade(index),
+                                    .screenEntranceCascade(index, bookId),
                                 item = book,
                                 pages = pages,
                                 isPageSaved = { pageIdx -> savedPages.contains("${book.id}:$pageIdx") },
@@ -449,7 +449,7 @@ fun BookAccordionItem(
                             shrinkTowards = Alignment.Top
                         ) + fadeOut(tween(180, easing = androidx.compose.animation.core.FastOutSlowInEasing))
                     ) {
-                        val rowSharedModifier = if (sharedTransitionScope != null && screenVisibilityScope != null && isThisRowActive) {
+                        val rowSharedModifier = if (sharedTransitionScope != null && screenVisibilityScope != null) {
                             with(sharedTransitionScope) {
                                 Modifier.sharedBounds(
                                     sharedContentState = rememberSharedContentState(key = rowTargetKey),
