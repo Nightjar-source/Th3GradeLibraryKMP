@@ -915,8 +915,8 @@ actual fun PdfViewerScreen(
         // Sits inside the root sharedBounds Box so when closing and shrinking,
         // it transforms smoothly back into the book card cover before 10% collapse!
         val shouldMorphCover = !isFromBookmarksEffective
-        val coverAlpha by if (animatedVisibilityScope != null && shouldMorphCover) {
-            animatedVisibilityScope.transition.animateFloat(
+        val coverAlpha: Float = if (animatedVisibilityScope != null && shouldMorphCover) {
+            val transitionAlpha by animatedVisibilityScope.transition.animateFloat(
                 transitionSpec = {
                     if (this.targetState == androidx.compose.animation.EnterExitState.Visible) {
                         // Opening: cover dissolves in the FIRST 10% of expansion time (~28ms)
@@ -933,7 +933,10 @@ actual fun PdfViewerScreen(
                 },
                 label = "reader_cover_morph_alpha"
             )
-        } else remember { mutableStateOf(0f) }
+            transitionAlpha
+        } else {
+            0f
+        }
 
         if (coverAlpha > 0.01f) {
             Box(
