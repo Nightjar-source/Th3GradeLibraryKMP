@@ -67,6 +67,7 @@ import com.Nightjar.Th3GradeLibraryKMP.theme.bounceClick
 import com.Nightjar.Th3GradeLibraryKMP.theme.parseHexColor
 import com.Nightjar.Th3GradeLibraryKMP.theme.popInOnInitialLoad
 import com.Nightjar.Th3GradeLibraryKMP.theme.screenEntranceStagger
+import com.Nightjar.Th3GradeLibraryKMP.theme.screenEntranceCascade
 import com.Nightjar.Th3GradeLibraryKMP.theme.adaptiveItemEntrance
 import org.jetbrains.compose.resources.painterResource
 import androidx.compose.runtime.saveable.rememberSaveable

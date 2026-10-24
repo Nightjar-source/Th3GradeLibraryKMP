@@ -189,47 +189,23 @@ fun Modifier.expressiveButtonMorph(
 fun Modifier.screenEntranceStagger(index: Int = 0, itemId: String? = null): Modifier = composed {
     val isLowEnd = LocalIsLowEndDevice.current
     val isReturningFromPdf = LocalIsReturningFromPdf.current
-    val seenMap = LocalSeenEntranceItems.current
-
-    // If returning from PDF, permanently mark screen entrance as completed and return immediately
-    if (isReturningFromPdf) {
-        seenMap?.put("__screen_entrance_completed__", true)
-        return@composed this
-    }
-
-    // Low end devices render immediately without animation overhead
-    if (isLowEnd) {
-        return@composed this
-    }
-
-    val itemKey = itemId ?: "idx_$index"
-
-    // If this specific item has already animated during this screen visit,
-    // it never animates again while scrolling up or down on this screen.
-    if (seenMap != null && seenMap[itemKey] == true) {
-        return@composed this
-    }
+    if (isLowEnd || isReturningFromPdf || index > 12) return@composed this
 
     var isLoaded by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf(false) }
 
-    val isInitialBatch = index in 0..5
     androidx.compose.runtime.LaunchedEffect(Unit) {
-        if (isInitialBatch && index > 0) {
-            // Initial viewport items cascade smoothly upon screen entrance
-            val staggerDelay = (index.coerceIn(0, 5) * 45L)
+        if (index > 0) {
+            val staggerDelay = (index.coerceIn(0, 10) * 55L).coerceAtMost(450L)
             kotlinx.coroutines.delay(staggerDelay)
         }
         isLoaded = true
-        // Record this item as permanently seen for the current screen visit.
-        // It will NEVER re-animate during any upward or downward scrolling on this screen.
-        seenMap?.put(itemKey, true)
     }
 
     val animProgress by androidx.compose.animation.core.animateFloatAsState(
         targetValue = if (isLoaded) 1f else 0f,
         animationSpec = androidx.compose.animation.core.spring(
-            dampingRatio = 0.82f,
-            stiffness = if (isInitialBatch) 260f else 340f
+            dampingRatio = 0.78f,
+            stiffness = 240f
         ),
         label = "fluidSlide_$index"
     )
@@ -238,13 +214,13 @@ fun Modifier.screenEntranceStagger(index: Int = 0, itemId: String? = null): Modi
         Modifier
     } else {
         val density = androidx.compose.ui.platform.LocalDensity.current
-        val offsetYPx = androidx.compose.runtime.remember(density) { with(density) { 28.dp.toPx() } }
+        val offsetYPx = androidx.compose.runtime.remember(density) { with(density) { 38.dp.toPx() } }
         this.graphicsLayer {
             val progress = animProgress.coerceIn(0f, 1f)
             this.alpha = progress
             this.translationY = (1f - progress) * offsetYPx
-            this.scaleX = 0.96f + 0.04f * progress
-            this.scaleY = 0.96f + 0.04f * progress
+            this.scaleX = 0.95f + 0.05f * progress
+            this.scaleY = 0.95f + 0.05f * progress
             this.clip = false
         }
     }
