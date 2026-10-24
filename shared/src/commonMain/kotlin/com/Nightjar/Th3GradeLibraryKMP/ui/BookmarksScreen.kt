@@ -47,7 +47,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil3.compose.AsyncImage
 import coil3.compose.LocalPlatformContext
-import coil3.request.CachePolicy
+import com.Nightjar.Th3GradeLibraryKMP.theme.screenEntranceCascade
 import coil3.request.ImageRequest
 import com.Nightjar.Th3GradeLibraryKMP.LocalAnimatedVisibilityScope
 import com.Nightjar.Th3GradeLibraryKMP.LocalSharedTransitionScope
@@ -249,7 +249,7 @@ fun BookmarksScreen(
                             BookAccordionItem(
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .com.Nightjar.Th3GradeLibraryKMP.theme.screenEntranceCascade(index),
+                                    .screenEntranceCascade(index),
                                 item = book,
                                 pages = pages,
                                 isPageSaved = { pageIdx -> savedPages.contains("${book.id}:$pageIdx") },

@@ -34,7 +34,10 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.Spring
-import androidx.compose.animation.core.animateDp
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.FastOutLinearInEasing
+import androidx.compose.animation.core.LinearOutSlowInEasing
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.draw.clipToBounds
@@ -913,16 +916,16 @@ actual fun PdfViewerScreen(
         val coverAlpha by if (animatedVisibilityScope != null) {
             animatedVisibilityScope.transition.animateFloat(
                 transitionSpec = {
-                    if (targetState == androidx.compose.animation.EnterExitState.Visible) {
+                    if (this.targetState == androidx.compose.animation.EnterExitState.Visible) {
                         // Opening: cover fades out quickly as reader content is ready
-                        androidx.compose.animation.core.tween(durationMillis = 180, easing = androidx.compose.animation.core.FastOutLinearInEasing)
+                        tween(durationMillis = 180, easing = FastOutLinearInEasing)
                     } else {
                         // Closing: cover fades in early (before reaching 10% remaining collapse),
                         // turning seamlessly into the book cover before arriving at original card bounds
-                        androidx.compose.animation.core.tween(durationMillis = 160, delayMillis = 20, easing = androidx.compose.animation.core.LinearOutSlowInEasing)
+                        tween(durationMillis = 160, delayMillis = 20, easing = LinearOutSlowInEasing)
                     }
                 },
-                targetValueByState = { state ->
+                targetValueByState = { state: androidx.compose.animation.EnterExitState ->
                     if (state == androidx.compose.animation.EnterExitState.Visible) 0f else 1f
                 },
                 label = "reader_cover_morph_alpha"
