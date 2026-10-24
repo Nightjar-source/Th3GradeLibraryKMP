@@ -227,7 +227,7 @@ class AppViewModel : ViewModel() {
             page = updated.last()
             persistState()
             viewModelScope.launch {
-                delay(450)
+                delay(260)
                 isNavigatingBack = false
                 if (wasOnPdf) {
                     isReturningFromPdf = false
@@ -236,7 +236,7 @@ class AppViewModel : ViewModel() {
             return true
         }
         viewModelScope.launch {
-            delay(450)
+            delay(260)
             isNavigatingBack = false
             if (wasOnPdf) {
                 isReturningFromPdf = false
@@ -301,22 +301,18 @@ class AppViewModel : ViewModel() {
     fun onTransitionFinished() {
         isReturningFromPdf = false
         isNavigatingBack = false
+        if (page != "pdf") {
+            selectedItem = null
+            pdfInitialPage = null
+            isFromBookmarks = false
+            pdfSourcePage = "home"
+            com.Nightjar.Th3GradeLibraryKMP.ui.TransitionTargetTracker.reset()
+            persistState()
+        }
     }
 
     fun clearSelectedItem() {
         clearSelectedItemJob?.cancel()
         popPage()
-        clearSelectedItemJob = viewModelScope.launch {
-            delay(450)
-            if (page != "pdf") {
-                selectedItem = null
-                pdfInitialPage = null
-                isFromBookmarks = false
-                pdfSourcePage = "home"
-                com.Nightjar.Th3GradeLibraryKMP.ui.TransitionTargetTracker.reset()
-                persistState()
-            }
-            isNavigatingBack = false
-        }
     }
 }

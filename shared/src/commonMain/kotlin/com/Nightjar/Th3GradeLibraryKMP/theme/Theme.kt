@@ -189,38 +189,48 @@ fun Modifier.expressiveButtonMorph(
 fun Modifier.screenEntranceStagger(index: Int = 0, itemId: String? = null): Modifier = composed {
     val isLowEnd = LocalIsLowEndDevice.current
     val isReturningFromPdf = LocalIsReturningFromPdf.current
-    if (isLowEnd || isReturningFromPdf || index > 12) return@composed this
+    val seenMap = LocalSeenEntranceItems.current
+    val itemKey = itemId ?: ("idx_" + index)
+
+    val alreadySeen = (seenMap != null && seenMap[itemKey] == true) || isReturningFromPdf
+    if (isLowEnd || alreadySeen || index > 12) {
+        if (seenMap != null) {
+            seenMap[itemKey] = true
+        }
+        return@composed this
+    }
 
     var isLoaded by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf(false) }
 
-    androidx.compose.runtime.LaunchedEffect(Unit) {
+    androidx.compose.runtime.LaunchedEffect(itemKey) {
         if (index > 0) {
-            val staggerDelay = (index.coerceIn(0, 10) * 55L).coerceAtMost(450L)
+            val staggerDelay = (index.coerceIn(0, 8) * 45L).coerceAtMost(360L)
             kotlinx.coroutines.delay(staggerDelay)
         }
         isLoaded = true
+        seenMap?.put(itemKey, true)
     }
 
     val animProgress by androidx.compose.animation.core.animateFloatAsState(
         targetValue = if (isLoaded) 1f else 0f,
         animationSpec = androidx.compose.animation.core.spring(
-            dampingRatio = 0.78f,
-            stiffness = 240f
+            dampingRatio = 0.82f,
+            stiffness = 280f
         ),
-        label = "fluidSlide_$index"
+        label = "fluidSlide_" + itemKey
     )
 
     if (animProgress >= 1f && isLoaded) {
         Modifier
     } else {
         val density = androidx.compose.ui.platform.LocalDensity.current
-        val offsetYPx = androidx.compose.runtime.remember(density) { with(density) { 38.dp.toPx() } }
+        val offsetYPx = androidx.compose.runtime.remember(density) { with(density) { 32.dp.toPx() } }
         this.graphicsLayer {
             val progress = animProgress.coerceIn(0f, 1f)
             this.alpha = progress
             this.translationY = (1f - progress) * offsetYPx
-            this.scaleX = 0.95f + 0.05f * progress
-            this.scaleY = 0.95f + 0.05f * progress
+            this.scaleX = 0.96f + 0.04f * progress
+            this.scaleY = 0.96f + 0.04f * progress
             this.clip = false
         }
     }

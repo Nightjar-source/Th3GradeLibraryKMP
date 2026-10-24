@@ -542,9 +542,9 @@ fun AppContent(
                                         targetContentZIndex = 2f
                                     }
                                 } else if (isFromPdf) {
-                                    // Liquid App Closing: Background stays stationary with soft fade, preventing coordinate battles with sharedBounds
-                                    (fadeIn(animationSpec = tween(durationMillis = 300, easing = androidx.compose.animation.core.LinearOutSlowInEasing))).togetherWith(
-                                        fadeOut(animationSpec = tween(durationMillis = 250, easing = androidx.compose.animation.core.FastOutLinearInEasing))
+                                    // Liquid App Closing: Background stays stationary with soft fade, settling instantly without lingering
+                                    (fadeIn(animationSpec = tween(durationMillis = 240, easing = androidx.compose.animation.core.LinearOutSlowInEasing))).togetherWith(
+                                        fadeOut(animationSpec = tween(durationMillis = 200, easing = androidx.compose.animation.core.FastOutLinearInEasing))
                                     ).apply {
                                         targetContentZIndex = 0f
                                     }
