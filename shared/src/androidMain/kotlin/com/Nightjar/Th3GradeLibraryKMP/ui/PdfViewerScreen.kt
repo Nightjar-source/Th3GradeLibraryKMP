@@ -36,6 +36,7 @@ import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.animateDp
 import androidx.compose.animation.core.FastOutLinearInEasing
 import androidx.compose.animation.core.LinearOutSlowInEasing
 import androidx.compose.ui.platform.LocalContext
@@ -340,7 +341,7 @@ actual fun PdfViewerScreen(
     val cornerRadius by if (animatedVisibilityScope != null) {
         animatedVisibilityScope.transition.animateDp(
             transitionSpec = { spring(dampingRatio = 0.76f, stiffness = 220f) },
-            targetValueByState = { state ->
+            targetValueByState = { state: androidx.compose.animation.EnterExitState ->
                 when (state) {
                     androidx.compose.animation.EnterExitState.Visible -> 0.dp
                     else -> dynamicTargetCornerRadius
