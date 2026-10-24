@@ -308,6 +308,8 @@ fun NewsScreen(
                                 val isReturning = com.Nightjar.Th3GradeLibraryKMP.theme.LocalIsReturningFromPdf.current
                                 NewsCardSwipeable(
                                     modifier = Modifier
+                                        .fillMaxWidth()
+                                        .com.Nightjar.Th3GradeLibraryKMP.theme.screenEntranceCascade(index)
                                         .animateItem(
                                             fadeInSpec = null,
                                             fadeOutSpec = tween(200),

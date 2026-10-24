@@ -550,15 +550,14 @@ fun LazyGridItemScope.ContentCard(
                 animatedVisibilityScope = animatedVisibilityScope,
                 enter = androidx.compose.animation.fadeIn(
                     animationSpec = androidx.compose.animation.core.tween(
-                        durationMillis = 130,
-                        easing = androidx.compose.animation.core.LinearEasing
+                        durationMillis = 200,
+                        easing = androidx.compose.animation.core.FastOutSlowInEasing
                     )
                 ),
                 exit = androidx.compose.animation.fadeOut(
                     animationSpec = androidx.compose.animation.core.tween(
-                        durationMillis = 150,
-                        delayMillis = 75,
-                        easing = androidx.compose.animation.core.FastOutLinearInEasing
+                        durationMillis = 180,
+                        easing = androidx.compose.animation.core.FastOutSlowInEasing
                     )
                 ),
                 renderInOverlayDuringTransition = isSharedActive,

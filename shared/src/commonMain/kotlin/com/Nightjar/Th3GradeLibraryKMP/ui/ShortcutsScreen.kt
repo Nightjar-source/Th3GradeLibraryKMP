@@ -131,6 +131,9 @@ fun ShortcutsScreen(
                     key = { _, item -> item.id }
                 ) { index, item ->
                     ShortcutItemCard(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .screenEntranceCascade(index + 1),
                         item = item,
                         isDark = isDark,
                         index = index + 1,

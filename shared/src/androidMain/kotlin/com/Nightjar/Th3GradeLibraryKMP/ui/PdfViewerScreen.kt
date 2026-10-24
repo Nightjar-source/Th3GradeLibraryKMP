@@ -365,15 +365,14 @@ actual fun PdfViewerScreen(
                 animatedVisibilityScope = animatedVisibilityScope,
                 enter = androidx.compose.animation.fadeIn(
                     animationSpec = androidx.compose.animation.core.tween(
-                        durationMillis = 130,
-                        easing = androidx.compose.animation.core.LinearEasing
+                        durationMillis = 200,
+                        easing = androidx.compose.animation.core.FastOutSlowInEasing
                     )
                 ),
                 exit = androidx.compose.animation.fadeOut(
                     animationSpec = androidx.compose.animation.core.tween(
-                        durationMillis = 150,
-                        delayMillis = 75,
-                        easing = androidx.compose.animation.core.LinearEasing
+                        durationMillis = 180,
+                        easing = androidx.compose.animation.core.FastOutSlowInEasing
                     )
                 ),
                 renderInOverlayDuringTransition = true,
@@ -385,14 +384,14 @@ actual fun PdfViewerScreen(
             )
         }
     } else if (animatedVisibilityScope != null) {
-        // Liquid Dynamic Island sink-down exit ONLY when bookmark is deleted or when opening from a shortcut/news
+        // Clean symmetrical fluid fade and gentle scale without shrinking to screen top edge
         with(animatedVisibilityScope) {
             Modifier.animateEnterExit(
-                enter = androidx.compose.animation.fadeIn(androidx.compose.animation.core.tween(220)) + androidx.compose.animation.scaleIn(initialScale = 0.92f),
-                exit = androidx.compose.animation.fadeOut(androidx.compose.animation.core.tween(220, delayMillis = 60)) + 
+                enter = androidx.compose.animation.fadeIn(androidx.compose.animation.core.tween(220)) + androidx.compose.animation.scaleIn(initialScale = 0.96f),
+                exit = androidx.compose.animation.fadeOut(androidx.compose.animation.core.tween(200)) + 
                        androidx.compose.animation.scaleOut(
-                           targetScale = 0.28f, 
-                           animationSpec = spring(dampingRatio = 0.78f, stiffness = Spring.StiffnessMediumLow)
+                           targetScale = 0.96f, 
+                           animationSpec = spring(dampingRatio = 0.82f, stiffness = Spring.StiffnessMediumLow)
                        ) 
             )
         }
@@ -595,8 +594,8 @@ actual fun PdfViewerScreen(
                     // Completely Floating Top control bar
                     AnimatedVisibility(
                         visible = !isZoomed,
-                        enter = fadeIn() + slideInVertically { -it },
-                        exit = fadeOut() + slideOutVertically { -it },
+                        enter = fadeIn(animationSpec = tween(220)),
+                        exit = fadeOut(animationSpec = tween(180)),
                         modifier = Modifier.align(Alignment.TopCenter)
                     ) {
                         Row(
@@ -682,8 +681,8 @@ actual fun PdfViewerScreen(
                     // Floating Page Indicator capsule at bottom center
                     AnimatedVisibility(
                         visible = !isZoomed,
-                        enter = fadeIn() + slideInVertically { it },
-                        exit = fadeOut() + slideOutVertically { it },
+                        enter = fadeIn(animationSpec = tween(220)),
+                        exit = fadeOut(animationSpec = tween(180)),
                         modifier = Modifier.align(Alignment.BottomCenter)
                     ) {
                         Card(
@@ -905,6 +904,48 @@ actual fun PdfViewerScreen(
                         }
                     }
                 }
+            }
+        }
+
+        // --- Fluid Cover Morph Underlay / Overlay during exit and launch ---
+        // Sits inside the root sharedBounds Box so when closing and shrinking,
+        // it transforms smoothly back into the book card cover before 10% collapse!
+        val coverAlpha by if (animatedVisibilityScope != null) {
+            animatedVisibilityScope.transition.animateFloat(
+                transitionSpec = {
+                    if (targetState == androidx.compose.animation.EnterExitState.Visible) {
+                        // Opening: cover fades out quickly as reader content is ready
+                        androidx.compose.animation.core.tween(durationMillis = 180, easing = androidx.compose.animation.core.FastOutLinearInEasing)
+                    } else {
+                        // Closing: cover fades in early (before reaching 10% remaining collapse),
+                        // turning seamlessly into the book cover before arriving at original card bounds
+                        androidx.compose.animation.core.tween(durationMillis = 160, delayMillis = 20, easing = androidx.compose.animation.core.LinearOutSlowInEasing)
+                    }
+                },
+                targetValueByState = { state ->
+                    if (state == androidx.compose.animation.EnterExitState.Visible) 0f else 1f
+                },
+                label = "reader_cover_morph_alpha"
+            )
+        } else remember { mutableStateOf(0f) }
+
+        if (coverAlpha > 0.01f) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .graphicsLayer { alpha = coverAlpha }
+                    .background(MaterialTheme.colorScheme.surface)
+            ) {
+                coil3.compose.AsyncImage(
+                    model = coil3.request.ImageRequest.Builder(coil3.compose.LocalPlatformContext.current)
+                        .data(com.Nightjar.Th3GradeLibraryKMP.generated.resources.Res.getUri("drawable/${item.coverResName}." + if (item.coverResName in listOf("ayajaaa", "english", "englishactivity", "kss1")) "jpg" else "png"))
+                        .memoryCachePolicy(coil3.request.CachePolicy.ENABLED)
+                        .diskCachePolicy(coil3.request.CachePolicy.ENABLED)
+                        .build(),
+                    contentDescription = item.title,
+                    contentScale = ContentScale.Crop,
+                    modifier = Modifier.fillMaxSize()
+                )
             }
         }
     }

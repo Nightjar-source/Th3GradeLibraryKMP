@@ -195,7 +195,7 @@ fun Modifier.screenEntranceStagger(index: Int = 0, itemId: String? = null): Modi
 
     androidx.compose.runtime.LaunchedEffect(Unit) {
         if (index > 0) {
-            val staggerDelay = (index.coerceIn(0, 8) * 36L).coerceAtMost(240L)
+            val staggerDelay = (index.coerceIn(0, 10) * 55L).coerceAtMost(450L)
             kotlinx.coroutines.delay(staggerDelay)
         }
         isLoaded = true
@@ -204,8 +204,8 @@ fun Modifier.screenEntranceStagger(index: Int = 0, itemId: String? = null): Modi
     val animProgress by androidx.compose.animation.core.animateFloatAsState(
         targetValue = if (isLoaded) 1f else 0f,
         animationSpec = androidx.compose.animation.core.spring(
-            dampingRatio = 0.72f,
-            stiffness = androidx.compose.animation.core.Spring.StiffnessLow
+            dampingRatio = 0.78f,
+            stiffness = 240f
         ),
         label = "fluidSlide_$index"
     )
@@ -214,7 +214,7 @@ fun Modifier.screenEntranceStagger(index: Int = 0, itemId: String? = null): Modi
         Modifier
     } else {
         val density = androidx.compose.ui.platform.LocalDensity.current
-        val offsetYPx = androidx.compose.runtime.remember(density) { with(density) { 28.dp.toPx() } }
+        val offsetYPx = androidx.compose.runtime.remember(density) { with(density) { 38.dp.toPx() } }
         this.graphicsLayer {
             val progress = animProgress.coerceIn(0f, 1f)
             this.alpha = progress

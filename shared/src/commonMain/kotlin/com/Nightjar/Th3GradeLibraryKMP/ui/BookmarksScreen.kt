@@ -247,7 +247,9 @@ fun BookmarksScreen(
                         if (book != null) {
                             val pages = groupedPages[bookId] ?: emptyList()
                             BookAccordionItem(
-                                modifier = Modifier.animateItem(),
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .com.Nightjar.Th3GradeLibraryKMP.theme.screenEntranceCascade(index),
                                 item = book,
                                 pages = pages,
                                 isPageSaved = { pageIdx -> savedPages.contains("${book.id}:$pageIdx") },
@@ -411,6 +413,7 @@ fun BookAccordionItem(
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
+                    .clipToBounds()
                     .padding(horizontal = 16.dp)
                     .padding(top = 8.dp, bottom = 12.dp),
                 verticalArrangement = Arrangement.spacedBy(8.dp)
@@ -445,7 +448,7 @@ fun BookAccordionItem(
                             shrinkTowards = Alignment.Top
                         ) + fadeOut(tween(180, easing = androidx.compose.animation.core.FastOutSlowInEasing))
                     ) {
-                        val rowSharedModifier = if (sharedTransitionScope != null && screenVisibilityScope != null) {
+                        val rowSharedModifier = if (sharedTransitionScope != null && screenVisibilityScope != null && isThisRowActive) {
                             with(sharedTransitionScope) {
                                 Modifier.sharedBounds(
                                     sharedContentState = rememberSharedContentState(key = rowTargetKey),
