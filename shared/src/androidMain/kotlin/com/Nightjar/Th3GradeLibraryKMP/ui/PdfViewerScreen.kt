@@ -105,7 +105,7 @@ actual fun PdfViewerScreen(
     isDark: Boolean,
     isFromBookmarks: Boolean,
     sourcePage: String,
-    isFromShortcut: Boolean = false
+    isFromShortcut: Boolean
 ) {
     val context = LocalContext.current
     val appSettings by com.Nightjar.Th3GradeLibraryKMP.network.SyncEngine.appSettings.collectAsState()
