@@ -184,7 +184,8 @@ fun RenderPdfDestination(
     initialPage: Int?,
     isDark: Boolean,
     isFromBookmarks: Boolean,
-    sourcePage: String
+    sourcePage: String,
+    isFromShortcut: Boolean = false
 ) {
     PdfViewerScreen(
         item = item,
@@ -194,6 +195,7 @@ fun RenderPdfDestination(
         initialPage = initialPage,
         isDark = isDark,
         isFromBookmarks = isFromBookmarks,
-        sourcePage = sourcePage
+        sourcePage = sourcePage,
+        isFromShortcut = isFromShortcut
     )
 }

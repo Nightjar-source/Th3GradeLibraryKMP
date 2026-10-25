@@ -565,9 +565,7 @@ fun LazyGridItemScope.ContentCard(
                 ),
                 renderInOverlayDuringTransition = isSharedActive,
                 clipInOverlayDuringTransition = OverlayClip(RoundedCornerShape(cardCornerRadius)),
-                boundsTransform = { _, _ ->
-                    spring(dampingRatio = 0.82f, stiffness = 280f)
-                },
+                boundsTransform = com.Nightjar.Th3GradeLibraryKMP.animation.MotionSpecs.boundsTransform,
                 resizeMode = SharedTransitionScope.ResizeMode.RemeasureToBounds
             )
         }
@@ -601,25 +599,13 @@ fun LazyGridItemScope.ContentCard(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalAlignment = Alignment.Start
                 ) {
-                    Box(
+                    BookCoverImage(
+                        item = item,
                         modifier = Modifier
                             .fillMaxWidth()
-                            .aspectRatio(0.72f)
-                            .clip(RoundedCornerShape(16.dp))
-                            .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
-                    ) {
-                        coil3.compose.AsyncImage(
-                            model = coil3.request.ImageRequest.Builder(coil3.compose.LocalPlatformContext.current)
-                                .data(com.Nightjar.Th3GradeLibraryKMP.generated.resources.Res.getUri("drawable/${item.coverResName}." + if (item.coverResName in listOf("ayajaaa", "english", "englishactivity", "kss1")) "jpg" else "png"))
-                                .crossfade(false)
-                                .memoryCachePolicy(coil3.request.CachePolicy.ENABLED)
-                                .diskCachePolicy(coil3.request.CachePolicy.ENABLED)
-                                .build(),
-                            contentDescription = item.title,
-                            contentScale = ContentScale.Crop,
-                            modifier = Modifier.fillMaxSize()
-                        )
-                    }
+                            .aspectRatio(0.72f),
+                        shape = RoundedCornerShape(16.dp)
+                    )
 
                     Spacer(modifier = Modifier.height(10.dp))
 
@@ -666,24 +652,11 @@ fun LazyGridItemScope.ContentCard(
                     modifier = Modifier.fillMaxWidth(),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Box(
-                        modifier = Modifier
-                            .size(width = if (isMicro) 56.dp else 72.dp, height = if (isMicro) 75.dp else 96.dp)
-                            .clip(RoundedCornerShape(14.dp))
-                            .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
-                    ) {
-                        coil3.compose.AsyncImage(
-                            model = coil3.request.ImageRequest.Builder(coil3.compose.LocalPlatformContext.current)
-                                .data(com.Nightjar.Th3GradeLibraryKMP.generated.resources.Res.getUri("drawable/${item.coverResName}." + if (item.coverResName in listOf("ayajaaa", "english", "englishactivity", "kss1")) "jpg" else "png"))
-                                .crossfade(false)
-                                .memoryCachePolicy(coil3.request.CachePolicy.ENABLED)
-                                .diskCachePolicy(coil3.request.CachePolicy.ENABLED)
-                                .build(),
-                            contentDescription = item.title,
-                            contentScale = ContentScale.Crop,
-                            modifier = Modifier.fillMaxSize()
-                        )
-                    }
+                    BookCoverImage(
+                        item = item,
+                        modifier = Modifier.size(width = if (isMicro) 56.dp else 72.dp, height = if (isMicro) 75.dp else 96.dp),
+                        shape = RoundedCornerShape(14.dp)
+                    )
 
                     Spacer(modifier = Modifier.width(if (isMicro) 10.dp else 16.dp))
 

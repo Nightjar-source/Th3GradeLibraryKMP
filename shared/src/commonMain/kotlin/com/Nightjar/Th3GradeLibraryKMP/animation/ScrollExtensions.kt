@@ -17,7 +17,8 @@ import kotlinx.coroutines.delay
 
 /**
  * Isolated Scroll and Item Entrance Animation Extensions.
- * Eliminates all list flickering, provides buttery 120Hz entrance, and protects against re-triggering on scroll.
+ * Eliminates all list flickering, provides fluid 120Hz sliding spring motion exactly matching caliq5,
+ * and completely protects against re-triggering during lazy scrolling.
  */
 fun Modifier.animateItemOnScroll(index: Int = 0, itemId: String? = null): Modifier = composed {
     val isLowEnd = LocalIsLowEndDevice.current
@@ -45,7 +46,7 @@ fun Modifier.animateItemOnScroll(index: Int = 0, itemId: String? = null): Modifi
 
     val animProgress = remember(screenKey, itemKey) { Animatable(0f) }
     val density = LocalDensity.current
-    val offsetYPx = remember(density) { with(density) { 14.dp.toPx() } }
+    val offsetYPx = remember(density) { with(density) { 24.dp.toPx() } }
 
     LaunchedEffect(screenKey, itemKey) {
         val staggerDelay = MotionSpecs.getStaggerDelay(index)
@@ -59,15 +60,15 @@ fun Modifier.animateItemOnScroll(index: Int = 0, itemId: String? = null): Modifi
 
     val p = animProgress.value
     this.graphicsLayer {
-        this.alpha = 0.30f + 0.70f * p // Base alpha 0.30f prevents harsh white/dark flash while preserving organic entrance
+        this.alpha = 0.35f + 0.65f * p
         this.translationY = (1f - p) * offsetYPx
-        this.scaleX = 0.985f + 0.015f * p
-        this.scaleY = 0.985f + 0.015f * p
+        this.scaleX = 0.96f + 0.04f * p
+        this.scaleY = 0.96f + 0.04f * p
         this.clip = false
     }
 }
 
 /**
- * Clean alias for library and news grids
+ * Clean alias for library, shortcuts, and news grids
  */
 fun Modifier.screenCascadeEntrance(index: Int = 0, itemId: String? = null): Modifier = this.animateItemOnScroll(index, itemId)

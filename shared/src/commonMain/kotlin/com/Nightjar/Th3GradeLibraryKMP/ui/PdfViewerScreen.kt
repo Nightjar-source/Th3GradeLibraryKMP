@@ -12,5 +12,6 @@ expect fun PdfViewerScreen(
     initialPage: Int? = null,
     isDark: Boolean = false,
     isFromBookmarks: Boolean = false,
-    sourcePage: String = "home"
+    sourcePage: String = "home",
+    isFromShortcut: Boolean = false
 )

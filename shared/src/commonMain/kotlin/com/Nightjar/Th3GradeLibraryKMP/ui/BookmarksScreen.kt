@@ -310,23 +310,11 @@ fun BookAccordionItem(
                 .padding(12.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Box(
-                modifier = Modifier
-                    .size(if (isMicro) 48.dp else 60.dp)
-                    .clip(RoundedCornerShape(12.dp))
-                    .background(MaterialTheme.colorScheme.surfaceVariant)
-            ) {
-                AsyncImage(
-                    model = ImageRequest.Builder(LocalPlatformContext.current)
-                        .data(Res.getUri("drawable/${item.coverResName}." + if (item.coverResName in listOf("ayajaaa", "english", "englishactivity", "kss1")) "jpg" else "png"))
-                        .memoryCachePolicy(CachePolicy.ENABLED)
-                        .diskCachePolicy(CachePolicy.ENABLED)
-                        .build(),
-                    contentDescription = item.title,
-                    contentScale = ContentScale.Crop,
-                    modifier = Modifier.fillMaxSize()
-                )
-            }
+            BookCoverImage(
+                item = item,
+                modifier = Modifier.size(if (isMicro) 48.dp else 60.dp),
+                shape = RoundedCornerShape(12.dp)
+            )
 
             Spacer(modifier = Modifier.width(if (isMicro) 10.dp else 16.dp))
 
@@ -441,9 +429,7 @@ fun BookAccordionItem(
                                     exit = fadeOut(animationSpec = tween(durationMillis = 130, easing = LinearEasing)),
                                     renderInOverlayDuringTransition = false,
                                     clipInOverlayDuringTransition = OverlayClip(RoundedCornerShape(14.dp)),
-                                    boundsTransform = { _, _ ->
-                                        spring(dampingRatio = 0.82f, stiffness = 280f)
-                                    },
+                                    boundsTransform = com.Nightjar.Th3GradeLibraryKMP.animation.MotionSpecs.boundsTransform,
                                     resizeMode = SharedTransitionScope.ResizeMode.RemeasureToBounds
                                 )
                             }
