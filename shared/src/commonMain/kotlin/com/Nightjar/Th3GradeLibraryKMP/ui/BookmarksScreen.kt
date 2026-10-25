@@ -449,7 +449,7 @@ fun BookAccordionItem(
                             shrinkTowards = Alignment.Top
                         ) + fadeOut(tween(180, easing = androidx.compose.animation.core.FastOutSlowInEasing))
                     ) {
-                        val rowSharedModifier = if (sharedTransitionScope != null && screenVisibilityScope != null && isThisRowActive) {
+                        val rowSharedModifier = if (sharedTransitionScope != null && screenVisibilityScope != null) {
                             with(sharedTransitionScope) {
                                 Modifier.sharedBounds(
                                     sharedContentState = rememberSharedContentState(key = rowTargetKey),
@@ -467,7 +467,7 @@ fun BookAccordionItem(
                                             easing = androidx.compose.animation.core.FastOutLinearInEasing
                                         )
                                     ),
-                                    renderInOverlayDuringTransition = true,
+                                    renderInOverlayDuringTransition = isThisRowActive,
                                     clipInOverlayDuringTransition = OverlayClip(RoundedCornerShape(14.dp)),
                                     boundsTransform = { _, _ ->
                                         spring(dampingRatio = 0.82f, stiffness = 280f)

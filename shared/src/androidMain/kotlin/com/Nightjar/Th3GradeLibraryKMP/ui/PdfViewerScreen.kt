@@ -410,6 +410,112 @@ actual fun PdfViewerScreen(
         .background(MaterialTheme.colorScheme.background)
 
     Box(modifier = rootModifier) {
+        // --- Morph Underlay / Overlay during expand & collapse respecting shape fidelity ---
+        // First 10% of expansion: dissolves from card shape into reader content
+        // Last 10% of contraction: reveals card shape right before reaching original position
+        val coverAlpha by if (animatedVisibilityScope != null) {
+            animatedVisibilityScope.transition.animateFloat(
+                transitionSpec = {
+                    if (this.targetState == androidx.compose.animation.EnterExitState.Visible) {
+                        // Opening: first 10% of transition (approx 35ms) dissolves out
+                        tween(durationMillis = 35, easing = LinearEasing)
+                    } else {
+                        // Closing: stays hidden for 85% of collapse, fades in at the last 10-15% (180ms delay, 45ms duration)
+                        tween(durationMillis = 45, delayMillis = 180, easing = FastOutSlowInEasing)
+                    }
+                },
+                targetValueByState = { state: androidx.compose.animation.EnterExitState ->
+                    if (state == androidx.compose.animation.EnterExitState.Visible) 0f else 1f
+                },
+                label = "reader_cover_morph_alpha"
+            )
+        } else remember { mutableStateOf(0f) }
+
+        if (coverAlpha > 0.01f) {
+            Box(
+                modifier = Modifier
+                    .zIndex(10f)
+                    .fillMaxSize()
+                    .graphicsLayer { alpha = coverAlpha }
+                    .background(MaterialTheme.colorScheme.surface)
+            ) {
+                if (isFromBookmarksEffective) {
+                    // Shape Fidelity for Bookmarks: Expand/Collapse as glass capsule row with bookmark page details
+                    Row(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(16.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Star,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.size(24.dp)
+                        )
+                        Spacer(modifier = Modifier.width(12.dp))
+                        Text(
+                            text = if (initialPage != null) "الصفحة رقم ${initialPage + 1}" else item.title,
+                            fontSize = 15.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
+                    }
+                } else if (!isGridMode) {
+                    // Shape Fidelity for List Mode: Horizontal card layout
+                    Row(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(12.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .size(width = 64.dp, height = 86.dp)
+                                .clip(RoundedCornerShape(12.dp))
+                                .background(MaterialTheme.colorScheme.surfaceVariant)
+                        ) {
+                            coil3.compose.AsyncImage(
+                                model = coil3.request.ImageRequest.Builder(coil3.compose.LocalPlatformContext.current)
+                                    .data(com.Nightjar.Th3GradeLibraryKMP.generated.resources.Res.getUri("drawable/${item.coverResName}." + if (item.coverResName in listOf("ayajaaa", "english", "englishactivity", "kss1")) "jpg" else "png"))
+                                    .build(),
+                                contentDescription = item.title,
+                                contentScale = ContentScale.Crop,
+                                modifier = Modifier.fillMaxSize()
+                            )
+                        }
+                        Spacer(modifier = Modifier.width(14.dp))
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                text = item.title,
+                                fontSize = 16.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.onSurface
+                            )
+                            Spacer(modifier = Modifier.height(4.dp))
+                            Text(
+                                text = item.author,
+                                fontSize = 12.sp,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    }
+                } else {
+                    // Grid Mode: Full book cover image
+                    coil3.compose.AsyncImage(
+                        model = coil3.request.ImageRequest.Builder(coil3.compose.LocalPlatformContext.current)
+                            .data(com.Nightjar.Th3GradeLibraryKMP.generated.resources.Res.getUri("drawable/${item.coverResName}." + if (item.coverResName in listOf("ayajaaa", "english", "englishactivity", "kss1")) "jpg" else "png"))
+                            .memoryCachePolicy(coil3.request.CachePolicy.ENABLED)
+                            .diskCachePolicy(coil3.request.CachePolicy.ENABLED)
+                            .build(),
+                        contentDescription = item.title,
+                        contentScale = ContentScale.Crop,
+                        modifier = Modifier.fillMaxSize()
+                    )
+                }
+            }
+        }
+
         if (loadingError != null) {
             Column(
                 modifier = Modifier
@@ -913,110 +1019,6 @@ actual fun PdfViewerScreen(
             }
         }
 
-        // --- Morph Underlay / Overlay during expand & collapse respecting shape fidelity ---
-        // First 10% of expansion: dissolves from card shape into reader content
-        // Last 10% of contraction: reveals card shape right before reaching original position
-        val coverAlpha by if (animatedVisibilityScope != null) {
-            animatedVisibilityScope.transition.animateFloat(
-                transitionSpec = {
-                    if (this.targetState == androidx.compose.animation.EnterExitState.Visible) {
-                        // Opening: first 10% of transition (approx 35ms) dissolves out
-                        tween(durationMillis = 35, easing = LinearEasing)
-                    } else {
-                        // Closing: stays hidden for 85% of collapse, fades in at the last 10-15% (180ms delay, 45ms duration)
-                        tween(durationMillis = 45, delayMillis = 180, easing = FastOutSlowInEasing)
-                    }
-                },
-                targetValueByState = { state: androidx.compose.animation.EnterExitState ->
-                    if (state == androidx.compose.animation.EnterExitState.Visible) 0f else 1f
-                },
-                label = "reader_cover_morph_alpha"
-            )
-        } else remember { mutableStateOf(0f) }
-
-        if (coverAlpha > 0.01f) {
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .graphicsLayer { alpha = coverAlpha }
-                    .background(MaterialTheme.colorScheme.surface)
-            ) {
-                if (isFromBookmarksEffective) {
-                    // Shape Fidelity for Bookmarks: Expand/Collapse as glass capsule row with bookmark page details
-                    Row(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .padding(16.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.Star,
-                            contentDescription = null,
-                            tint = MaterialTheme.colorScheme.primary,
-                            modifier = Modifier.size(24.dp)
-                        )
-                        Spacer(modifier = Modifier.width(12.dp))
-                        Text(
-                            text = if (initialPage != null) "الصفحة رقم ${initialPage + 1}" else item.title,
-                            fontSize = 15.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.onSurface
-                        )
-                    }
-                } else if (!isGridMode) {
-                    // Shape Fidelity for List Mode: Horizontal card layout
-                    Row(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .padding(12.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Box(
-                            modifier = Modifier
-                                .size(width = 64.dp, height = 86.dp)
-                                .clip(RoundedCornerShape(12.dp))
-                                .background(MaterialTheme.colorScheme.surfaceVariant)
-                        ) {
-                            coil3.compose.AsyncImage(
-                                model = coil3.request.ImageRequest.Builder(coil3.compose.LocalPlatformContext.current)
-                                    .data(com.Nightjar.Th3GradeLibraryKMP.generated.resources.Res.getUri("drawable/${item.coverResName}." + if (item.coverResName in listOf("ayajaaa", "english", "englishactivity", "kss1")) "jpg" else "png"))
-                                    .build(),
-                                contentDescription = item.title,
-                                contentScale = ContentScale.Crop,
-                                modifier = Modifier.fillMaxSize()
-                            )
-                        }
-                        Spacer(modifier = Modifier.width(14.dp))
-                        Column(modifier = Modifier.weight(1f)) {
-                            Text(
-                                text = item.title,
-                                fontSize = 16.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = MaterialTheme.colorScheme.onSurface
-                            )
-                            Spacer(modifier = Modifier.height(4.dp))
-                            Text(
-                                text = item.author,
-                                fontSize = 12.sp,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        }
-                    }
-                } else {
-                    // Grid Mode: Full book cover image
-                    coil3.compose.AsyncImage(
-                        model = coil3.request.ImageRequest.Builder(coil3.compose.LocalPlatformContext.current)
-                            .data(com.Nightjar.Th3GradeLibraryKMP.generated.resources.Res.getUri("drawable/${item.coverResName}." + if (item.coverResName in listOf("ayajaaa", "english", "englishactivity", "kss1")) "jpg" else "png"))
-                            .memoryCachePolicy(coil3.request.CachePolicy.ENABLED)
-                            .diskCachePolicy(coil3.request.CachePolicy.ENABLED)
-                            .build(),
-                        contentDescription = item.title,
-                        contentScale = ContentScale.Crop,
-                        modifier = Modifier.fillMaxSize()
-                    )
-                }
-            }
-        }
     }
 }
 

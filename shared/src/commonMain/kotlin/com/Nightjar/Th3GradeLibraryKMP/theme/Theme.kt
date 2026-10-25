@@ -193,7 +193,7 @@ fun Modifier.screenEntranceStagger(index: Int = 0, itemId: String? = null): Modi
     val itemKey = itemId ?: ("idx_" + index)
 
     val alreadySeen = (seenMap != null && seenMap[itemKey] == true) || isReturningFromPdf
-    if (isLowEnd || alreadySeen || index > 12) {
+    if (isLowEnd || alreadySeen || index !in 0..8) {
         if (seenMap != null) {
             seenMap[itemKey] = true
         }
@@ -204,7 +204,7 @@ fun Modifier.screenEntranceStagger(index: Int = 0, itemId: String? = null): Modi
 
     androidx.compose.runtime.LaunchedEffect(itemKey) {
         if (index > 0) {
-            val staggerDelay = (index.coerceIn(0, 8) * 45L).coerceAtMost(360L)
+            val staggerDelay = (index * 35L).coerceAtMost(280L)
             kotlinx.coroutines.delay(staggerDelay)
         }
         isLoaded = true
@@ -215,7 +215,7 @@ fun Modifier.screenEntranceStagger(index: Int = 0, itemId: String? = null): Modi
         targetValue = if (isLoaded) 1f else 0f,
         animationSpec = androidx.compose.animation.core.spring(
             dampingRatio = 0.82f,
-            stiffness = 280f
+            stiffness = 300f
         ),
         label = "fluidSlide_" + itemKey
     )
@@ -224,13 +224,13 @@ fun Modifier.screenEntranceStagger(index: Int = 0, itemId: String? = null): Modi
         Modifier
     } else {
         val density = androidx.compose.ui.platform.LocalDensity.current
-        val offsetYPx = androidx.compose.runtime.remember(density) { with(density) { 32.dp.toPx() } }
+        val offsetYPx = androidx.compose.runtime.remember(density) { with(density) { 24.dp.toPx() } }
         this.graphicsLayer {
             val progress = animProgress.coerceIn(0f, 1f)
-            this.alpha = progress
+            this.alpha = 0.85f + 0.15f * progress
             this.translationY = (1f - progress) * offsetYPx
-            this.scaleX = 0.96f + 0.04f * progress
-            this.scaleY = 0.96f + 0.04f * progress
+            this.scaleX = 0.98f + 0.02f * progress
+            this.scaleY = 0.98f + 0.02f * progress
             this.clip = false
         }
     }
