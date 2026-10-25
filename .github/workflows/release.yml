@@ -50,12 +50,7 @@ jobs:
           KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
 
       - name: Build Android Release APK
-        run: |
-          ./gradlew assembleRelease --stacktrace > build.log 2>&1 || {
-            echo '=== BUILD FAILED: LAST 100 LINES ==='
-            tail -n 100 build.log
-            exit 1
-          }
+        run: ./gradlew assembleRelease --stacktrace --no-daemon
         env:
           KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
           KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
