@@ -57,16 +57,8 @@ jobs:
 
       - name: Prepare APK Release Files
         run: |
-          mkdir -p androidApp/build/outputs/apk/release
-          find androidApp/build/outputs -type f -name "*.apk" -exec ls -la {} +
-          TARGET_APK="androidApp/build/outputs/apk/release/androidApp-release.apk"
-          if [ ! -f "$TARGET_APK" ]; then
-            FOUND_APK=$(find androidApp/build/outputs -type f -name "*.apk" | head -n 1)
-            echo "Found APK: $FOUND_APK"
-            cp "$FOUND_APK" "$TARGET_APK"
-          fi
-          cp "$TARGET_APK" "androidApp/build/outputs/apk/release/Th3GradeLibrary_${{ steps.release_info.outputs.tag }}.apk"
-          cp "$TARGET_APK" "androidApp/build/outputs/apk/release/كتب_وملازم_الثالث_متوسط_${{ steps.release_info.outputs.tag }}.apk"
+          cp androidApp/build/outputs/apk/release/androidApp-release.apk "androidApp/build/outputs/apk/release/Th3GradeLibrary_${{ steps.release_info.outputs.tag }}.apk"
+          cp androidApp/build/outputs/apk/release/androidApp-release.apk "androidApp/build/outputs/apk/release/كتب_وملازم_الثالث_متوسط_${{ steps.release_info.outputs.tag }}.apk"
 
       - name: Upload Release APK Artifact
         uses: actions/upload-artifact@v4

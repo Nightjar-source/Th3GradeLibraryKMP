@@ -172,11 +172,15 @@ fun ShortcutItemCard(
                 .fillMaxWidth()
                 .aspectRatio(0.8f)
                 .clip(RoundedCornerShape(20.dp))
+                .background(MaterialTheme.colorScheme.surfaceVariant)
         ) {
-            BookCoverImage(
-                item = item,
-                modifier = imageModifier.fillMaxSize(),
-                shape = RoundedCornerShape(20.dp)
+            coil3.compose.AsyncImage(
+                model = coil3.request.ImageRequest.Builder(coil3.compose.LocalPlatformContext.current)
+                    .data(com.Nightjar.Th3GradeLibraryKMP.generated.resources.Res.getUri("drawable/${item.coverResName}." + if (item.coverResName in listOf("ayajaaa", "english", "englishactivity", "kss1")) "jpg" else "png"))
+                    .build(),
+                contentDescription = item.title,
+                contentScale = ContentScale.Crop,
+                modifier = imageModifier
             )
             Box(
                 modifier = Modifier

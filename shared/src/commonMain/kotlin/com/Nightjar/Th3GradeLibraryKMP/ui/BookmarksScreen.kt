@@ -284,20 +284,19 @@ fun BookAccordionItem(
     screenVisibilityScope: AnimatedVisibilityScope?,
     modifier: Modifier = Modifier
 ) {
-    // Dynamic page tracking: maintains pages being animated out so shrinkVertically runs smoothly
-    val trackedPages = remember { mutableStateListOf<Int>() }
-    LaunchedEffect(pages) {
-        pages.forEach { p ->
-            if (p !in trackedPages) trackedPages.add(p)
-        }
-    }
+    val sortedPages = remember(pages) { pages.distinct().sorted() }
 
     Column(
         modifier = modifier
             .fillMaxWidth()
-            .animateContentSize(spring(dampingRatio = 0.82f, stiffness = 280f))
             .liquidGlass(isDark, borderRadius = 20.dp, alpha = 0.96f)
             .clip(RoundedCornerShape(20.dp))
+            .animateContentSize(
+                animationSpec = spring(
+                    dampingRatio = 0.82f,
+                    stiffness = 320f
+                )
+            )
     ) {
         // Accordion Header
         val responsiveInfo = com.Nightjar.Th3GradeLibraryKMP.theme.LocalResponsiveLayoutInfo.current
@@ -305,16 +304,28 @@ fun BookAccordionItem(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .clip(RoundedCornerShape(20.dp))
+                .clip(RoundedCornerShape(if (isMicro) 16.dp else 20.dp))
                 .clickable { onToggleExpand() }
-                .padding(12.dp),
+                .padding(if (isMicro) 8.dp else 12.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            BookCoverImage(
-                item = item,
-                modifier = Modifier.size(if (isMicro) 48.dp else 60.dp),
-                shape = RoundedCornerShape(12.dp)
-            )
+            Box(
+                modifier = Modifier
+                    .size(if (isMicro) 48.dp else 60.dp)
+                    .clip(RoundedCornerShape(if (isMicro) 10.dp else 12.dp))
+                    .background(MaterialTheme.colorScheme.surfaceVariant)
+            ) {
+                AsyncImage(
+                    model = ImageRequest.Builder(LocalPlatformContext.current)
+                        .data(Res.getUri("drawable/${item.coverResName}." + if (item.coverResName in listOf("ayajaaa", "english", "englishactivity", "kss1")) "jpg" else "png"))
+                        .memoryCachePolicy(CachePolicy.ENABLED)
+                        .diskCachePolicy(CachePolicy.ENABLED)
+                        .build(),
+                    contentDescription = item.title,
+                    contentScale = ContentScale.Crop,
+                    modifier = Modifier.fillMaxSize()
+                )
+            }
 
             Spacer(modifier = Modifier.width(if (isMicro) 10.dp else 16.dp))
 
@@ -328,7 +339,7 @@ fun BookAccordionItem(
                     overflow = TextOverflow.Ellipsis
                 )
                 Spacer(modifier = Modifier.height(4.dp))
-                val pagesCount = pages.size
+                val pagesCount = sortedPages.size
                 val pagesCountText = when {
                     pagesCount == 1 -> "صفحة واحدة محفوظة"
                     pagesCount == 2 -> "صفحتان محفوظتان"
@@ -344,9 +355,9 @@ fun BookAccordionItem(
 
             val arrowRotation by animateFloatAsState(
                 targetValue = if (isExpanded) 180f else 0f,
-                animationSpec = tween(
-                    durationMillis = 220,
-                    easing = androidx.compose.animation.core.FastOutSlowInEasing
+                animationSpec = spring(
+                    dampingRatio = 0.82f,
+                    stiffness = 320f
                 ),
                 label = "arrow_rotation"
             )
@@ -362,10 +373,10 @@ fun BookAccordionItem(
             )
         }
 
-        // Instant synchronized divider line directly under Header
+        // Instant synchronized divider line directly under Header (t=0, smoothly blends with expand)
         val dividerAlpha by animateFloatAsState(
             targetValue = if (isExpanded) 1f else 0f,
-            animationSpec = tween(durationMillis = 150, easing = androidx.compose.animation.core.FastOutSlowInEasing),
+            animationSpec = spring(dampingRatio = 0.82f, stiffness = 320f),
             label = "divider_alpha"
         )
         if (dividerAlpha > 0.01f) {
@@ -382,23 +393,23 @@ fun BookAccordionItem(
             )
         }
 
-        // Expanded Bookmark Rows with Ultra-Moist Fluid Organic Spring
+        // Expanded Bookmark Rows with Ultra-Moist Fluid Organic Spring (سائل رطب كالحرير)
         AnimatedVisibility(
             visible = isExpanded,
             enter = expandVertically(
                 animationSpec = spring(
                     dampingRatio = 0.82f,
-                    stiffness = 280f
+                    stiffness = 320f
                 ),
                 expandFrom = Alignment.Top
-            ) + fadeIn(tween(200, easing = androidx.compose.animation.core.FastOutSlowInEasing)),
+            ) + fadeIn(tween(180, easing = androidx.compose.animation.core.FastOutSlowInEasing)),
             exit = shrinkVertically(
                 animationSpec = spring(
                     dampingRatio = 0.82f,
-                    stiffness = 280f
+                    stiffness = 320f
                 ),
                 shrinkTowards = Alignment.Top
-            ) + fadeOut(tween(180, easing = androidx.compose.animation.core.FastOutSlowInEasing))
+            ) + fadeOut(tween(150, easing = androidx.compose.animation.core.FastOutSlowInEasing))
         ) {
             Column(
                 modifier = Modifier
@@ -410,87 +421,95 @@ fun BookAccordionItem(
             ) {
                 val sharedTransitionScope = LocalSharedTransitionScope.current
 
-                // Render all tracked pages sorted
-                val sortedPages = remember(trackedPages.toList()) { trackedPages.sorted() }
-                sortedPages.forEach { pageIndex ->
-                    key(pageIndex) {
-                        val rowInteractionSource = remember { MutableInteractionSource() }
-                        val rowTargetKey = "bookmark_${item.id}_$pageIndex"
-                        val isReturningFromPdf = LocalIsReturningFromPdf.current
-                        val isRowActiveTarget = (TransitionTargetTracker.isTransitionActive || isReturningFromPdf) &&
-                                TransitionTargetTracker.activeTargetId == rowTargetKey
+                var renderedPages by remember { mutableStateOf(sortedPages) }
+                LaunchedEffect(sortedPages) {
+                    if ((sortedPages - renderedPages.toSet()).isNotEmpty()) {
+                        renderedPages = (renderedPages + sortedPages).distinct().sorted()
+                    }
+                }
 
+                renderedPages.forEach { pageIndex ->
+                    key(pageIndex) {
+                    val isPageStillSaved = isPageSaved(pageIndex)
+                    val rowInteractionSource = remember { MutableInteractionSource() }
+                    val rowTargetKey = "bookmark_${item.id}_$pageIndex"
+                    val isReturningFromPdf = LocalIsReturningFromPdf.current
+                    val isThisRowTarget = (TransitionTargetTracker.activeTargetId == rowTargetKey)
+                    val isThisRowActive = isThisRowTarget && (TransitionTargetTracker.isTransitionActive || isReturningFromPdf)
+                    val isRowVisible = isPageStillSaved || isThisRowActive
+
+                    AnimatedVisibility(
+                        visible = isRowVisible,
+                        enter = expandVertically(
+                            animationSpec = spring(dampingRatio = 0.82f, stiffness = 320f),
+                            expandFrom = Alignment.Top
+                        ) + fadeIn(tween(200, easing = androidx.compose.animation.core.FastOutSlowInEasing)),
+                        exit = shrinkVertically(
+                            animationSpec = spring(dampingRatio = 0.82f, stiffness = 320f),
+                            shrinkTowards = Alignment.Top
+                        ) + fadeOut(tween(180, easing = androidx.compose.animation.core.FastOutSlowInEasing))
+                    ) {
                         val rowSharedModifier = if (sharedTransitionScope != null && screenVisibilityScope != null) {
                             with(sharedTransitionScope) {
                                 Modifier.sharedBounds(
                                     sharedContentState = rememberSharedContentState(key = rowTargetKey),
                                     animatedVisibilityScope = screenVisibilityScope,
-                                    enter = fadeIn(animationSpec = tween(durationMillis = 150, delayMillis = 75, easing = LinearEasing)),
-                                    exit = fadeOut(animationSpec = tween(durationMillis = 130, easing = LinearEasing)),
-                                    renderInOverlayDuringTransition = false,
+                                    enter = androidx.compose.animation.fadeIn(
+                                        animationSpec = androidx.compose.animation.core.tween(
+                                            durationMillis = 130,
+                                            easing = androidx.compose.animation.core.LinearEasing
+                                        )
+                                    ),
+                                    exit = androidx.compose.animation.fadeOut(
+                                        animationSpec = androidx.compose.animation.core.tween(
+                                            durationMillis = 150,
+                                            delayMillis = 75,
+                                            easing = androidx.compose.animation.core.FastOutLinearInEasing
+                                        )
+                                    ),
+                                    renderInOverlayDuringTransition = isThisRowActive,
                                     clipInOverlayDuringTransition = OverlayClip(RoundedCornerShape(14.dp)),
-                                    boundsTransform = com.Nightjar.Th3GradeLibraryKMP.animation.MotionSpecs.boundsTransform,
+                                    boundsTransform = { _, _ ->
+                                        spring(dampingRatio = 0.82f, stiffness = 280f)
+                                    },
                                     resizeMode = SharedTransitionScope.ResizeMode.RemeasureToBounds
                                 )
                             }
                         } else Modifier
 
-                        val isSavedLocally = isPageSaved(pageIndex)
-                        val isVisible = isSavedLocally || isRowActiveTarget
-
-                        // Remove exited page from tracker after shrink animation completes
-                        LaunchedEffect(isVisible) {
-                            if (!isVisible && !isRowActiveTarget) {
-                                kotlinx.coroutines.delay(350)
-                                if (!isPageSaved(pageIndex)) {
-                                    trackedPages.remove(pageIndex)
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .then(if (isThisRowActive) Modifier.zIndex(15f) else Modifier)
+                                .then(rowSharedModifier)
+                                .liquidGlass(
+                                    isDark = isDark,
+                                    borderRadius = 14.dp,
+                                    alpha = if (isDark) 0.60f else 0.45f
+                                )
+                                .clip(RoundedCornerShape(14.dp))
+                                .clickable(interactionSource = rowInteractionSource, indication = null) {
+                                    TransitionTargetTracker.activeTargetId = rowTargetKey
+                                    TransitionTargetTracker.isTransitionActive = true
+                                    onNavigateToPdf(pageIndex)
                                 }
-                            }
-                        }
-
-                        AnimatedVisibility(
-                            visible = isVisible,
-                            enter = expandVertically(
-                                animationSpec = spring(dampingRatio = 0.82f, stiffness = 280f),
-                                expandFrom = Alignment.Top
-                            ) + fadeIn(tween(180)),
-                            exit = shrinkVertically(
-                                animationSpec = spring(dampingRatio = 0.82f, stiffness = 280f),
-                                shrinkTowards = Alignment.Top
-                            ) + fadeOut(tween(140))
+                                .padding(12.dp),
+                            verticalAlignment = Alignment.CenterVertically
                         ) {
-                            Row(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .then(rowSharedModifier)
-                                    .liquidGlass(
-                                        isDark = isDark,
-                                        borderRadius = 14.dp,
-                                        alpha = if (isDark) 0.60f else 0.45f
-                                    )
-                                    .clip(RoundedCornerShape(14.dp))
-                                    .clickable(interactionSource = rowInteractionSource, indication = null) {
-                                        TransitionTargetTracker.activeTargetId = rowTargetKey
-                                        TransitionTargetTracker.isTransitionActive = true
-                                        onNavigateToPdf(pageIndex)
-                                    }
-                                    .padding(12.dp),
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Default.Bookmark,
-                                    contentDescription = "Page",
-                                    tint = MaterialTheme.colorScheme.primary,
-                                    modifier = Modifier.size(20.dp)
-                                )
-                                Spacer(modifier = Modifier.width(12.dp))
-                                Text(
-                                    text = "الصفحة رقم ${pageIndex + 1}",
-                                    fontSize = 14.sp,
-                                    color = MaterialTheme.colorScheme.onSurface
-                                )
-                            }
+                            Icon(
+                                imageVector = Icons.Default.Bookmark,
+                                contentDescription = "Page",
+                                tint = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.size(20.dp)
+                            )
+                            Spacer(modifier = Modifier.width(12.dp))
+                            Text(
+                                text = "الصفحة رقم ${pageIndex + 1}",
+                                fontSize = 14.sp,
+                                color = MaterialTheme.colorScheme.onSurface
+                            )
                         }
+                    }
                     }
                 }
             }
