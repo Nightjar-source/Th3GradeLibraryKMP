@@ -6,8 +6,6 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.BrokenImage
-import androidx.compose.material.icons.filled.MenuBook
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -132,7 +130,7 @@ fun BookCoverImage(
                         contentAlignment = Alignment.Center
                     ) {
                         Icon(
-                            imageVector = Icons.Default.BrokenImage,
+                            imageVector = Icons.Default.Book,
                             contentDescription = "ملف بانتظار التنزيل",
                             tint = Color.White.copy(alpha = 0.9f),
                             modifier = Modifier.size(20.dp)
