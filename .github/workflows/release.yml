@@ -70,21 +70,26 @@ jobs:
 
       - name: Prepare APK Release Files
         run: |
-          ls -la androidApp/build/outputs/apk/release/ || true
-          APK_FILE=$(find androidApp/build/outputs/apk/release/ -name "*.apk" | head -n 1)
-          echo "Found APK: $APK_FILE"
-          cp "$APK_FILE" "androidApp/build/outputs/apk/release/androidApp-release.apk" || true
-          cp "$APK_FILE" "androidApp/build/outputs/apk/release/Th3GradeLibrary_${{ steps.release_info.outputs.tag }}.apk"
-          cp "$APK_FILE" "androidApp/build/outputs/apk/release/كتب_وملازم_الثالث_متوسط_${{ steps.release_info.outputs.tag }}.apk"
+          echo "=== Listing all APKs found in project ==="
+          find . -name "*.apk"
+          APK_FILE=$(find . -name "*release*.apk" | head -n 1)
+          if [ -z "$APK_FILE" ]; then
+            APK_FILE=$(find . -name "*.apk" | head -n 1)
+          fi
+          echo "Selected APK: $APK_FILE"
+          mkdir -p build_output
+          cp "$APK_FILE" "build_output/androidApp-release.apk"
+          cp "$APK_FILE" "build_output/Th3GradeLibrary_${{ steps.release_info.outputs.tag }}.apk"
+          cp "$APK_FILE" "build_output/كتب_وملازم_الثالث_متوسط_${{ steps.release_info.outputs.tag }}.apk"
 
       - name: Upload Release APK Artifact
         uses: actions/upload-artifact@v4
         with:
           name: Th3GradeLibrary_${{ steps.release_info.outputs.tag }}
           path: |
-            androidApp/build/outputs/apk/release/Th3GradeLibrary_${{ steps.release_info.outputs.tag }}.apk
-            androidApp/build/outputs/apk/release/كتب_وملازم_الثالث_متوسط_${{ steps.release_info.outputs.tag }}.apk
-            androidApp/build/outputs/apk/release/androidApp-release.apk
+            build_output/Th3GradeLibrary_${{ steps.release_info.outputs.tag }}.apk
+            build_output/كتب_وملازم_الثالث_متوسط_${{ steps.release_info.outputs.tag }}.apk
+            build_output/androidApp-release.apk
 
       - name: Create Release
         continue-on-error: true
@@ -107,7 +112,7 @@ jobs:
             مرشحات وملخصات مركزة: مراجعات سريعة لليالي الامتحانات تساعدك على ضمان الدرجات العالية.
             إمكانية القراءة دون إنترنت: تحميل مباشر للملفات بصيغة PDF لتصفحها في أي وقت ومكان بسهولة تامة.
           files: |
-            androidApp/build/outputs/apk/release/Th3GradeLibrary_${{ steps.release_info.outputs.tag }}.apk
-            androidApp/build/outputs/apk/release/كتب_وملازم_الثالث_متوسط_${{ steps.release_info.outputs.tag }}.apk
+            build_output/Th3GradeLibrary_${{ steps.release_info.outputs.tag }}.apk
+            build_output/كتب_وملازم_الثالث_متوسط_${{ steps.release_info.outputs.tag }}.apk
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
