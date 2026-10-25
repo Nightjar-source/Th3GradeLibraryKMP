@@ -16,5 +16,5 @@ import com.Nightjar.Th3GradeLibraryKMP.data.BookItem
 @Composable
 expect fun rememberPdfPageThumbnail(
     item: BookItem,
-    targetPage: Int = 0
+    targetPage: Int
 ): ImageBitmap?
