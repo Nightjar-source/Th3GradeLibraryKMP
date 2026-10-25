@@ -104,8 +104,7 @@ actual fun PdfViewerScreen(
     initialPage: Int?,
     isDark: Boolean,
     isFromBookmarks: Boolean,
-    sourcePage: String,
-    isFromShortcut: Boolean
+    sourcePage: String
 ) {
     val context = LocalContext.current
     val appSettings by com.Nightjar.Th3GradeLibraryKMP.network.SyncEngine.appSettings.collectAsState()
@@ -355,9 +354,10 @@ actual fun PdfViewerScreen(
     } else remember { mutableStateOf(0.dp) }
     val safeCornerRadius = cornerRadius.coerceAtLeast(0.dp)
 
+    val isTargetInViewport = com.Nightjar.Th3GradeLibraryKMP.ui.TransitionTargetTracker.visibleItemIds.contains(item.id)
     val hasValidTarget = when {
         isFromBookmarksEffective -> (initialPage != null)
-        else -> true
+        else -> isTargetInViewport
     }
 
     val sharedKey = when {
@@ -384,7 +384,9 @@ actual fun PdfViewerScreen(
                 ),
                 renderInOverlayDuringTransition = true,
                 clipInOverlayDuringTransition = OverlayClip(androidx.compose.foundation.shape.RoundedCornerShape(safeCornerRadius)),
-                boundsTransform = com.Nightjar.Th3GradeLibraryKMP.animation.MotionSpecs.boundsTransform,
+                boundsTransform = { _, _ ->
+                    spring(dampingRatio = 0.82f, stiffness = 280f)
+                },
                 resizeMode = SharedTransitionScope.ResizeMode.RemeasureToBounds
             )
         }
@@ -468,12 +470,21 @@ actual fun PdfViewerScreen(
                             .padding(12.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        BookCoverImage(
-                            item = item,
-                            modifier = Modifier.size(width = 64.dp, height = 86.dp),
-                            shape = RoundedCornerShape(12.dp),
-                            targetPage = initialPage
-                        )
+                        Box(
+                            modifier = Modifier
+                                .size(width = 64.dp, height = 86.dp)
+                                .clip(RoundedCornerShape(12.dp))
+                                .background(MaterialTheme.colorScheme.surfaceVariant)
+                        ) {
+                            coil3.compose.AsyncImage(
+                                model = coil3.request.ImageRequest.Builder(coil3.compose.LocalPlatformContext.current)
+                                    .data(com.Nightjar.Th3GradeLibraryKMP.generated.resources.Res.getUri("drawable/${item.coverResName}." + if (item.coverResName in listOf("ayajaaa", "english", "englishactivity", "kss1")) "jpg" else "png"))
+                                    .build(),
+                                contentDescription = item.title,
+                                contentScale = ContentScale.Crop,
+                                modifier = Modifier.fillMaxSize()
+                            )
+                        }
                         Spacer(modifier = Modifier.width(14.dp))
                         Column(modifier = Modifier.weight(1f)) {
                             Text(
@@ -492,11 +503,15 @@ actual fun PdfViewerScreen(
                     }
                 } else {
                     // Grid Mode: Full book cover image
-                    BookCoverImage(
-                        item = item,
-                        modifier = Modifier.fillMaxSize(),
-                        shape = RoundedCornerShape(0.dp),
-                        targetPage = initialPage
+                    coil3.compose.AsyncImage(
+                        model = coil3.request.ImageRequest.Builder(coil3.compose.LocalPlatformContext.current)
+                            .data(com.Nightjar.Th3GradeLibraryKMP.generated.resources.Res.getUri("drawable/${item.coverResName}." + if (item.coverResName in listOf("ayajaaa", "english", "englishactivity", "kss1")) "jpg" else "png"))
+                            .memoryCachePolicy(coil3.request.CachePolicy.ENABLED)
+                            .diskCachePolicy(coil3.request.CachePolicy.ENABLED)
+                            .build(),
+                        contentDescription = item.title,
+                        contentScale = ContentScale.Crop,
+                        modifier = Modifier.fillMaxSize()
                     )
                 }
             }
@@ -778,9 +793,9 @@ actual fun PdfViewerScreen(
                         }
                     }
                 
-                    // Floating Page Indicator capsule at bottom center - delayed until hero morph settles
+                    // Floating Page Indicator capsule at bottom center
                     AnimatedVisibility(
-                        visible = !isZoomed && isTransitionSettled != false,
+                        visible = !isZoomed,
                         enter = fadeIn(animationSpec = tween(220)),
                         exit = fadeOut(animationSpec = tween(180)),
                         modifier = Modifier.align(Alignment.BottomCenter)
