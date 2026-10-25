@@ -84,21 +84,29 @@ actual fun rememberPdfPageThumbnail(
                     return@withContext null
                 }
 
-                ParcelFileDescriptor.open(pdfFile, ParcelFileDescriptor.MODE_READ_ONLY).use { pfd ->
-                    PdfRenderer(pfd).use { renderer ->
+                val pfd = ParcelFileDescriptor.open(pdfFile, ParcelFileDescriptor.MODE_READ_ONLY)
+                try {
+                    val renderer = PdfRenderer(pfd)
+                    try {
                         val pageCount = renderer.pageCount
                         if (pageCount <= 0) return@withContext null
                         val safePage = targetPage.coerceIn(0, pageCount - 1)
-                        renderer.openPage(safePage).use { page ->
-                            // Render at thumbnail resolution (approx 360x480) for lightweight memory footprint
+                        val page = renderer.openPage(safePage)
+                        try {
                             val targetW = 360
                             val targetH = ((targetW.toFloat() / page.width) * page.height).toInt().coerceAtLeast(1)
                             val rendered = Bitmap.createBitmap(targetW, targetH, Bitmap.Config.ARGB_8888)
                             page.render(rendered, null, null, PdfRenderer.Page.RENDER_MODE_FOR_DISPLAY)
                             PdfBitmapCache.cache.put(cacheKey, rendered)
                             rendered
+                        } finally {
+                            try { page.close() } catch (_: Exception) {}
                         }
+                    } finally {
+                        try { renderer.close() } catch (_: Exception) {}
                     }
+                } finally {
+                    try { pfd.close() } catch (_: Exception) {}
                 }
             } catch (_: Exception) {
                 null
