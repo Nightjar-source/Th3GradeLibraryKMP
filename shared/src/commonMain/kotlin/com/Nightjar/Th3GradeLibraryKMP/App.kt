@@ -534,41 +534,29 @@ fun AppContent(
                                 val isToPdf = targetState == "pdf"
                                 val isFromPdf = initialState == "pdf"
 
-                                if (isToPdf) {
-                                    // Liquid App Opening: Background stays stationary with soft fade, allowing sharedBounds overlay to morph smoothly
-                                    (fadeIn(animationSpec = tween(durationMillis = 300, easing = androidx.compose.animation.core.LinearOutSlowInEasing))).togetherWith(
-                                        fadeOut(animationSpec = tween(durationMillis = 250, easing = androidx.compose.animation.core.FastOutLinearInEasing))
-                                    ).apply {
-                                        targetContentZIndex = 2f
-                                    }
-                                } else if (isFromPdf) {
-                                    // Liquid App Closing: Background stays stationary with soft fade, settling instantly without lingering
-                                    (fadeIn(animationSpec = tween(durationMillis = 240, easing = androidx.compose.animation.core.LinearOutSlowInEasing))).togetherWith(
-                                        fadeOut(animationSpec = tween(durationMillis = 200, easing = androidx.compose.animation.core.FastOutLinearInEasing))
-                                    ).apply {
-                                        targetContentZIndex = 0f
+                                if (isToPdf || isFromPdf) {
+                                    // SharedBounds handles the visual morph entirely.
+                                    // Use None transitions to prevent double-fade artifacts.
+                                    EnterTransition.None.togetherWith(ExitTransition.None).apply {
+                                        targetContentZIndex = if (isToPdf) 2f else 0f
                                     }
                                 } else {
                                     val direction = if (isAppRtl) -viewModel.navigationDirection else viewModel.navigationDirection
 
                                     val fluidEasing = androidx.compose.animation.core.CubicBezierEasing(0.16f, 1f, 0.3f, 1f)
                                     val slideSpec = androidx.compose.animation.core.tween<androidx.compose.ui.unit.IntOffset>(
-                                        durationMillis = 380,
+                                        durationMillis = 350,
                                         easing = fluidEasing
-                                    )
-                                    val fadeSpec = androidx.compose.animation.core.tween<Float>(
-                                        durationMillis = 280,
-                                        easing = androidx.compose.animation.core.LinearOutSlowInEasing
                                     )
 
                                     (slideInHorizontally(
                                         initialOffsetX = { fullWidth -> fullWidth * direction },
                                         animationSpec = slideSpec
-                                    ) + fadeIn(animationSpec = fadeSpec)).togetherWith(
+                                    )).togetherWith(
                                         slideOutHorizontally(
                                             targetOffsetX = { fullWidth -> -fullWidth * direction },
                                             animationSpec = slideSpec
-                                        ) + fadeOut(animationSpec = fadeSpec)
+                                        )
                                     )
                                 }
                             }

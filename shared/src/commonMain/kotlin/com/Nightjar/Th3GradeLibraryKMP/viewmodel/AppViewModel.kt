@@ -33,6 +33,7 @@ class AppViewModel : ViewModel() {
     var selectedItem by mutableStateOf<BookItem?>(null)
     var pdfInitialPage by mutableStateOf<Int?>(null)
     var isFromBookmarks by mutableStateOf(false)
+    var isFromShortcut by mutableStateOf(false)
     var pdfSourcePage by mutableStateOf("home")
 
     // ===== Modals and Dialogs =====
@@ -79,6 +80,7 @@ class AppViewModel : ViewModel() {
                 if (target != null) {
                     com.Nightjar.Th3GradeLibraryKMP.ui.TransitionTargetTracker.activeTargetId = "card_${target.id}"
                     com.Nightjar.Th3GradeLibraryKMP.ui.TransitionTargetTracker.isTransitionActive = true
+                    isFromShortcut = true
                     selectedItem = target
                     pdfInitialPage = com.Nightjar.Th3GradeLibraryKMP.network.SyncEngine.lastReadPages.value[target.id]
                     com.Nightjar.Th3GradeLibraryKMP.network.SyncEngine.saveSelectedCategory(if (target.isNote) "notes" else "books")
@@ -113,6 +115,7 @@ class AppViewModel : ViewModel() {
             if (target != null) {
                 com.Nightjar.Th3GradeLibraryKMP.ui.TransitionTargetTracker.activeTargetId = "card_${target.id}"
                 com.Nightjar.Th3GradeLibraryKMP.ui.TransitionTargetTracker.isTransitionActive = true
+                isFromShortcut = true
                 selectedItem = target
                 pdfInitialPage = com.Nightjar.Th3GradeLibraryKMP.network.SyncEngine.lastReadPages.value[target.id]
                 com.Nightjar.Th3GradeLibraryKMP.network.SyncEngine.saveSelectedCategory(if (target.isNote) "notes" else "books")
@@ -305,6 +308,7 @@ class AppViewModel : ViewModel() {
             selectedItem = null
             pdfInitialPage = null
             isFromBookmarks = false
+            isFromShortcut = false
             pdfSourcePage = "home"
             com.Nightjar.Th3GradeLibraryKMP.ui.TransitionTargetTracker.reset()
             persistState()

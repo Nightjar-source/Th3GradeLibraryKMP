@@ -578,12 +578,6 @@ fun LazyGridItemScope.ContentCard(
             .zIndex(if (isThisCardTarget) 15f else if (com.Nightjar.Th3GradeLibraryKMP.theme.LocalIsNavigatingBack.current) 1f else 0f)
             .fillMaxWidth()
             .then(sharedBoundsModifier)
-            .animateContentSize(
-                animationSpec = spring(
-                    dampingRatio = 0.82f,
-                    stiffness = 320f
-                )
-            )
             .liquidGlass(isDark, borderRadius = cardCornerRadius, alpha = 0.5f)
             .clip(RoundedCornerShape(cardCornerRadius))
             .clickable {
@@ -596,10 +590,9 @@ fun LazyGridItemScope.ContentCard(
         androidx.compose.animation.AnimatedContent(
             targetState = isGridView,
             transitionSpec = {
-                fadeIn(animationSpec = tween(160, easing = LinearOutSlowInEasing))
-                    .togetherWith(
-                        fadeOut(animationSpec = tween(140, easing = FastOutLinearInEasing))
-                    ).using(SizeTransform(clip = false))
+                (fadeIn(animationSpec = tween(220, easing = LinearOutSlowInEasing))).togetherWith(
+                    fadeOut(animationSpec = tween(180, easing = FastOutLinearInEasing))
+                ).using(SizeTransform(clip = false))
             },
             label = "grid_list_fluid_transition"
         ) { grid ->

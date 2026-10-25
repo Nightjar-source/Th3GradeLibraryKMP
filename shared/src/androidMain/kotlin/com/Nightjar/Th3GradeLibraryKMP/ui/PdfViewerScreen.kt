@@ -354,9 +354,10 @@ actual fun PdfViewerScreen(
     } else remember { mutableStateOf(0.dp) }
     val safeCornerRadius = cornerRadius.coerceAtLeast(0.dp)
 
+    val isTargetInViewport = com.Nightjar.Th3GradeLibraryKMP.ui.TransitionTargetTracker.visibleItemIds.contains(item.id)
     val hasValidTarget = when {
         isFromBookmarksEffective -> (initialPage != null)
-        else -> true
+        else -> isTargetInViewport
     }
 
     val sharedKey = when {
@@ -703,11 +704,13 @@ actual fun PdfViewerScreen(
                             }
                         }
 
-                    // Completely Floating Top control bar
+                    // Completely Floating Top control bar - delayed until hero morph settles
+                    val isTransitionSettled = animatedVisibilityScope?.transition?.currentState == androidx.compose.animation.EnterExitState.Visible
                     AnimatedVisibility(
-                        visible = !isZoomed,
-                        enter = fadeIn(animationSpec = tween(220)),
-                        exit = fadeOut(animationSpec = tween(180)),
+                        visible = !isZoomed && isTransitionSettled != false,
+                        enter = fadeIn(animationSpec = tween(200, delayMillis = 120)) +
+                                slideInVertically(animationSpec = tween(200, delayMillis = 120)) { -it / 3 },
+                        exit = fadeOut(animationSpec = tween(120)),
                         modifier = Modifier.align(Alignment.TopCenter)
                     ) {
                         Row(

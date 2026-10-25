@@ -183,8 +183,9 @@ fun Modifier.expressiveButtonMorph(
  * Respects low-end devices and returning from PDF states.
  */
 /**
- * Fluid staggered sliding animation on screen load and quick navigations (matching caliq5).
- * Replays smoothly on every screen entrance or tab switch with an elegant, moist (Fluid) spring motion.
+ * Fluid staggered sliding animation on screen load and quick navigations.
+ * NEVER touches alpha to avoid double-fade with AnimatedContent transitions.
+ * Only applies subtle translationY slide-up and micro-scale for a silky 120Hz entrance.
  */
 fun Modifier.screenEntranceStagger(index: Int = 0, itemId: String? = null): Modifier = composed {
     val isLowEnd = LocalIsLowEndDevice.current
@@ -193,7 +194,7 @@ fun Modifier.screenEntranceStagger(index: Int = 0, itemId: String? = null): Modi
     val itemKey = itemId ?: ("idx_" + index)
 
     val alreadySeen = (seenMap != null && seenMap[itemKey] == true) || isReturningFromPdf
-    if (isLowEnd || alreadySeen || index !in 0..8) {
+    if (isLowEnd || alreadySeen || index !in 0..6) {
         if (seenMap != null) {
             seenMap[itemKey] = true
         }
@@ -204,7 +205,7 @@ fun Modifier.screenEntranceStagger(index: Int = 0, itemId: String? = null): Modi
 
     androidx.compose.runtime.LaunchedEffect(itemKey) {
         if (index > 0) {
-            val staggerDelay = (index * 35L).coerceAtMost(280L)
+            val staggerDelay = (index * 30L).coerceAtMost(180L)
             kotlinx.coroutines.delay(staggerDelay)
         }
         isLoaded = true
@@ -214,8 +215,8 @@ fun Modifier.screenEntranceStagger(index: Int = 0, itemId: String? = null): Modi
     val animProgress by androidx.compose.animation.core.animateFloatAsState(
         targetValue = if (isLoaded) 1f else 0f,
         animationSpec = androidx.compose.animation.core.spring(
-            dampingRatio = 0.82f,
-            stiffness = 300f
+            dampingRatio = 0.85f,
+            stiffness = 400f
         ),
         label = "fluidSlide_" + itemKey
     )
@@ -224,13 +225,13 @@ fun Modifier.screenEntranceStagger(index: Int = 0, itemId: String? = null): Modi
         Modifier
     } else {
         val density = androidx.compose.ui.platform.LocalDensity.current
-        val offsetYPx = androidx.compose.runtime.remember(density) { with(density) { 24.dp.toPx() } }
+        val offsetYPx = androidx.compose.runtime.remember(density) { with(density) { 16.dp.toPx() } }
         this.graphicsLayer {
             val progress = animProgress.coerceIn(0f, 1f)
-            this.alpha = 0.85f + 0.15f * progress
+            // NEVER touch alpha - AnimatedContent handles screen-level fade
             this.translationY = (1f - progress) * offsetYPx
-            this.scaleX = 0.98f + 0.02f * progress
-            this.scaleY = 0.98f + 0.02f * progress
+            this.scaleX = 0.99f + 0.01f * progress
+            this.scaleY = 0.99f + 0.01f * progress
             this.clip = false
         }
     }
