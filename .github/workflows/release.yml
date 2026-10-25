@@ -70,8 +70,12 @@ jobs:
 
       - name: Prepare APK Release Files
         run: |
-          cp androidApp/build/outputs/apk/release/androidApp-release.apk "androidApp/build/outputs/apk/release/Th3GradeLibrary_${{ steps.release_info.outputs.tag }}.apk"
-          cp androidApp/build/outputs/apk/release/androidApp-release.apk "androidApp/build/outputs/apk/release/كتب_وملازم_الثالث_متوسط_${{ steps.release_info.outputs.tag }}.apk"
+          ls -la androidApp/build/outputs/apk/release/ || true
+          APK_FILE=$(find androidApp/build/outputs/apk/release/ -name "*.apk" | head -n 1)
+          echo "Found APK: $APK_FILE"
+          cp "$APK_FILE" "androidApp/build/outputs/apk/release/androidApp-release.apk" || true
+          cp "$APK_FILE" "androidApp/build/outputs/apk/release/Th3GradeLibrary_${{ steps.release_info.outputs.tag }}.apk"
+          cp "$APK_FILE" "androidApp/build/outputs/apk/release/كتب_وملازم_الثالث_متوسط_${{ steps.release_info.outputs.tag }}.apk"
 
       - name: Upload Release APK Artifact
         uses: actions/upload-artifact@v4
