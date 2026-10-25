@@ -50,46 +50,24 @@ jobs:
           KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
 
       - name: Build Android Release APK
-        id: build_apk
-        continue-on-error: true
-        run: ./gradlew assembleRelease --stacktrace 2>&1 | tee build.log
+        run: ./gradlew assembleRelease
         env:
           KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
           KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
 
-      - name: Upload Build Failure Log
-        if: steps.build_apk.outcome != 'success'
-        uses: actions/upload-artifact@v4
-        with:
-          name: build-error-log
-          path: build.log
-
-      - name: Fail if build failed
-        if: steps.build_apk.outcome != 'success'
-        run: exit 1
-
       - name: Prepare APK Release Files
         run: |
-          echo "=== Listing all APKs found in project ==="
-          find . -name "*.apk"
-          APK_FILE=$(find . -name "*release*.apk" | head -n 1)
-          if [ -z "$APK_FILE" ]; then
-            APK_FILE=$(find . -name "*.apk" | head -n 1)
-          fi
-          echo "Selected APK: $APK_FILE"
-          mkdir -p build_output
-          cp "$APK_FILE" "build_output/androidApp-release.apk"
-          cp "$APK_FILE" "build_output/Th3GradeLibrary_${{ steps.release_info.outputs.tag }}.apk"
-          cp "$APK_FILE" "build_output/كتب_وملازم_الثالث_متوسط_${{ steps.release_info.outputs.tag }}.apk"
+          cp androidApp/build/outputs/apk/release/androidApp-release.apk "androidApp/build/outputs/apk/release/Th3GradeLibrary_${{ steps.release_info.outputs.tag }}.apk"
+          cp androidApp/build/outputs/apk/release/androidApp-release.apk "androidApp/build/outputs/apk/release/كتب_وملازم_الثالث_متوسط_${{ steps.release_info.outputs.tag }}.apk"
 
       - name: Upload Release APK Artifact
         uses: actions/upload-artifact@v4
         with:
           name: Th3GradeLibrary_${{ steps.release_info.outputs.tag }}
           path: |
-            build_output/Th3GradeLibrary_${{ steps.release_info.outputs.tag }}.apk
-            build_output/كتب_وملازم_الثالث_متوسط_${{ steps.release_info.outputs.tag }}.apk
-            build_output/androidApp-release.apk
+            androidApp/build/outputs/apk/release/Th3GradeLibrary_${{ steps.release_info.outputs.tag }}.apk
+            androidApp/build/outputs/apk/release/كتب_وملازم_الثالث_متوسط_${{ steps.release_info.outputs.tag }}.apk
+            androidApp/build/outputs/apk/release/androidApp-release.apk
 
       - name: Create Release
         continue-on-error: true
@@ -112,7 +90,7 @@ jobs:
             مرشحات وملخصات مركزة: مراجعات سريعة لليالي الامتحانات تساعدك على ضمان الدرجات العالية.
             إمكانية القراءة دون إنترنت: تحميل مباشر للملفات بصيغة PDF لتصفحها في أي وقت ومكان بسهولة تامة.
           files: |
-            build_output/Th3GradeLibrary_${{ steps.release_info.outputs.tag }}.apk
-            build_output/كتب_وملازم_الثالث_متوسط_${{ steps.release_info.outputs.tag }}.apk
+            androidApp/build/outputs/apk/release/Th3GradeLibrary_${{ steps.release_info.outputs.tag }}.apk
+            androidApp/build/outputs/apk/release/كتب_وملازم_الثالث_متوسط_${{ steps.release_info.outputs.tag }}.apk
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
