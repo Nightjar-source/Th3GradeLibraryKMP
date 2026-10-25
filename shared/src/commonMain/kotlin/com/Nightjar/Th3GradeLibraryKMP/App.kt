@@ -534,29 +534,29 @@ fun AppContent(
                                 val isToPdf = targetState == "pdf"
                                 val isFromPdf = initialState == "pdf"
 
-                                if (isToPdf || isFromPdf) {
-                                    // SharedBounds handles the visual morph entirely.
-                                    // Use None transitions to prevent double-fade artifacts.
-                                    EnterTransition.None.togetherWith(ExitTransition.None).apply {
-                                        targetContentZIndex = if (isToPdf) 2f else 0f
+                                if (isToPdf) {
+                                    (fadeIn(animationSpec = com.Nightjar.Th3GradeLibraryKMP.animation.MotionSpecs.pdfEnterFade)).togetherWith(
+                                        fadeOut(animationSpec = com.Nightjar.Th3GradeLibraryKMP.animation.MotionSpecs.pdfEnterFade)
+                                    ).apply {
+                                        targetContentZIndex = 50f
+                                    }
+                                } else if (isFromPdf) {
+                                    (fadeIn(animationSpec = com.Nightjar.Th3GradeLibraryKMP.animation.MotionSpecs.pdfExitFade)).togetherWith(
+                                        fadeOut(animationSpec = com.Nightjar.Th3GradeLibraryKMP.animation.MotionSpecs.pdfExitFade)
+                                    ).apply {
+                                        targetContentZIndex = -1f
                                     }
                                 } else {
                                     val direction = if (isAppRtl) -viewModel.navigationDirection else viewModel.navigationDirection
 
-                                    val fluidEasing = androidx.compose.animation.core.CubicBezierEasing(0.16f, 1f, 0.3f, 1f)
-                                    val slideSpec = androidx.compose.animation.core.tween<androidx.compose.ui.unit.IntOffset>(
-                                        durationMillis = 350,
-                                        easing = fluidEasing
-                                    )
-
                                     (slideInHorizontally(
                                         initialOffsetX = { fullWidth -> fullWidth * direction },
-                                        animationSpec = slideSpec
-                                    )).togetherWith(
+                                        animationSpec = com.Nightjar.Th3GradeLibraryKMP.animation.MotionSpecs.screenSlideSpec
+                                    ) + fadeIn(animationSpec = com.Nightjar.Th3GradeLibraryKMP.animation.MotionSpecs.screenFadeSpec)).togetherWith(
                                         slideOutHorizontally(
                                             targetOffsetX = { fullWidth -> -fullWidth * direction },
-                                            animationSpec = slideSpec
-                                        )
+                                            animationSpec = com.Nightjar.Th3GradeLibraryKMP.animation.MotionSpecs.screenSlideSpec
+                                        ) + fadeOut(animationSpec = com.Nightjar.Th3GradeLibraryKMP.animation.MotionSpecs.screenFadeSpec)
                                     )
                                 }
                             }

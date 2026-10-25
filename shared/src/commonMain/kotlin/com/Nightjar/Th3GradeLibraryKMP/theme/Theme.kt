@@ -178,78 +178,17 @@ fun Modifier.expressiveButtonMorph(
 }
 
 /**
- * Staggered pop-in animation on screen load (from proven backup).
- * Guaranteed never to flash an empty/blank screen: initial alpha is 0.85f and fluidly rises to 1.0f.
- * Respects low-end devices and returning from PDF states.
+ * Delegated to isolated MotionSpecs & ScrollExtensions module (Clean Architecture).
  */
-/**
- * Fluid staggered sliding animation on screen load and quick navigations.
- * NEVER touches alpha to avoid double-fade with AnimatedContent transitions.
- * Only applies subtle translationY slide-up and micro-scale for a silky 120Hz entrance.
- */
-fun Modifier.screenEntranceStagger(index: Int = 0, itemId: String? = null): Modifier = composed {
-    val isLowEnd = LocalIsLowEndDevice.current
-    val isReturningFromPdf = LocalIsReturningFromPdf.current
-    val seenMap = LocalSeenEntranceItems.current
-    val itemKey = itemId ?: ("idx_" + index)
+fun Modifier.screenEntranceStagger(index: Int = 0, itemId: String? = null): Modifier = 
+    com.Nightjar.Th3GradeLibraryKMP.animation.animateItemOnScroll(index, itemId)
 
-    val alreadySeen = (seenMap != null && seenMap[itemKey] == true) || isReturningFromPdf
-    if (isLowEnd || alreadySeen || index !in 0..6) {
-        if (seenMap != null) {
-            seenMap[itemKey] = true
-        }
-        return@composed this
-    }
+fun Modifier.screenEntranceCascade(index: Int = 0, itemId: String? = null): Modifier = 
+    com.Nightjar.Th3GradeLibraryKMP.animation.screenCascadeEntrance(index, itemId)
 
-    var isLoaded by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf(false) }
+fun Modifier.popInOnInitialLoad(index: Int = 0, itemId: String? = null): Modifier = 
+    com.Nightjar.Th3GradeLibraryKMP.animation.animateItemOnScroll(index, itemId)
 
-    androidx.compose.runtime.LaunchedEffect(itemKey) {
-        if (index > 0) {
-            val staggerDelay = (index * 30L).coerceAtMost(180L)
-            kotlinx.coroutines.delay(staggerDelay)
-        }
-        isLoaded = true
-        seenMap?.put(itemKey, true)
-    }
-
-    val animProgress by androidx.compose.animation.core.animateFloatAsState(
-        targetValue = if (isLoaded) 1f else 0f,
-        animationSpec = androidx.compose.animation.core.spring(
-            dampingRatio = 0.85f,
-            stiffness = 400f
-        ),
-        label = "fluidSlide_" + itemKey
-    )
-
-    if (animProgress >= 1f && isLoaded) {
-        Modifier
-    } else {
-        val density = androidx.compose.ui.platform.LocalDensity.current
-        val offsetYPx = androidx.compose.runtime.remember(density) { with(density) { 16.dp.toPx() } }
-        this.graphicsLayer {
-            val progress = animProgress.coerceIn(0f, 1f)
-            // NEVER touch alpha - AnimatedContent handles screen-level fade
-            this.translationY = (1f - progress) * offsetYPx
-            this.scaleX = 0.99f + 0.01f * progress
-            this.scaleY = 0.99f + 0.01f * progress
-            this.clip = false
-        }
-    }
-}
-
-/**
- * Screen entrance cascade alias with item ID support.
- */
-fun Modifier.screenEntranceCascade(index: Int = 0, itemId: String? = null): Modifier = this.screenEntranceStagger(index, itemId)
-
-/**
- * Pop-in animation on initial load (caliq5 / backup standard).
- */
-fun Modifier.popInOnInitialLoad(index: Int = 0, itemId: String? = null): Modifier = this.screenEntranceStagger(index, itemId)
-
-/**
- * Unified adaptive entrance: Zero overhead for dynamic list items to maintain 120 FPS scrolling without re-triggering.
- */
 fun Modifier.adaptiveItemEntrance(index: Int = 0, itemId: String? = null): Modifier = this
 
 val KufiReemFontFamily: FontFamily

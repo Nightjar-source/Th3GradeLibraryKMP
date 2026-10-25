@@ -354,10 +354,9 @@ actual fun PdfViewerScreen(
     } else remember { mutableStateOf(0.dp) }
     val safeCornerRadius = cornerRadius.coerceAtLeast(0.dp)
 
-    val isTargetInViewport = com.Nightjar.Th3GradeLibraryKMP.ui.TransitionTargetTracker.visibleItemIds.contains(item.id)
     val hasValidTarget = when {
         isFromBookmarksEffective -> (initialPage != null)
-        else -> isTargetInViewport
+        else -> true
     }
 
     val sharedKey = when {
@@ -793,9 +792,9 @@ actual fun PdfViewerScreen(
                         }
                     }
                 
-                    // Floating Page Indicator capsule at bottom center
+                    // Floating Page Indicator capsule at bottom center - delayed until hero morph settles
                     AnimatedVisibility(
-                        visible = !isZoomed,
+                        visible = !isZoomed && isTransitionSettled != false,
                         enter = fadeIn(animationSpec = tween(220)),
                         exit = fadeOut(animationSpec = tween(180)),
                         modifier = Modifier.align(Alignment.BottomCenter)
