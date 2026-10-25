@@ -46,7 +46,7 @@ actual fun rememberPdfPageThumbnail(
                 if (!coversDir.exists()) {
                     coversDir.mkdirs()
                 }
-                val persistentCoverFile = File(coversDir, "cover_${item.id}_p${targetPage}.webp")
+                val persistentCoverFile = File(coversDir, "cover_${item.id}_p${targetPage}.png")
                 if (persistentCoverFile.exists() && persistentCoverFile.length() > 0L) {
                     val loaded = BitmapFactory.decodeFile(persistentCoverFile.absolutePath)
                     if (loaded != null) {
@@ -118,13 +118,7 @@ actual fun rememberPdfPageThumbnail(
                             try {
                                 val tempCover = File(coversDir, "cover_${item.id}_p${targetPage}_${System.currentTimeMillis()}.tmp")
                                 FileOutputStream(tempCover).use { outStream ->
-                                    val format = if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.R) {
-                                        Bitmap.CompressFormat.WEBP_LOSSY
-                                    } else {
-                                        @Suppress("DEPRECATION")
-                                        Bitmap.CompressFormat.WEBP
-                                    }
-                                    rendered.compress(format, 85, outStream)
+                                    rendered.compress(Bitmap.CompressFormat.PNG, 100, outStream)
                                 }
                                 if (tempCover.exists() && tempCover.length() > 0L) {
                                     tempCover.renameTo(persistentCoverFile)
