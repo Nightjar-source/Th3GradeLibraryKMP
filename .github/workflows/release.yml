@@ -50,10 +50,23 @@ jobs:
           KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
 
       - name: Build Android Release APK
-        run: ./gradlew assembleRelease
+        id: build_apk
+        continue-on-error: true
+        run: ./gradlew assembleRelease --stacktrace 2>&1 | tee build.log
         env:
           KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
           KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+
+      - name: Upload Build Failure Log
+        if: steps.build_apk.outcome != 'success'
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-error-log
+          path: build.log
+
+      - name: Fail if build failed
+        if: steps.build_apk.outcome != 'success'
+        run: exit 1
 
       - name: Prepare APK Release Files
         run: |
