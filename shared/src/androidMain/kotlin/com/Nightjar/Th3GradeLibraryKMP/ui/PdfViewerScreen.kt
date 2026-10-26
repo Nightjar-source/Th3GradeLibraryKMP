@@ -104,6 +104,7 @@ actual fun PdfViewerScreen(
     initialPage: Int?,
     isDark: Boolean,
     isFromBookmarks: Boolean,
+    isFromShortcut: Boolean,
     sourcePage: String
 ) {
     val context = LocalContext.current
@@ -355,6 +356,7 @@ actual fun PdfViewerScreen(
     val safeCornerRadius = cornerRadius.coerceAtLeast(0.dp)
 
     val hasValidTarget = when {
+        isFromShortcut -> false // When opened directly from home screen shortcut, skip sharedBounds so it won't collapse to screen edge!
         isFromBookmarksEffective -> (initialPage != null)
         else -> true
     }

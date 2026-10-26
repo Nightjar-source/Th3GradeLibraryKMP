@@ -187,7 +187,6 @@ fun Modifier.screenEntranceStagger(index: Int = 0, itemId: String? = null): Modi
     if (isLowEnd || index > 12) return@composed this
 
     val isReturningFromPdf = LocalIsReturningFromPdf.current
-    val isNavigatingBack = LocalIsNavigatingBack.current
     val itemKey = itemId ?: index.toString()
     val isActiveSharedTarget = com.Nightjar.Th3GradeLibraryKMP.ui.TransitionTargetTracker.isTransitionActive &&
             (com.Nightjar.Th3GradeLibraryKMP.ui.TransitionTargetTracker.activeTargetId == "card_$itemKey" ||
@@ -197,8 +196,8 @@ fun Modifier.screenEntranceStagger(index: Int = 0, itemId: String? = null): Modi
     val screenKey = LocalScreenEntranceKey.current
     val seenMap = LocalSeenEntranceItems.current
 
-    // When returning from PDF or navigating back or on active shared target: keep 100% stationary with zero movement!
-    if (isReturningFromPdf || isNavigatingBack || isActiveSharedTarget) {
+    // When returning from PDF or on active shared target: keep 100% stationary with zero movement!
+    if (isReturningFromPdf || isActiveSharedTarget) {
         seenMap?.put(itemKey, true)
         return@composed this
     }
@@ -208,16 +207,16 @@ fun Modifier.screenEntranceStagger(index: Int = 0, itemId: String? = null): Modi
 
     val animProgress = androidx.compose.runtime.remember(screenKey, itemKey) { androidx.compose.animation.core.Animatable(0f) }
     val density = androidx.compose.ui.platform.LocalDensity.current
-    val offsetYPx = androidx.compose.runtime.remember(density) { with(density) { 14.dp.toPx() } }
+    val offsetYPx = androidx.compose.runtime.remember(density) { with(density) { 24.dp.toPx() } }
 
     androidx.compose.runtime.LaunchedEffect(screenKey, itemKey) {
-        val staggerDelay = (index.coerceIn(0, 8) * 22L)
+        val staggerDelay = (index.coerceIn(0, 8) * 36L).coerceAtMost(240L)
         if (staggerDelay > 0) kotlinx.coroutines.delay(staggerDelay)
         animProgress.animateTo(
             targetValue = 1f,
             animationSpec = androidx.compose.animation.core.spring(
-                dampingRatio = 0.76f, // Ultra-moist fluid organic spring (كالجبنة)
-                stiffness = 320f
+                dampingRatio = 0.72f, // Ultra-moist fluid organic spring matching caliq5
+                stiffness = androidx.compose.animation.core.Spring.StiffnessLow
             )
         )
         seenMap?.put(itemKey, true)
@@ -225,10 +224,10 @@ fun Modifier.screenEntranceStagger(index: Int = 0, itemId: String? = null): Modi
 
     val p = animProgress.value
     this.graphicsLayer {
-        this.alpha = 0.30f + 0.70f * p // Base alpha 0.30f eliminates harsh dark/white flashes!
+        this.alpha = p
         this.translationY = (1f - p) * offsetYPx
-        this.scaleX = 0.985f + 0.015f * p
-        this.scaleY = 0.985f + 0.015f * p
+        this.scaleX = 0.95f + 0.05f * p
+        this.scaleY = 0.95f + 0.05f * p
         this.clip = false
     }
 }

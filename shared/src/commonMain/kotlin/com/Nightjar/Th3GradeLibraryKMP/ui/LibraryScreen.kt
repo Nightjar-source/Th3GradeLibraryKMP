@@ -149,7 +149,8 @@ fun LibraryScreen(
                             fontSize = 32.sp,
                             fontWeight = FontWeight.Bold,
                             lineHeight = 40.sp,
-                            color = MaterialTheme.colorScheme.onSurface
+                            color = MaterialTheme.colorScheme.onSurface,
+                            modifier = Modifier.screenEntranceCascade(0)
                         )
                         Spacer(modifier = Modifier.height(8.dp))
 
@@ -160,7 +161,7 @@ fun LibraryScreen(
                         ) {
                             Box(modifier = Modifier.weight(1f)) {
                                 CategoryMenuCard(
-                                    modifier = Modifier.popInOnInitialLoad(0),
+                                    modifier = Modifier.screenEntranceCascade(1, "home_card_notes"),
                                     title = "الملازم الدراسية",
                                     desc = "أفضل الملخصات لأساتذة العراق",
                                     brush = Brush.linearGradient(listOf(Color(0xFF2DD4BF), Color(0xFF059669))),
@@ -171,7 +172,7 @@ fun LibraryScreen(
                             }
                             Box(modifier = Modifier.weight(1f)) {
                                 CategoryMenuCard(
-                                    modifier = Modifier.popInOnInitialLoad(1),
+                                    modifier = Modifier.screenEntranceCascade(2, "home_card_books"),
                                     title = "الكتب الرسمية",
                                     desc = "المنهج الوزاري المعتمد 2027",
                                     brush = Brush.linearGradient(listOf(Color(0xFF6366F1), Color(0xFF1D4ED8))),
@@ -183,7 +184,7 @@ fun LibraryScreen(
                         }
                     } else {
                         CategoryMenuCard(
-                            modifier = Modifier.popInOnInitialLoad(0),
+                            modifier = Modifier.screenEntranceCascade(1, "home_card_notes"),
                             title = "الملازم الدراسية",
                             desc = "أفضل الملخصات لأساتذة العراق",
                             brush = Brush.linearGradient(listOf(Color(0xFF2DD4BF), Color(0xFF059669))),
@@ -193,7 +194,7 @@ fun LibraryScreen(
                         )
 
                         CategoryMenuCard(
-                            modifier = Modifier.popInOnInitialLoad(1),
+                            modifier = Modifier.screenEntranceCascade(2, "home_card_books"),
                             title = "الكتب الرسمية",
                             desc = "المنهج الوزاري المعتمد 2027",
                             brush = Brush.linearGradient(listOf(Color(0xFF6366F1), Color(0xFF1D4ED8))),

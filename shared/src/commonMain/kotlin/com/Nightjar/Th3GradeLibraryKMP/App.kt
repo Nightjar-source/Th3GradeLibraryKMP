@@ -712,6 +712,7 @@ fun AppContent(
                                                 initialPage = pdfInitialPage,
                                                 isDark = isDark,
                                                 isFromBookmarks = viewModel.isFromBookmarks,
+                                                isFromShortcut = viewModel.isFromShortcut,
                                                 sourcePage = viewModel.pdfSourcePage
                                             )
                                         }
@@ -769,281 +770,183 @@ fun AppContent(
                             } else Modifier
                         )
                 ) {
-                    // Floating App Bar
+                    // Floating Unified App Bar (Whole pill slides to top edge together smoothly)
                     androidx.compose.animation.AnimatedVisibility(
                         visible = !showOnboarding && page != "pdf" && page != "web",
                         enter = slideInVertically(animationSpec = spring(dampingRatio = 0.76f, stiffness = 280f)) { -it } + fadeIn(tween(260)),
                         exit = slideOutVertically(animationSpec = spring(dampingRatio = 0.76f, stiffness = 280f)) { -it } + fadeOut(tween(220)),
                         modifier = Modifier.fillMaxWidth()
                     ) {
-                    val isPhoneLandscape = isLandscape && screenHeight < 480.dp
-                    val isExpandedScreen = widthClass == androidx.window.core.layout.WindowWidthSizeClass.EXPANDED && screenHeight >= 480.dp
-                    val animatedEndPadding by animateDpAsState(
-                        targetValue = if (isWide) (railWidth + 16.dp) else if (isMicroWindow) 8.dp else 16.dp,
-                        animationSpec = spring(dampingRatio = 0.78f, stiffness = 300f),
-                        label = "topBarEndPadding"
-                    )
-                    val animatedStartPadding by animateDpAsState(
-                        targetValue = if (isMicroWindow) 8.dp else 16.dp,
-                        animationSpec = spring(dampingRatio = 0.78f, stiffness = 300f),
-                        label = "topBarStartPadding"
-                    )
-                    val animatedTopPadding by animateDpAsState(
-                        targetValue = when {
-                            isPhoneLandscape -> 2.dp      // Phone landscape: total 38dp (< 46dp)
-                            isMicroWindow -> 3.dp         // Micro window: total 42dp (< 46dp)
-                            isExpandedScreen -> 8.dp      // Tablets / DeX: official M3 64dp
-                            else -> 4.dp                  // Normal portrait phone: total 50dp (< 56dp)
-                        },
-                        animationSpec = spring(dampingRatio = 0.78f, stiffness = 300f),
-                        label = "topBarTopPadding"
-                    )
-                    val animatedElementSize by animateDpAsState(
-                        targetValue = when {
-                            isPhoneLandscape -> 34.dp     // Phone landscape: under 46dp
-                            isMicroWindow -> 36.dp
-                            isExpandedScreen -> 48.dp     // Tablets / DeX: standard
-                            else -> 42.dp                 // Normal portrait phone: under 56dp (42dp + 8dp padding = 50dp)
-                        },
-                        animationSpec = spring(dampingRatio = 0.78f, stiffness = 300f),
-                        label = "topBarElementSize"
-                    )
-
-                    Box(
-                        modifier = Modifier
-                            .windowInsetsPadding(WindowInsets.statusBars.union(WindowInsets.captionBar).union(WindowInsets.displayCutout))
-                            .windowInsetsPadding(WindowInsets.safeDrawing.only(WindowInsetsSides.Horizontal))
-                            .padding(
-                                start = animatedStartPadding,
-                                end = animatedEndPadding,
-                                top = animatedTopPadding,
-                                bottom = animatedTopPadding
-                            )
-                            .fillMaxWidth(),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        // 1. Separate Floating Circular Back Button at Start Edge (caliq5 style)
-                        androidx.compose.animation.AnimatedVisibility(
-                            visible = (page != "home"),
-                            enter = fadeIn(tween(220)) + scaleIn(initialScale = 0.75f, animationSpec = spring(dampingRatio = 0.72f, stiffness = 300f)),
-                            exit = fadeOut(tween(180)) + scaleOut(targetScale = 0.75f, animationSpec = tween(180)),
-                            modifier = Modifier.align(Alignment.CenterStart)
-                        ) {
-                            Box(
-                                modifier = Modifier
-                                    .size(animatedElementSize)
-                                    .liquidGlass(isDark, borderRadius = 22.dp, alpha = 0.92f)
-                                    .clip(CircleShape)
-                                    .bounceClick { handleTopBarBack() },
-                                contentAlignment = Alignment.Center
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Default.ChevronRight,
-                                    contentDescription = "Back",
-                                    tint = MaterialTheme.colorScheme.onSurface,
-                                    modifier = Modifier.size(if (isPhoneLandscape) 18.dp else if (isMicroWindow) 20.dp else if (isWide) 22.dp else 26.dp)
-                                )
-                            }
-                        }
-
-                        // App Icon on Home Screen at Start Edge
-                        androidx.compose.animation.AnimatedVisibility(
-                            visible = (page == "home"),
-                            enter = fadeIn(tween(220)) + scaleIn(initialScale = 0.75f, animationSpec = tween(220)),
-                            exit = fadeOut(tween(200)) + scaleOut(targetScale = 0.75f, animationSpec = tween(200)),
-                            modifier = Modifier.align(Alignment.CenterStart)
-                        ) {
-                            Box(
-                                modifier = Modifier
-                                    .size(animatedElementSize)
-                                    .clip(CircleShape)
-                                    .background(
-                                        Brush.radialGradient(
-                                            listOf(
-                                                parseHexColor(appSettings.primaryColor).copy(alpha = 0.5f),
-                                                Color.Transparent
-                                            )
-                                        )
-                                    ),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                Image(
-                                    painter = painterResource(com.Nightjar.Th3GradeLibraryKMP.generated.resources.Res.drawable.app_icon),
-                                    contentDescription = "App Icon",
-                                    modifier = Modifier.size(if (isMicroWindow) 24.dp else 28.dp).clip(CircleShape)
-                                )
-                            }
-                        }
-
-                        // 2. Separate Floating Oval Title Capsule in the Center with Dynamic Safe Margins
-                        var savedTitle by remember { mutableStateOf("مكتبة الثالث متوسط") }
-                        val appBarTitleRaw = when (page) {
-                            "news" -> "آخر الأخبار"
-                            "bookmarks" -> "المحفوظات"
-                            "shortcuts" -> "إضافة اختصار"
-                            "about" -> "حول التطبيق"
-                            "list" -> if (selectedCategory == "books") "الكتب الرسمية" else "الملازم الدراسية"
-                            else -> "مكتبة الثالث متوسط"
-                        }
-                        if (page != "pdf" && page != "error") {
-                            savedTitle = appBarTitleRaw
-                        }
-
-                        val titleStartMargin = if (isWide) 110.dp else (animatedElementSize + (if (isMicroWindow) 6.dp else 12.dp))
-                        val titleEndMargin = if (isWide) {
-                            110.dp
-                        } else {
-                            when (page) {
-                                "list" -> animatedElementSize * 2 + (if (isMicroWindow) 12.dp else 20.dp)
-                                "news" -> animatedElementSize + (if (isMicroWindow) 6.dp else 12.dp)
-                                else -> animatedElementSize + (if (isMicroWindow) 6.dp else 12.dp)
-                            }
-                        }
-
+                        val topBarHeight = if (isWide) 48.dp else 56.dp
+                        val topBarPaddingV = if (isWide) 4.dp else 8.dp
                         Box(
                             modifier = Modifier
-                                .align(Alignment.Center)
-                                .padding(start = titleStartMargin, end = titleEndMargin)
-                                .height(animatedElementSize)
-                                .wrapContentWidth()
-                                .widthIn(max = 420.dp)
-                                .liquidGlass(isDark, borderRadius = 24.dp, alpha = 0.92f)
-                                .clip(CircleShape)
-                                .clickable(interactionSource = remember { MutableInteractionSource() }, indication = null) { /* Touch shield */ }
-                                .animateContentSize(spring(dampingRatio = 0.76f, stiffness = 320f))
-                                .padding(horizontal = if (isMicroWindow) 8.dp else if (isWide) 16.dp else 20.dp),
+                                .windowInsetsPadding(WindowInsets.statusBars.add(WindowInsets.captionBar))
+                                .windowInsetsPadding(WindowInsets.safeDrawing.only(WindowInsetsSides.Horizontal))
+                                .padding(
+                                    start = 16.dp,
+                                    end = if (isWide) (railWidth + 16.dp) else 16.dp,
+                                    top = topBarPaddingV,
+                                    bottom = topBarPaddingV
+                                ),
                             contentAlignment = Alignment.Center
                         ) {
-                            AnimatedContent(
-                                targetState = savedTitle,
-                                transitionSpec = {
-                                    (slideInVertically { height -> height / 2 } + fadeIn(tween(220)))
-                                        .togetherWith(slideOutVertically { height -> -height / 2 } + fadeOut(tween(220)))
-                                },
-                                label = "titleTransition"
-                            ) { targetTitle ->
-                                Text(
-                                    text = targetTitle,
-                                    fontSize = if (isPhoneLandscape) 12.sp else if (isMicroWindow) 12.sp else if (isWide) 15.sp else 16.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    fontFamily = if (targetTitle == "مكتبة الثالث متوسط") com.Nightjar.Th3GradeLibraryKMP.theme.KufiReemFontFamily else null,
-                                    color = MaterialTheme.colorScheme.onSurface,
-                                    maxLines = 1,
-                                    overflow = TextOverflow.Ellipsis
-                                )
-                            }
-                        }
-
-                        // 3. Floating Action Controls at End Edge (End of Header)
-                        AnimatedContent(
-                            targetState = page,
-                            transitionSpec = {
-                                (scaleIn(initialScale = 0.8f, animationSpec = spring(dampingRatio = 0.72f, stiffness = 260f)) + fadeIn(tween(220)))
-                                    .togetherWith(scaleOut(targetScale = 0.8f, animationSpec = tween(180)) + fadeOut(tween(180)))
-                                    .using(SizeTransform(clip = false))
-                            },
-                            modifier = Modifier.align(Alignment.CenterEnd),
-                            label = "topBarActions"
-                        ) { targetPage ->
-                            if (targetPage == "list") {
+                            Row(
+                                modifier = Modifier
+                                    .widthIn(max = 608.dp)
+                                    .fillMaxWidth()
+                                    .defaultMinSize(minHeight = topBarHeight)
+                                    .wrapContentHeight()
+                                    .liquidGlass(isDark, borderRadius = 28.dp, alpha = 0.95f)
+                                    .padding(horizontal = 8.dp, vertical = 2.dp),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
                                 Row(
                                     verticalAlignment = Alignment.CenterVertically,
-                                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                    modifier = Modifier.weight(1f).padding(start = 8.dp)
                                 ) {
-                                    // Separate Floating Circle 1: Grid / List View Toggle with fluid liquid rotation
-                                    val gridRotation by animateFloatAsState(
-                                        targetValue = if (isGridView) 180f else 0f,
-                                        animationSpec = spring(dampingRatio = 0.74f, stiffness = 320f),
-                                        label = "gridRotation"
-                                    )
                                     Box(
-                                        modifier = Modifier
-                                            .size(animatedElementSize)
-                                            .liquidGlass(isDark, borderRadius = 22.dp, alpha = 0.92f)
-                                            .clip(CircleShape)
-                                            .bounceClick { SyncEngine.saveGridView(!isGridView) },
+                                        modifier = Modifier.size(44.dp),
                                         contentAlignment = Alignment.Center
                                     ) {
-                                        androidx.compose.animation.AnimatedContent(
-                                            targetState = isGridView,
-                                            transitionSpec = {
-                                                (fadeIn(tween(220)) + scaleIn(initialScale = 0.75f, animationSpec = spring(0.74f, 320f)))
-                                                    .togetherWith(fadeOut(tween(160)) + scaleOut(targetScale = 0.75f, animationSpec = tween(160)))
-                                            },
-                                            label = "gridToggle"
-                                        ) { isGrid ->
-                                            Icon(
-                                                imageVector = if (isGrid) Icons.Default.ViewList else Icons.Default.GridView,
-                                                contentDescription = "Toggle Grid/List view",
-                                                tint = MaterialTheme.colorScheme.onSurface,
-                                                modifier = Modifier
-                                                    .size(if (isWide) 20.dp else 22.dp)
-                                                    .graphicsLayer { rotationZ = gridRotation }
-                                            )
+                                        androidx.compose.animation.AnimatedVisibility(
+                                            visible = (page != "home"),
+                                            enter = fadeIn(tween(220)) + scaleIn(initialScale = 0.75f, animationSpec = tween(220)),
+                                            exit = fadeOut(tween(200)) + scaleOut(targetScale = 0.75f, animationSpec = tween(200))
+                                        ) {
+                                            IconButton(
+                                                onClick = {
+                                                    handleTopBarBack()
+                                                }
+                                            ) {
+                                                Icon(
+                                                    imageVector = Icons.Default.ChevronRight,
+                                                    contentDescription = "Back",
+                                                    tint = MaterialTheme.colorScheme.onSurface
+                                                )
+                                            }
                                         }
+
+                                        androidx.compose.animation.AnimatedVisibility(
+                                            visible = (page == "home"),
+                                            enter = fadeIn(tween(220)) + scaleIn(initialScale = 0.75f, animationSpec = tween(220)),
+                                            exit = fadeOut(tween(200)) + scaleOut(targetScale = 0.75f, animationSpec = tween(200))
+                                        ) {
+                                            Box(
+                                                modifier = Modifier
+                                                    .size(40.dp)
+                                                    .clip(CircleShape)
+                                                    .background(
+                                                        Brush.radialGradient(
+                                                            listOf(
+                                                                parseHexColor(appSettings.primaryColor).copy(alpha = 0.5f),
+                                                                Color.Transparent
+                                                            )
+                                                        )
+                                                    ),
+                                                contentAlignment = Alignment.Center
+                                            ) {
+                                                Image(
+                                                    painter = painterResource(com.Nightjar.Th3GradeLibraryKMP.generated.resources.Res.drawable.app_icon),
+                                                    contentDescription = "App Icon",
+                                                    modifier = Modifier.size(28.dp).clip(CircleShape)
+                                                )
+                                            }
+                                        }
+                                    }
+                                    Spacer(modifier = Modifier.width(8.dp))
+
+                                    var savedTitle by remember { mutableStateOf("مكتبة الثالث متوسط") }
+                                    val appBarTitleRaw = when (page) {
+                                        "news" -> "آخر الأخبار"
+                                        "bookmarks" -> "المحفوظات"
+                                        "shortcuts" -> "إضافة اختصار"
+                                        "about" -> "حول التطبيق"
+                                        "list" -> if (selectedCategory == "books") "الكتب الرسمية" else "الملازم الدراسية"
+                                        else -> "مكتبة الثالث متوسط"
+                                    }
+                                    if (page != "pdf" && page != "error") {
+                                        savedTitle = appBarTitleRaw
                                     }
 
-                                    // Separate Floating Circle 2: Search Toggle with fluid liquid morph
-                                    val searchRotation by animateFloatAsState(
-                                        targetValue = if (isSearchOpen) 90f else 0f,
-                                        animationSpec = spring(dampingRatio = 0.74f, stiffness = 320f),
-                                        label = "searchRotation"
-                                    )
-                                    Box(
-                                        modifier = Modifier
-                                            .size(animatedElementSize)
-                                            .liquidGlass(isDark, borderRadius = 22.dp, alpha = 0.92f)
-                                            .clip(CircleShape)
-                                            .bounceClick {
-                                                if (isSearchOpen) {
-                                                    stopVoiceAndClearSearch()
-                                                    isSearchOpen = false
-                                                } else {
-                                                    stopVoiceAndClearSearch()
-                                                    isSearchOpen = true
-                                                }
-                                            },
-                                        contentAlignment = Alignment.Center
-                                    ) {
-                                        androidx.compose.animation.AnimatedContent(
-                                            targetState = isSearchOpen,
-                                            transitionSpec = {
-                                                (fadeIn(tween(220)) + scaleIn(initialScale = 0.75f, animationSpec = spring(0.74f, 320f)))
-                                                    .togetherWith(fadeOut(tween(160)) + scaleOut(targetScale = 0.75f, animationSpec = tween(160)))
-                                            },
-                                            label = "searchToggle"
-                                        ) { isOpen ->
-                                            Icon(
-                                                imageVector = if (isOpen) Icons.Default.Close else Icons.Default.Search,
-                                                contentDescription = "Toggle Search",
-                                                tint = MaterialTheme.colorScheme.onSurface,
-                                                modifier = Modifier
-                                                    .size(if (isWide) 20.dp else 22.dp)
-                                                    .graphicsLayer { rotationZ = searchRotation }
-                                            )
-                                        }
+                                    AnimatedContent(
+                                        targetState = savedTitle,
+                                        transitionSpec = {
+                                            (slideInVertically { height -> height / 2 } + fadeIn(tween(220)))
+                                                .togetherWith(slideOutVertically { height -> -height / 2 } + fadeOut(tween(220)))
+                                        },
+                                        label = "titleTransition"
+                                    ) { targetTitle ->
+                                        Text(
+                                            text = targetTitle,
+                                            fontSize = if (isWide) 16.sp else 18.sp,
+                                            fontWeight = FontWeight.Bold,
+                                            fontFamily = if (targetTitle == "مكتبة الثالث متوسط") com.Nightjar.Th3GradeLibraryKMP.theme.KufiReemFontFamily else null,
+                                            color = MaterialTheme.colorScheme.onSurface,
+                                            maxLines = 1,
+                                            overflow = TextOverflow.Ellipsis
+                                        )
                                     }
                                 }
-                            } else if (targetPage == "news") {
-                                Box(
-                                    modifier = Modifier
-                                        .size(animatedElementSize)
-                                        .liquidGlass(isDark, borderRadius = 22.dp, alpha = 0.92f)
-                                        .clip(CircleShape)
-                                        .bounceClick { isNewsSettingsOpen = true },
-                                    contentAlignment = Alignment.Center
-                                ) {
-                                    Icon(
-                                        Icons.Default.Settings,
-                                        contentDescription = "Settings",
-                                        tint = MaterialTheme.colorScheme.onSurface,
-                                        modifier = Modifier.size(20.dp)
-                                    )
+
+                                AnimatedContent(
+                                    targetState = page,
+                                    transitionSpec = {
+                                        (scaleIn(initialScale = 0.8f, animationSpec = spring(dampingRatio = 0.72f, stiffness = 260f)) + fadeIn(tween(220)))
+                                            .togetherWith(scaleOut(targetScale = 0.8f, animationSpec = tween(180)) + fadeOut(tween(180)))
+                                            .using(SizeTransform(clip = false))
+                                    },
+                                    label = "topBarActions"
+                                ) { targetPage ->
+                                    Row(
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.spacedBy(4.dp)
+                                    ) {
+                                        if (targetPage == "list") {
+                                            IconButton(onClick = { SyncEngine.saveGridView(!isGridView) }) {
+                                                androidx.compose.animation.AnimatedContent(
+                                                    targetState = isGridView,
+                                                    transitionSpec = {
+                                                        (fadeIn(tween(200)) + scaleIn(initialScale = 0.8f)).togetherWith(fadeOut(tween(160)) + scaleOut(targetScale = 0.8f))
+                                                    },
+                                                    label = "gridToggle"
+                                                ) { isGrid ->
+                                                    Icon(
+                                                        imageVector = if (isGrid) Icons.Default.ViewList else Icons.Default.GridView,
+                                                        contentDescription = "Toggle Grid/List view",
+                                                        tint = MaterialTheme.colorScheme.onSurface
+                                                    )
+                                                }
+                                            }
+                                            IconButton(onClick = { isSearchOpen = !isSearchOpen }) {
+                                                androidx.compose.animation.AnimatedContent(
+                                                    targetState = isSearchOpen,
+                                                    transitionSpec = {
+                                                        (fadeIn(tween(200)) + scaleIn(initialScale = 0.8f)).togetherWith(fadeOut(tween(160)) + scaleOut(targetScale = 0.8f))
+                                                    },
+                                                    label = "searchToggle"
+                                                ) { isOpen ->
+                                                    Icon(
+                                                        imageVector = if (isOpen) Icons.Default.Close else Icons.Default.Search,
+                                                        contentDescription = "Toggle Search",
+                                                        tint = MaterialTheme.colorScheme.onSurface
+                                                    )
+                                                }
+                                            }
+                                        } else if (targetPage == "news") {
+                                            IconButton(onClick = { isNewsSettingsOpen = true }) {
+                                                Icon(Icons.Default.Settings, contentDescription = "Settings", tint = MaterialTheme.colorScheme.onSurface)
+                                            }
+                                        } else {
+                                            // Empty spacer to maintain spacing for other pages
+                                            Spacer(modifier = Modifier.width(0.dp))
+                                        }
+                                    }
                                 }
                             }
                         }
                     }
-                }
 
                     // Floating Search Bar (Naturally nested below App Bar in Column)
                     androidx.compose.animation.AnimatedVisibility(
