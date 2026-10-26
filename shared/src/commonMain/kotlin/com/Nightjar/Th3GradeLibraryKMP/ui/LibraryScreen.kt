@@ -572,17 +572,21 @@ fun LazyGridItemScope.ContentCard(
         }
     } else Modifier
 
+    val contentSizeModifier = if (!isReturningFromPdf && !isThisCardTarget) {
+        Modifier.animateContentSize(
+            animationSpec = spring(
+                dampingRatio = 0.80f,
+                stiffness = 340f
+            )
+        )
+    } else Modifier
+
     Box(
         modifier = modifier
             .zIndex(if (isThisCardTarget) 15f else if (com.Nightjar.Th3GradeLibraryKMP.theme.LocalIsNavigatingBack.current) 1f else 0f)
             .fillMaxWidth()
             .then(sharedBoundsModifier)
-            .animateContentSize(
-                animationSpec = spring(
-                    dampingRatio = 0.80f,
-                    stiffness = 340f
-                )
-            )
+            .then(contentSizeModifier)
             .liquidGlass(isDark, borderRadius = cardCornerRadius, alpha = 0.5f)
             .clip(RoundedCornerShape(cardCornerRadius))
             .clickable {

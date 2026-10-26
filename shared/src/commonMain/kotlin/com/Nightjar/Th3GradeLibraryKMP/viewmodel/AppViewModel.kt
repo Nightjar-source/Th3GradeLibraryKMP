@@ -223,6 +223,10 @@ class AppViewModel : ViewModel() {
         val wasOnPdf = current.lastOrNull() == "pdf"
         if (wasOnPdf) {
             isReturningFromPdf = true
+            selectedItem?.let { item ->
+                com.Nightjar.Th3GradeLibraryKMP.ui.TransitionTargetTracker.activeTargetId = "card_${item.id}"
+                com.Nightjar.Th3GradeLibraryKMP.ui.TransitionTargetTracker.isTransitionActive = true
+            }
         }
         if (current.size > 1) {
             val updated = current.dropLast(1)
@@ -230,7 +234,7 @@ class AppViewModel : ViewModel() {
             page = updated.last()
             persistState()
             viewModelScope.launch {
-                delay(260)
+                delay(420)
                 isNavigatingBack = false
                 if (wasOnPdf) {
                     isReturningFromPdf = false
@@ -239,7 +243,7 @@ class AppViewModel : ViewModel() {
             return true
         }
         viewModelScope.launch {
-            delay(260)
+            delay(420)
             isNavigatingBack = false
             if (wasOnPdf) {
                 isReturningFromPdf = false

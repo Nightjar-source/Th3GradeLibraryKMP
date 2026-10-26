@@ -179,21 +179,21 @@ fun AppContent(
     val libraryHomeScrollState = androidx.compose.runtime.saveable.rememberSaveable(saver = androidx.compose.foundation.ScrollState.Saver) {
         androidx.compose.foundation.ScrollState(0)
     }
-    val initialBookIndex = remember(initialBookId, initialIsNote) {
+    val initialTargetBook = remember {
         if (initialBookId != null && !initialIsNote) {
             AllItems.books.indexOfFirst { it.id == initialBookId }.takeIf { it >= 0 } ?: 0
         } else 0
     }
-    val initialNoteIndex = remember(initialBookId, initialIsNote) {
+    val initialTargetNote = remember {
         if (initialBookId != null && initialIsNote) {
             AllItems.notes.indexOfFirst { it.id == initialBookId }.takeIf { it >= 0 } ?: 0
         } else 0
     }
     val libraryBooksLazyGridState = androidx.compose.runtime.saveable.rememberSaveable(saver = androidx.compose.foundation.lazy.grid.LazyGridState.Saver) {
-        androidx.compose.foundation.lazy.grid.LazyGridState(firstVisibleItemIndex = initialBookIndex)
+        androidx.compose.foundation.lazy.grid.LazyGridState(firstVisibleItemIndex = initialTargetBook)
     }
     val libraryNotesLazyGridState = androidx.compose.runtime.saveable.rememberSaveable(saver = androidx.compose.foundation.lazy.grid.LazyGridState.Saver) {
-        androidx.compose.foundation.lazy.grid.LazyGridState(firstVisibleItemIndex = initialNoteIndex)
+        androidx.compose.foundation.lazy.grid.LazyGridState(firstVisibleItemIndex = initialTargetNote)
     }
     val bookmarksLazyGridState = androidx.compose.runtime.saveable.rememberSaveable(saver = androidx.compose.foundation.lazy.grid.LazyGridState.Saver) {
         androidx.compose.foundation.lazy.grid.LazyGridState()
@@ -358,20 +358,19 @@ fun AppContent(
         handleTopBarBack()
     }
 
-    // Align LazyGrid position for initial book or shortcut without racing AppViewModel
-    LaunchedEffect(initialBookId) {
-        if (initialBookId != null) {
-            val target = AllItems.books.firstOrNull { it.id == initialBookId }
-                ?: AllItems.notes.firstOrNull { it.id == initialBookId }
-            if (target != null) {
-                val list = if (target.isNote) AllItems.notes else AllItems.books
-                val targetIdx = list.indexOfFirst { it.id == target.id }
-                if (targetIdx >= 0) {
-                    val state = if (target.isNote) libraryNotesLazyGridState else libraryBooksLazyGridState
-                    try {
-                        state.scrollToItem(targetIdx)
-                    } catch (_: Exception) {}
-                }
+    // Align LazyGrid position for initial book, shortcut, or returning from PDF seamlessly
+    LaunchedEffect(selectedItem, initialBookId) {
+        val target = selectedItem ?: (initialBookId?.let { id ->
+            AllItems.books.firstOrNull { it.id == id } ?: AllItems.notes.firstOrNull { it.id == id }
+        })
+        if (target != null) {
+            val list = if (target.isNote) AllItems.notes else AllItems.books
+            val targetIdx = list.indexOfFirst { it.id == target.id }
+            if (targetIdx >= 0) {
+                val state = if (target.isNote) libraryNotesLazyGridState else libraryBooksLazyGridState
+                try {
+                    state.scrollToItem(targetIdx)
+                } catch (_: Exception) {}
             }
         }
     }
@@ -536,9 +535,9 @@ fun AppContent(
 
                                 if (isToPdf || isFromPdf) {
                                     // SharedBounds handles the visual morph entirely.
-                                    // Use None transitions to prevent double-fade artifacts.
+                                    // Keep reader on top while shrinking back into list
                                     EnterTransition.None.togetherWith(ExitTransition.None).apply {
-                                        targetContentZIndex = if (isToPdf) 2f else 0f
+                                        targetContentZIndex = if (isToPdf) 2f else -1f
                                     }
                                 } else {
                                     val direction = if (isAppRtl) -viewModel.navigationDirection else viewModel.navigationDirection
@@ -562,9 +561,9 @@ fun AppContent(
                             }
                         ) { targetPage ->
                             val currentTransition = this@AnimatedContent.transition
-                            LaunchedEffect(currentTransition.currentState, currentTransition.targetState, targetPage) {
+                            LaunchedEffect(currentTransition.currentState, currentTransition.targetState, targetPage, isReturningFromPdf) {
                                 if (currentTransition.currentState == currentTransition.targetState &&
-                                    page != "pdf"
+                                    page != "pdf" && !isReturningFromPdf
                                 ) {
                                     com.Nightjar.Th3GradeLibraryKMP.ui.TransitionTargetTracker.reset()
                                     viewModel.onTransitionFinished()
