@@ -250,7 +250,7 @@ fun BookmarksScreen(
                             BookAccordionItem(
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .screenEntranceCascade(index - lazyGridState.firstVisibleItemIndex, bookId),
+                                    .adaptiveItemEntrance(index, bookId),
                                 item = book,
                                 pages = pages,
                                 isPageSaved = { pageIdx -> savedPages.contains("${book.id}:$pageIdx") },

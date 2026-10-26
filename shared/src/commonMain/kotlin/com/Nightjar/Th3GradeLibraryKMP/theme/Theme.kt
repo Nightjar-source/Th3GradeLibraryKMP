@@ -178,62 +178,58 @@ fun Modifier.expressiveButtonMorph(
 }
 
 /**
- * Staggered pop-in animation on screen load (from proven backup).
- * Guaranteed never to flash an empty/blank screen: initial alpha is 0.85f and fluidly rises to 1.0f.
- * Respects low-end devices and returning from PDF states.
- */
-/**
- * Fluid staggered sliding animation on screen load and quick navigations.
- * NEVER touches alpha to avoid double-fade with AnimatedContent transitions.
- * Only applies subtle translationY slide-up and micro-scale for a silky 120Hz entrance.
+ * Fluid staggered sliding animation on screen load and quick navigations (matching caliq5 exactly).
+ * Replays smoothly on every screen entrance or tab switch with an elegant, moist (Fluid) spring motion.
+ * Protected by LocalSeenEntranceItems session cache to never re-trigger or flash during list scrolling or accordion toggles.
  */
 fun Modifier.screenEntranceStagger(index: Int = 0, itemId: String? = null): Modifier = composed {
     val isLowEnd = LocalIsLowEndDevice.current
-    val isReturningFromPdf = LocalIsReturningFromPdf.current
-    val seenMap = LocalSeenEntranceItems.current
-    val itemKey = itemId ?: ("idx_" + index)
+    if (isLowEnd || index > 12) return@composed this
 
-    val alreadySeen = (seenMap != null && seenMap[itemKey] == true) || isReturningFromPdf
-    if (isLowEnd || alreadySeen || index !in 0..6) {
-        if (seenMap != null) {
-            seenMap[itemKey] = true
-        }
+    val isReturningFromPdf = LocalIsReturningFromPdf.current
+    val isNavigatingBack = LocalIsNavigatingBack.current
+    val itemKey = itemId ?: index.toString()
+    val isActiveSharedTarget = com.Nightjar.Th3GradeLibraryKMP.ui.TransitionTargetTracker.isTransitionActive &&
+            (com.Nightjar.Th3GradeLibraryKMP.ui.TransitionTargetTracker.activeTargetId == "card_$itemKey" ||
+             com.Nightjar.Th3GradeLibraryKMP.ui.TransitionTargetTracker.activeTargetId == itemKey ||
+             com.Nightjar.Th3GradeLibraryKMP.ui.TransitionTargetTracker.activeTargetId?.startsWith("bookmark_$itemKey") == true)
+
+    val screenKey = LocalScreenEntranceKey.current
+    val seenMap = LocalSeenEntranceItems.current
+
+    // When returning from PDF or navigating back or on active shared target: keep 100% stationary with zero movement!
+    if (isReturningFromPdf || isNavigatingBack || isActiveSharedTarget) {
+        seenMap?.put(itemKey, true)
         return@composed this
     }
 
-    var isLoaded by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf(false) }
+    val alreadySeen = seenMap?.get(itemKey) == true
+    if (alreadySeen) return@composed this
 
-    androidx.compose.runtime.LaunchedEffect(itemKey) {
-        if (index > 0) {
-            val staggerDelay = (index * 30L).coerceAtMost(180L)
-            kotlinx.coroutines.delay(staggerDelay)
-        }
-        isLoaded = true
+    val animProgress = androidx.compose.runtime.remember(screenKey, itemKey) { androidx.compose.animation.core.Animatable(0f) }
+    val density = androidx.compose.ui.platform.LocalDensity.current
+    val offsetYPx = androidx.compose.runtime.remember(density) { with(density) { 14.dp.toPx() } }
+
+    androidx.compose.runtime.LaunchedEffect(screenKey, itemKey) {
+        val staggerDelay = (index.coerceIn(0, 8) * 22L)
+        if (staggerDelay > 0) kotlinx.coroutines.delay(staggerDelay)
+        animProgress.animateTo(
+            targetValue = 1f,
+            animationSpec = androidx.compose.animation.core.spring(
+                dampingRatio = 0.76f, // Ultra-moist fluid organic spring (كالجبنة)
+                stiffness = 320f
+            )
+        )
         seenMap?.put(itemKey, true)
     }
 
-    val animProgress by androidx.compose.animation.core.animateFloatAsState(
-        targetValue = if (isLoaded) 1f else 0f,
-        animationSpec = androidx.compose.animation.core.spring(
-            dampingRatio = 0.85f,
-            stiffness = 400f
-        ),
-        label = "fluidSlide_" + itemKey
-    )
-
-    if (animProgress >= 1f && isLoaded) {
-        Modifier
-    } else {
-        val density = androidx.compose.ui.platform.LocalDensity.current
-        val offsetYPx = androidx.compose.runtime.remember(density) { with(density) { 16.dp.toPx() } }
-        this.graphicsLayer {
-            val progress = animProgress.coerceIn(0f, 1f)
-            // NEVER touch alpha - AnimatedContent handles screen-level fade
-            this.translationY = (1f - progress) * offsetYPx
-            this.scaleX = 0.99f + 0.01f * progress
-            this.scaleY = 0.99f + 0.01f * progress
-            this.clip = false
-        }
+    val p = animProgress.value
+    this.graphicsLayer {
+        this.alpha = 0.30f + 0.70f * p // Base alpha 0.30f eliminates harsh dark/white flashes!
+        this.translationY = (1f - p) * offsetYPx
+        this.scaleX = 0.985f + 0.015f * p
+        this.scaleY = 0.985f + 0.015f * p
+        this.clip = false
     }
 }
 
@@ -243,14 +239,21 @@ fun Modifier.screenEntranceStagger(index: Int = 0, itemId: String? = null): Modi
 fun Modifier.screenEntranceCascade(index: Int = 0, itemId: String? = null): Modifier = this.screenEntranceStagger(index, itemId)
 
 /**
- * Pop-in animation on initial load (caliq5 / backup standard).
+ * Pop-in animation on initial load (caliq5 standard).
  */
 fun Modifier.popInOnInitialLoad(index: Int = 0, itemId: String? = null): Modifier = this.screenEntranceStagger(index, itemId)
 
 /**
- * Unified adaptive entrance: Zero overhead for dynamic list items to maintain 120 FPS scrolling without re-triggering.
+ * Unified adaptive entrance: Screen Entrance Cascade for initial visible items (0..8).
+ * Scrolled items (> 8) are rendered instantly without overhead to preserve 120 FPS scrolling.
  */
-fun Modifier.adaptiveItemEntrance(index: Int = 0, itemId: String? = null): Modifier = this
+fun Modifier.adaptiveItemEntrance(index: Int = 0, itemId: String? = null): Modifier = composed {
+    if (index <= 8) {
+        this.screenEntranceCascade(index, itemId)
+    } else {
+        this
+    }
+}
 
 val KufiReemFontFamily: FontFamily
     @Composable

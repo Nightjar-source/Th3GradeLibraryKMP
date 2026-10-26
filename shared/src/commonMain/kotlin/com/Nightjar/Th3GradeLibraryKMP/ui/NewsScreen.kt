@@ -309,7 +309,7 @@ fun NewsScreen(
                                 NewsCardSwipeable(
                                     modifier = Modifier
                                         .fillMaxWidth()
-                                        .screenEntranceCascade(index - lazyGridState.firstVisibleItemIndex, newsItem.id)
+                                        .adaptiveItemEntrance(index, newsItem.id)
                                         .animateItem(
                                             fadeInSpec = null,
                                             fadeOutSpec = tween(200),

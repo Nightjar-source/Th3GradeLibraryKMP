@@ -335,7 +335,7 @@ fun LibraryScreen(
                         ContentCard(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .screenEntranceCascade(index - lazyGridState.firstVisibleItemIndex, item.id)
+                                .adaptiveItemEntrance(index, item.id)
                                 .animateItem(
                                     fadeInSpec = null,
                                     fadeOutSpec = null,
