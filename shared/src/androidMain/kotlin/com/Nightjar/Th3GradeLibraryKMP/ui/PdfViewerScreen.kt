@@ -354,9 +354,11 @@ actual fun PdfViewerScreen(
     } else remember { mutableStateOf(0.dp) }
     val safeCornerRadius = cornerRadius.coerceAtLeast(0.dp)
 
+    val isTargetInViewport = com.Nightjar.Th3GradeLibraryKMP.ui.TransitionTargetTracker.visibleItemIds.contains(item.id)
+    val isDirectTarget = com.Nightjar.Th3GradeLibraryKMP.ui.TransitionTargetTracker.activeTargetId == "card_" + item.id
     val hasValidTarget = when {
         isFromBookmarksEffective -> (initialPage != null)
-        else -> true
+        else -> isTargetInViewport || isDirectTarget
     }
 
     val sharedKey = when {

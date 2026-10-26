@@ -197,25 +197,6 @@ fun BookmarksScreen(
                     }
                 }
 
-                // Explicit Scroll State Preservation across tab navigation and background recreation
-                var savedFirstVisibleItemIndex by androidx.compose.runtime.saveable.rememberSaveable { androidx.compose.runtime.mutableStateOf(0) }
-                var savedFirstVisibleItemScrollOffset by androidx.compose.runtime.saveable.rememberSaveable { androidx.compose.runtime.mutableStateOf(0) }
-
-                LaunchedEffect(lazyGridState.firstVisibleItemIndex, lazyGridState.firstVisibleItemScrollOffset) {
-                    if (lazyGridState.firstVisibleItemIndex > 0 || lazyGridState.firstVisibleItemScrollOffset > 0) {
-                        savedFirstVisibleItemIndex = lazyGridState.firstVisibleItemIndex
-                        savedFirstVisibleItemScrollOffset = lazyGridState.firstVisibleItemScrollOffset
-                    }
-                }
-
-                LaunchedEffect(sortedBookIds.isNotEmpty()) {
-                    if (sortedBookIds.isNotEmpty() && (savedFirstVisibleItemIndex > 0 || savedFirstVisibleItemScrollOffset > 0)) {
-                        if (lazyGridState.firstVisibleItemIndex == 0 && lazyGridState.firstVisibleItemScrollOffset == 0) {
-                            lazyGridState.scrollToItem(savedFirstVisibleItemIndex, savedFirstVisibleItemScrollOffset)
-                        }
-                    }
-                }
-
                 val dynamicBookmarkColumns = remember(responsiveInfo) {
                     if (responsiveInfo.isWide) {
                         if (responsiveInfo.width >= 1800.dp) GridCells.Fixed(5)
