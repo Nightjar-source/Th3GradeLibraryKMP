@@ -544,7 +544,6 @@ fun LazyGridItemScope.ContentCard(
     val animatedVisibilityScope = LocalAnimatedVisibilityScope.current
     val isReturningFromPdf = com.Nightjar.Th3GradeLibraryKMP.theme.LocalIsReturningFromPdf.current
     val isThisCardTarget = (TransitionTargetTracker.activeTargetId == "card_${item.id}" || TransitionTargetTracker.activeTargetId == item.id)
-    val isSharedActive = isThisCardTarget && (TransitionTargetTracker.isTransitionActive || isReturningFromPdf)
 
     val sharedBoundsModifier = if (sharedTransitionScope != null && animatedVisibilityScope != null) {
         with(sharedTransitionScope) {
@@ -553,21 +552,20 @@ fun LazyGridItemScope.ContentCard(
                 animatedVisibilityScope = animatedVisibilityScope,
                 enter = androidx.compose.animation.fadeIn(
                     animationSpec = androidx.compose.animation.core.tween(
-                        durationMillis = 200,
-                        easing = androidx.compose.animation.core.FastOutSlowInEasing
+                        durationMillis = 150,
+                        delayMillis = 75,
+                        easing = androidx.compose.animation.core.LinearEasing
                     )
                 ),
                 exit = androidx.compose.animation.fadeOut(
                     animationSpec = androidx.compose.animation.core.tween(
-                        durationMillis = 180,
-                        easing = androidx.compose.animation.core.FastOutSlowInEasing
+                        durationMillis = 130,
+                        easing = androidx.compose.animation.core.LinearEasing
                     )
                 ),
-                renderInOverlayDuringTransition = isSharedActive,
+                renderInOverlayDuringTransition = true,
                 clipInOverlayDuringTransition = OverlayClip(RoundedCornerShape(cardCornerRadius)),
-                boundsTransform = { _, _ ->
-                    spring(dampingRatio = 0.82f, stiffness = 280f)
-                },
+                boundsTransform = { _, _ -> spring(dampingRatio = 0.82f, stiffness = 280f) },
                 resizeMode = SharedTransitionScope.ResizeMode.RemeasureToBounds
             )
         }
@@ -578,6 +576,12 @@ fun LazyGridItemScope.ContentCard(
             .zIndex(if (isThisCardTarget) 15f else if (com.Nightjar.Th3GradeLibraryKMP.theme.LocalIsNavigatingBack.current) 1f else 0f)
             .fillMaxWidth()
             .then(sharedBoundsModifier)
+            .animateContentSize(
+                animationSpec = spring(
+                    dampingRatio = 0.80f,
+                    stiffness = 340f
+                )
+            )
             .liquidGlass(isDark, borderRadius = cardCornerRadius, alpha = 0.5f)
             .clip(RoundedCornerShape(cardCornerRadius))
             .clickable {
@@ -587,16 +591,7 @@ fun LazyGridItemScope.ContentCard(
             }
             .padding(12.dp)
     ) {
-        androidx.compose.animation.AnimatedContent(
-            targetState = isGridView,
-            transitionSpec = {
-                (fadeIn(animationSpec = tween(220, easing = LinearOutSlowInEasing))).togetherWith(
-                    fadeOut(animationSpec = tween(180, easing = FastOutLinearInEasing))
-                ).using(SizeTransform(clip = false))
-            },
-            label = "grid_list_fluid_transition"
-        ) { grid ->
-            if (grid) {
+        if (isGridView) {
                 Column(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalAlignment = Alignment.Start
@@ -611,7 +606,7 @@ fun LazyGridItemScope.ContentCard(
                         coil3.compose.AsyncImage(
                             model = coil3.request.ImageRequest.Builder(coil3.compose.LocalPlatformContext.current)
                                 .data(com.Nightjar.Th3GradeLibraryKMP.generated.resources.Res.getUri("drawable/${item.coverResName}." + if (item.coverResName in listOf("ayajaaa", "english", "englishactivity", "kss1")) "jpg" else "png"))
-                                .crossfade(false)
+                                .crossfade(!isReturningFromPdf)
                                 .memoryCachePolicy(coil3.request.CachePolicy.ENABLED)
                                 .diskCachePolicy(coil3.request.CachePolicy.ENABLED)
                                 .build(),
@@ -660,22 +655,20 @@ fun LazyGridItemScope.ContentCard(
                     }
                 }
             } else {
-                val layoutInfo = com.Nightjar.Th3GradeLibraryKMP.theme.LocalResponsiveLayoutInfo.current
-                val isMicro = layoutInfo.width < 360.dp
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Box(
                         modifier = Modifier
-                            .size(width = if (isMicro) 56.dp else 72.dp, height = if (isMicro) 75.dp else 96.dp)
+                            .size(width = 72.dp, height = 96.dp)
                             .clip(RoundedCornerShape(14.dp))
                             .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
                     ) {
                         coil3.compose.AsyncImage(
                             model = coil3.request.ImageRequest.Builder(coil3.compose.LocalPlatformContext.current)
                                 .data(com.Nightjar.Th3GradeLibraryKMP.generated.resources.Res.getUri("drawable/${item.coverResName}." + if (item.coverResName in listOf("ayajaaa", "english", "englishactivity", "kss1")) "jpg" else "png"))
-                                .crossfade(false)
+                                .crossfade(!isReturningFromPdf)
                                 .memoryCachePolicy(coil3.request.CachePolicy.ENABLED)
                                 .diskCachePolicy(coil3.request.CachePolicy.ENABLED)
                                 .build(),
@@ -685,18 +678,18 @@ fun LazyGridItemScope.ContentCard(
                         )
                     }
 
-                    Spacer(modifier = Modifier.width(if (isMicro) 10.dp else 16.dp))
+                    Spacer(modifier = Modifier.width(16.dp))
 
                     Column(modifier = Modifier.weight(1f)) {
                         Text(
                             text = item.title,
-                            fontSize = if (isMicro) 14.sp else 16.sp,
+                            fontSize = 16.sp,
                             fontWeight = FontWeight.Bold,
                             maxLines = 2,
                             overflow = TextOverflow.Ellipsis,
                             color = MaterialTheme.colorScheme.onSurface
                         )
-                        Spacer(modifier = Modifier.height(if (isMicro) 4.dp else 6.dp))
+                        Spacer(modifier = Modifier.height(6.dp))
                         Row(
                             verticalAlignment = Alignment.CenterVertically,
                             horizontalArrangement = Arrangement.spacedBy(6.dp)
@@ -733,6 +726,5 @@ fun LazyGridItemScope.ContentCard(
             }
         }
     }
-}
 
 

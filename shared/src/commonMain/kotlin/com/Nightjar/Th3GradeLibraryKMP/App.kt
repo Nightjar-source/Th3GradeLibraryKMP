@@ -534,29 +534,42 @@ fun AppContent(
                                 val isToPdf = targetState == "pdf"
                                 val isFromPdf = initialState == "pdf"
 
-                                if (isToPdf || isFromPdf) {
-                                    // SharedBounds handles the visual morph entirely.
-                                    // Use None transitions to prevent double-fade artifacts.
-                                    EnterTransition.None.togetherWith(ExitTransition.None).apply {
-                                        targetContentZIndex = if (isToPdf) 2f else 0f
+                                if (isToPdf) {
+                                    (fadeIn(animationSpec = tween(durationMillis = 130, easing = androidx.compose.animation.core.LinearEasing))).togetherWith(
+                                        fadeOut(animationSpec = tween(durationMillis = 130, easing = androidx.compose.animation.core.LinearEasing))
+                                    ).apply {
+                                        targetContentZIndex = 50f
+                                    }
+                                } else if (isFromPdf) {
+                                    (fadeIn(animationSpec = tween(durationMillis = 150, delayMillis = 75, easing = androidx.compose.animation.core.LinearEasing))).togetherWith(
+                                        fadeOut(animationSpec = tween(durationMillis = 150, delayMillis = 75, easing = androidx.compose.animation.core.LinearEasing))
+                                    ).apply {
+                                        targetContentZIndex = -1f
                                     }
                                 } else {
-                                    val direction = if (isAppRtl) -viewModel.navigationDirection else viewModel.navigationDirection
+                                    val pageOrder = listOf("home", "list", "news", "bookmarks", "shortcuts", "about")
+                                    val initialIndex = pageOrder.indexOf(initialState).takeIf { it >= 0 } ?: 0
+                                    val targetIndex = pageOrder.indexOf(targetState).takeIf { it >= 0 } ?: 0
 
                                     val fluidEasing = androidx.compose.animation.core.CubicBezierEasing(0.16f, 1f, 0.3f, 1f)
                                     val slideSpec = androidx.compose.animation.core.tween<androidx.compose.ui.unit.IntOffset>(
                                         durationMillis = 350,
                                         easing = fluidEasing
                                     )
+                                    val fadeSpec = androidx.compose.animation.core.tween<Float>(
+                                        durationMillis = 260,
+                                        easing = androidx.compose.animation.core.FastOutSlowInEasing
+                                    )
+                                    val direction = if (isNavigatingBack || targetIndex < initialIndex) 1 else -1 // RTL: Forward is -1 (from left), Backward is 1 (from right)
 
                                     (slideInHorizontally(
                                         initialOffsetX = { fullWidth -> fullWidth * direction },
                                         animationSpec = slideSpec
-                                    )).togetherWith(
+                                    ) + fadeIn(animationSpec = fadeSpec)).togetherWith(
                                         slideOutHorizontally(
                                             targetOffsetX = { fullWidth -> -fullWidth * direction },
                                             animationSpec = slideSpec
-                                        )
+                                        ) + fadeOut(animationSpec = fadeSpec)
                                     )
                                 }
                             }
