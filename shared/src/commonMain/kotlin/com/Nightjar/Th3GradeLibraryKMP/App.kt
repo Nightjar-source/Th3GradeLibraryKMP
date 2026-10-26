@@ -712,7 +712,6 @@ fun AppContent(
                                                 initialPage = pdfInitialPage,
                                                 isDark = isDark,
                                                 isFromBookmarks = viewModel.isFromBookmarks,
-                                                isFromShortcut = viewModel.isFromShortcut,
                                                 sourcePage = viewModel.pdfSourcePage
                                             )
                                         }

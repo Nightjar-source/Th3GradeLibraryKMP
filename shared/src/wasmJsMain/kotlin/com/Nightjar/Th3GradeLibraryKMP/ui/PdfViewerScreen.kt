@@ -32,7 +32,6 @@ actual fun PdfViewerScreen(
     initialPage: Int?,
     isDark: Boolean,
     isFromBookmarks: Boolean,
-    isFromShortcut: Boolean,
     sourcePage: String
 ) {
     // Construct the relative path to the asset resource served by Wasm dev/prod server

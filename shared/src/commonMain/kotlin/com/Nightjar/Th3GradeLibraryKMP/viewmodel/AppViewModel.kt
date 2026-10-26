@@ -222,9 +222,7 @@ class AppViewModel : ViewModel() {
         val current = pageHistory.value
         val wasOnPdf = current.lastOrNull() == "pdf"
         if (wasOnPdf) {
-            if (!isFromShortcut) {
-                isReturningFromPdf = true
-            }
+            isReturningFromPdf = true
         }
         if (current.size > 1) {
             val updated = current.dropLast(1)
