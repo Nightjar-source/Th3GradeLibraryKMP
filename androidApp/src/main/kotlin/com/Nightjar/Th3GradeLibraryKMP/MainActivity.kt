@@ -91,6 +91,9 @@ class MainActivity : ComponentActivity() {
     private var onSpeechResultCallback: ((String) -> Unit)? = null
     private var onSpeechEndCallback: (() -> Unit)? = null
 
+    private var pendingSpeechOnResult: ((String) -> Unit)? = null
+    private var pendingSpeechOnEnd: (() -> Unit)? = null
+
     private val speechRecognitionLauncher = registerForActivityResult(
         androidx.activity.result.contract.ActivityResultContracts.StartActivityForResult()
     ) { result ->
@@ -101,6 +104,107 @@ class MainActivity : ComponentActivity() {
             }
         }
         onSpeechEndCallback?.invoke()
+    }
+
+    private val recordAudioLauncher = registerForActivityResult(
+        androidx.activity.result.contract.ActivityResultContracts.RequestPermission()
+    ) { isGranted ->
+        val onResult = pendingSpeechOnResult
+        val onEnd = pendingSpeechOnEnd
+        pendingSpeechOnResult = null
+        pendingSpeechOnEnd = null
+
+        if (onResult != null && onEnd != null) {
+            if (isGranted) {
+                executeSpeechRecognizer(onResult, onEnd)
+            } else {
+                executeSystemSpeechIntent(onResult, onEnd)
+            }
+        }
+    }
+
+    private fun executeSystemSpeechIntent(onResult: (String) -> Unit, onEnd: () -> Unit) {
+        val speechIntent = Intent(android.speech.RecognizerIntent.ACTION_RECOGNIZE_SPEECH).apply {
+            putExtra(android.speech.RecognizerIntent.EXTRA_LANGUAGE_MODEL, android.speech.RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
+            putExtra(android.speech.RecognizerIntent.EXTRA_LANGUAGE, "ar")
+            putExtra(android.speech.RecognizerIntent.EXTRA_PARTIAL_RESULTS, true)
+            putExtra(android.speech.RecognizerIntent.EXTRA_PROMPT, "تحدث للبحث في المكتبة...")
+        }
+        try {
+            onSpeechResultCallback = onResult
+            onSpeechEndCallback = onEnd
+            speechRecognitionLauncher.launch(speechIntent)
+        } catch (e: Exception) {
+            onEnd()
+            Toast.makeText(this@MainActivity, "البحث الصوتي غير متوفر على جهازك", Toast.LENGTH_SHORT).show()
+        }
+    }
+
+    private fun executeSpeechRecognizer(onResult: (String) -> Unit, onEnd: () -> Unit) {
+        if (!android.speech.SpeechRecognizer.isRecognitionAvailable(this@MainActivity)) {
+            executeSystemSpeechIntent(onResult, onEnd)
+            return
+        }
+
+        currentSpeechRecognizer?.destroy()
+        try {
+            currentSpeechRecognizer = android.speech.SpeechRecognizer.createSpeechRecognizer(this@MainActivity)
+        } catch (e: Exception) {
+            executeSystemSpeechIntent(onResult, onEnd)
+            return
+        }
+
+        val speechIntent = Intent(android.speech.RecognizerIntent.ACTION_RECOGNIZE_SPEECH).apply {
+            putExtra(android.speech.RecognizerIntent.EXTRA_LANGUAGE_MODEL, android.speech.RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
+            putExtra(android.speech.RecognizerIntent.EXTRA_LANGUAGE, "ar")
+            putExtra(android.speech.RecognizerIntent.EXTRA_PARTIAL_RESULTS, true)
+        }
+
+        currentSpeechRecognizer?.setRecognitionListener(object : android.speech.RecognitionListener {
+            override fun onReadyForSpeech(params: Bundle?) {}
+            override fun onBeginningOfSpeech() {}
+            override fun onRmsChanged(rmsdB: Float) {}
+            override fun onBufferReceived(buffer: ByteArray?) {}
+            override fun onEndOfSpeech() {}
+            override fun onError(error: Int) {
+                if (error == android.speech.SpeechRecognizer.ERROR_RECOGNIZER_BUSY ||
+                    error == android.speech.SpeechRecognizer.ERROR_CLIENT ||
+                    error == android.speech.SpeechRecognizer.ERROR_INSUFFICIENT_PERMISSIONS) {
+                    executeSystemSpeechIntent(onResult, onEnd)
+                    return
+                }
+                onEnd()
+                val msg = when(error) {
+                    android.speech.SpeechRecognizer.ERROR_NETWORK -> "خطأ في الاتصال بالإنترنت"
+                    android.speech.SpeechRecognizer.ERROR_NO_MATCH -> "لم يتم التعرف على الصوت"
+                    android.speech.SpeechRecognizer.ERROR_SPEECH_TIMEOUT -> "انتهى وقت التحدث"
+                    else -> "حدث خطأ في التسجيل"
+                }
+                Toast.makeText(this@MainActivity, msg, Toast.LENGTH_SHORT).show()
+            }
+            override fun onResults(results: Bundle?) {
+                val matches = results?.getStringArrayList(android.speech.SpeechRecognizer.RESULTS_RECOGNITION)
+                if (!matches.isNullOrEmpty()) {
+                    onResult(matches[0])
+                }
+                onEnd()
+            }
+            override fun onPartialResults(partialResults: Bundle?) {
+                val matches = partialResults?.getStringArrayList(android.speech.SpeechRecognizer.RESULTS_RECOGNITION)
+                if (!matches.isNullOrEmpty()) {
+                    onResult(matches[0])
+                }
+            }
+            override fun onEvent(eventType: Int, params: Bundle?) {}
+        })
+
+        android.os.Handler(android.os.Looper.getMainLooper()).post {
+            try {
+                currentSpeechRecognizer?.startListening(speechIntent)
+            } catch (e: Exception) {
+                executeSystemSpeechIntent(onResult, onEnd)
+            }
+        }
     }
     private val bookIdState = mutableStateOf<String?>(null)
     private val isNoteState = mutableStateOf(false)
@@ -400,88 +504,15 @@ class MainActivity : ComponentActivity() {
             }
 
             override fun startVoiceSearch(onResult: (String) -> Unit, onEnd: () -> Unit) {
-                if (androidx.core.content.ContextCompat.checkSelfPermission(this@MainActivity, android.Manifest.permission.RECORD_AUDIO) != android.content.pm.PackageManager.PERMISSION_GRANTED) {
-                    androidx.core.app.ActivityCompat.requestPermissions(this@MainActivity, arrayOf(android.Manifest.permission.RECORD_AUDIO), 101)
-                    onEnd()
-                    Toast.makeText(this@MainActivity, "يرجى منح صلاحية الميكروفون للبحث الصوتي والمحاولة مجدداً", Toast.LENGTH_SHORT).show()
-                    return
-                }
-
-                val speechIntent = Intent(android.speech.RecognizerIntent.ACTION_RECOGNIZE_SPEECH).apply {
-                    putExtra(android.speech.RecognizerIntent.EXTRA_LANGUAGE_MODEL, android.speech.RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
-                    putExtra(android.speech.RecognizerIntent.EXTRA_LANGUAGE, "ar")
-                    putExtra(android.speech.RecognizerIntent.EXTRA_PARTIAL_RESULTS, true)
-                }
-
-                if (!android.speech.SpeechRecognizer.isRecognitionAvailable(this@MainActivity)) {
+                if (androidx.core.content.ContextCompat.checkSelfPermission(this@MainActivity, android.Manifest.permission.RECORD_AUDIO) == android.content.pm.PackageManager.PERMISSION_GRANTED) {
+                    executeSpeechRecognizer(onResult, onEnd)
+                } else {
+                    pendingSpeechOnResult = onResult
+                    pendingSpeechOnEnd = onEnd
                     try {
-                        onSpeechResultCallback = onResult
-                        onSpeechEndCallback = onEnd
-                        speechRecognitionLauncher.launch(speechIntent)
-                    } catch (e: Exception) {
-                        onEnd()
-                        Toast.makeText(this@MainActivity, "البحث الصوتي غير متوفر على جهازك", Toast.LENGTH_SHORT).show()
-                    }
-                    return
-                }
-
-                currentSpeechRecognizer?.destroy()
-                try {
-                    currentSpeechRecognizer = android.speech.SpeechRecognizer.createSpeechRecognizer(this@MainActivity)
-                } catch (e: Exception) {
-                    try {
-                        onSpeechResultCallback = onResult
-                        onSpeechEndCallback = onEnd
-                        speechRecognitionLauncher.launch(speechIntent)
+                        recordAudioLauncher.launch(android.Manifest.permission.RECORD_AUDIO)
                     } catch (_: Exception) {
-                        onEnd()
-                    }
-                    return
-                }
-
-                currentSpeechRecognizer?.setRecognitionListener(object : android.speech.RecognitionListener {
-                    override fun onReadyForSpeech(params: Bundle?) {}
-                    override fun onBeginningOfSpeech() {}
-                    override fun onRmsChanged(rmsdB: Float) {}
-                    override fun onBufferReceived(buffer: ByteArray?) {}
-                    override fun onEndOfSpeech() {}
-                    override fun onError(error: Int) {
-                        onEnd()
-                        val msg = when(error) {
-                            android.speech.SpeechRecognizer.ERROR_NETWORK -> "خطأ في الاتصال بالإنترنت"
-                            android.speech.SpeechRecognizer.ERROR_NO_MATCH -> "لم يتم التعرف على الصوت"
-                            android.speech.SpeechRecognizer.ERROR_SPEECH_TIMEOUT -> "انتهى وقت التحدث"
-                            else -> "حدث خطأ في التسجيل"
-                        }
-                        Toast.makeText(this@MainActivity, msg, Toast.LENGTH_SHORT).show()
-                    }
-                    override fun onResults(results: Bundle?) {
-                        val matches = results?.getStringArrayList(android.speech.SpeechRecognizer.RESULTS_RECOGNITION)
-                        if (!matches.isNullOrEmpty()) {
-                            onResult(matches[0])
-                        }
-                        onEnd()
-                    }
-                    override fun onPartialResults(partialResults: Bundle?) {
-                        val matches = partialResults?.getStringArrayList(android.speech.SpeechRecognizer.RESULTS_RECOGNITION)
-                        if (!matches.isNullOrEmpty()) {
-                            onResult(matches[0])
-                        }
-                    }
-                    override fun onEvent(eventType: Int, params: Bundle?) {}
-                })
-                
-                android.os.Handler(android.os.Looper.getMainLooper()).post {
-                    try {
-                        currentSpeechRecognizer?.startListening(speechIntent)
-                    } catch (e: Exception) {
-                        try {
-                            onSpeechResultCallback = onResult
-                            onSpeechEndCallback = onEnd
-                            speechRecognitionLauncher.launch(speechIntent)
-                        } catch (_: Exception) {
-                            onEnd()
-                        }
+                        executeSystemSpeechIntent(onResult, onEnd)
                     }
                 }
             }

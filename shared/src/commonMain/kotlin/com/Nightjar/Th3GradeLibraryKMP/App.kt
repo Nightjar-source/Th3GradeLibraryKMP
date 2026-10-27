@@ -526,38 +526,29 @@ fun AppContent(
                     ) {
                         val screenEntranceSeenMap = remember { mutableMapOf<String, androidx.compose.runtime.snapshots.SnapshotStateMap<String, Boolean>>() }
                         val isAppRtl = androidx.compose.ui.platform.LocalLayoutDirection.current == androidx.compose.ui.unit.LayoutDirection.Rtl
+                        val currentBasePage = if (page == "pdf") (viewModel.pdfSourcePage ?: "list") else page
+                        // Layer 1: Base Application Screen (Always composed & alive underneath - طابوقة فوق طابوقة)
                         AnimatedContent(
-                            targetState = page,
+                            targetState = currentBasePage,
                             modifier = Modifier.fillMaxSize(),
                             transitionSpec = {
-                                val isToPdf = targetState == "pdf"
-                                val isFromPdf = initialState == "pdf"
+                                val direction = if (isAppRtl) -viewModel.navigationDirection else viewModel.navigationDirection
 
-                                if (isToPdf || isFromPdf) {
-                                    // SharedBounds handles the visual morph entirely.
-                                    // Keep reader on top while shrinking back into list
-                                    EnterTransition.None.togetherWith(ExitTransition.None).apply {
-                                        targetContentZIndex = if (isToPdf) 2f else -1f
-                                    }
-                                } else {
-                                    val direction = if (isAppRtl) -viewModel.navigationDirection else viewModel.navigationDirection
+                                val fluidEasing = androidx.compose.animation.core.CubicBezierEasing(0.16f, 1f, 0.3f, 1f)
+                                val slideSpec = androidx.compose.animation.core.tween<androidx.compose.ui.unit.IntOffset>(
+                                    durationMillis = 350,
+                                    easing = fluidEasing
+                                )
 
-                                    val fluidEasing = androidx.compose.animation.core.CubicBezierEasing(0.16f, 1f, 0.3f, 1f)
-                                    val slideSpec = androidx.compose.animation.core.tween<androidx.compose.ui.unit.IntOffset>(
-                                        durationMillis = 350,
-                                        easing = fluidEasing
-                                    )
-
-                                    (slideInHorizontally(
-                                        initialOffsetX = { fullWidth -> fullWidth * direction },
+                                (slideInHorizontally(
+                                    initialOffsetX = { fullWidth -> fullWidth * direction },
+                                    animationSpec = slideSpec
+                                )).togetherWith(
+                                    slideOutHorizontally(
+                                        targetOffsetX = { fullWidth -> -fullWidth * direction },
                                         animationSpec = slideSpec
-                                    )).togetherWith(
-                                        slideOutHorizontally(
-                                            targetOffsetX = { fullWidth -> -fullWidth * direction },
-                                            animationSpec = slideSpec
-                                        )
                                     )
-                                }
+                                )
                             }
                         ) { targetPage ->
                             val currentTransition = this@AnimatedContent.transition
@@ -677,33 +668,53 @@ fun AppContent(
                                         onScrollableStateChanged = { canCurrentPageScroll = it },
                                         scrollState = aboutScrollState
                                     )
-                                    "pdf" -> {
-                                        val currentItem = selectedItem
-                                        if (currentItem != null) {
-                                            RenderPdfDestination(
-                                                item = currentItem,
-                                                savedItemIds = savedItemIds,
-                                                onToggleBookmark = { pageIdx ->
-                                                    val key = "${currentItem.id}:$pageIdx"
-                                                    val isNowSaved = SyncEngine.toggleBookmark(key)
-                                                    if (!isNowSaved) {
-                                                        platformActionHandler.showToast("تم حذف الصفحة ${pageIdx + 1} من المحفوظات")
-                                                    } else {
-                                                        platformActionHandler.showToast("تم حفظ الصفحة ${pageIdx + 1} في المحفوظات")
-                                                    }
-                                                },
-                                                onClose = {
-                                                    handleTopBarBack()
-                                                },
-                                                initialPage = pdfInitialPage,
-                                                isDark = isDark,
-                                                isFromBookmarks = viewModel.isFromBookmarks,
-                                                sourcePage = viewModel.pdfSourcePage
-                                            )
-                                        }
-                                    }
                                 }
                                 }
+                                }
+                            }
+                        }
+
+                        // Layer 2: PDF Reader as Layer-on-Layer ("طابوقة فوق طابوقة" - Underneath is always ready)
+                        val currentItem = selectedItem
+                        val isPdfVisible = (page == "pdf" && currentItem != null)
+                        androidx.compose.animation.AnimatedVisibility(
+                            visible = isPdfVisible,
+                            enter = androidx.compose.animation.EnterTransition.None,
+                            exit = androidx.compose.animation.ExitTransition.None,
+                            modifier = Modifier.fillMaxSize().zIndex(100f)
+                        ) {
+                            val pdfTransition = this@AnimatedVisibility.transition
+                            androidx.compose.runtime.LaunchedEffect(pdfTransition.currentState, pdfTransition.targetState) {
+                                if (!pdfTransition.targetState && !pdfTransition.currentState) {
+                                    com.Nightjar.Th3GradeLibraryKMP.ui.TransitionTargetTracker.reset()
+                                    viewModel.onTransitionFinished()
+                                }
+                            }
+
+                            if (currentItem != null) {
+                                androidx.compose.runtime.CompositionLocalProvider(
+                                    LocalAnimatedVisibilityScope provides this@AnimatedVisibility
+                                ) {
+                                    RenderPdfDestination(
+                                        item = currentItem,
+                                        savedItemIds = savedItemIds,
+                                        onToggleBookmark = { pageIdx ->
+                                            val key = "${currentItem.id}:$pageIdx"
+                                            val isNowSaved = SyncEngine.toggleBookmark(key)
+                                            if (!isNowSaved) {
+                                                platformActionHandler.showToast("تم حذف الصفحة ${pageIdx + 1} من المحفوظات")
+                                            } else {
+                                                platformActionHandler.showToast("تم حفظ الصفحة ${pageIdx + 1} في المحفوظات")
+                                            }
+                                        },
+                                        onClose = {
+                                            handleTopBarBack()
+                                        },
+                                        initialPage = pdfInitialPage,
+                                        isDark = isDark,
+                                        isFromBookmarks = viewModel.isFromBookmarks,
+                                        sourcePage = viewModel.pdfSourcePage
+                                    )
                                 }
                             }
                         }

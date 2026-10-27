@@ -325,7 +325,7 @@ fun LibraryScreen(
                         .fillMaxWidth()
                         .elasticOverscroll(),
                     horizontalArrangement = Arrangement.spacedBy(16.dp, Alignment.CenterHorizontally),
-                    verticalArrangement = Arrangement.spacedBy(if (isGridView) 16.dp else 12.dp),
+                    verticalArrangement = Arrangement.spacedBy(14.dp),
                     contentPadding = PaddingValues(
                         top = dynamicTopPadding, 
                         bottom = bottomPadding
@@ -596,10 +596,17 @@ fun LazyGridItemScope.ContentCard(
             }
             .padding(12.dp)
     ) {
-        androidx.compose.animation.Crossfade(
+        androidx.compose.animation.AnimatedContent(
             targetState = isGridView,
-            animationSpec = androidx.compose.animation.core.tween(durationMillis = 200, easing = androidx.compose.animation.core.LinearOutSlowInEasing),
-            label = "cardLayoutToggle"
+            transitionSpec = {
+                (androidx.compose.animation.fadeIn(animationSpec = androidx.compose.animation.core.tween(200, delayMillis = 40, easing = androidx.compose.animation.core.LinearOutSlowInEasing)) + 
+                 androidx.compose.animation.scaleIn(initialScale = 0.94f, animationSpec = androidx.compose.animation.core.spring(dampingRatio = 0.82f, stiffness = 320f)))
+                .togetherWith(
+                 androidx.compose.animation.fadeOut(animationSpec = androidx.compose.animation.core.tween(150, easing = androidx.compose.animation.core.FastOutLinearInEasing)) + 
+                 androidx.compose.animation.scaleOut(targetScale = 0.94f, animationSpec = androidx.compose.animation.core.tween(150))
+                ).using(androidx.compose.animation.SizeTransform(clip = false))
+            },
+            label = "cardLiquidMorph"
         ) { gridMode ->
             if (gridMode) {
                 Column(
