@@ -358,19 +358,19 @@ fun AppContent(
         handleTopBarBack()
     }
 
-    // Align LazyGrid position for initial book, shortcut, or returning from PDF seamlessly
-    LaunchedEffect(selectedItem, initialBookId) {
-        val target = selectedItem ?: (initialBookId?.let { id ->
-            AllItems.books.firstOrNull { it.id == id } ?: AllItems.notes.firstOrNull { it.id == id }
-        })
-        if (target != null) {
-            val list = if (target.isNote) AllItems.notes else AllItems.books
-            val targetIdx = list.indexOfFirst { it.id == target.id }
-            if (targetIdx >= 0) {
-                val state = if (target.isNote) libraryNotesLazyGridState else libraryBooksLazyGridState
-                try {
-                    state.scrollToItem(targetIdx)
-                } catch (_: Exception) {}
+    // Align LazyGrid position for initial book shortcut only when launched directly from cold start
+    LaunchedEffect(initialBookId) {
+        if (initialBookId != null) {
+            val target = AllItems.books.firstOrNull { it.id == initialBookId } ?: AllItems.notes.firstOrNull { it.id == initialBookId }
+            if (target != null) {
+                val list = if (target.isNote) AllItems.notes else AllItems.books
+                val targetIdx = list.indexOfFirst { it.id == target.id }
+                if (targetIdx >= 0) {
+                    val state = if (target.isNote) libraryNotesLazyGridState else libraryBooksLazyGridState
+                    try {
+                        state.scrollToItem(targetIdx)
+                    } catch (_: Exception) {}
+                }
             }
         }
     }
@@ -875,11 +875,12 @@ fun AppContent(
                             savedTitle = appBarTitleRaw
                         }
 
+                        val effectivePageForTitle = if (page == "pdf") (viewModel.pdfSourcePage ?: "list") else page
                         val titleStartMargin = if (isWide) 110.dp else (animatedElementSize + (if (isMicroWindow) 6.dp else 12.dp))
                         val titleEndMargin = if (isWide) {
                             110.dp
                         } else {
-                            when (page) {
+                            when (effectivePageForTitle) {
                                 "list" -> animatedElementSize * 2 + (if (isMicroWindow) 12.dp else 20.dp)
                                 "news" -> animatedElementSize + (if (isMicroWindow) 6.dp else 12.dp)
                                 else -> animatedElementSize + (if (isMicroWindow) 6.dp else 12.dp)

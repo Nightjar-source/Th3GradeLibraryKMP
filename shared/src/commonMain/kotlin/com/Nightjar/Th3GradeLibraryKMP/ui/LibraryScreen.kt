@@ -596,7 +596,12 @@ fun LazyGridItemScope.ContentCard(
             }
             .padding(12.dp)
     ) {
-        if (isGridView) {
+        androidx.compose.animation.Crossfade(
+            targetState = isGridView,
+            animationSpec = androidx.compose.animation.core.tween(durationMillis = 200, easing = androidx.compose.animation.core.LinearOutSlowInEasing),
+            label = "cardLayoutToggle"
+        ) { gridMode ->
+            if (gridMode) {
                 Column(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalAlignment = Alignment.Start
@@ -611,7 +616,7 @@ fun LazyGridItemScope.ContentCard(
                         coil3.compose.AsyncImage(
                             model = coil3.request.ImageRequest.Builder(coil3.compose.LocalPlatformContext.current)
                                 .data(com.Nightjar.Th3GradeLibraryKMP.generated.resources.Res.getUri("drawable/${item.coverResName}." + if (item.coverResName in listOf("ayajaaa", "english", "englishactivity", "kss1")) "jpg" else "png"))
-                                .crossfade(!isReturningFromPdf)
+                                .crossfade(false)
                                 .memoryCachePolicy(coil3.request.CachePolicy.ENABLED)
                                 .diskCachePolicy(coil3.request.CachePolicy.ENABLED)
                                 .build(),
@@ -673,7 +678,7 @@ fun LazyGridItemScope.ContentCard(
                         coil3.compose.AsyncImage(
                             model = coil3.request.ImageRequest.Builder(coil3.compose.LocalPlatformContext.current)
                                 .data(com.Nightjar.Th3GradeLibraryKMP.generated.resources.Res.getUri("drawable/${item.coverResName}." + if (item.coverResName in listOf("ayajaaa", "english", "englishactivity", "kss1")) "jpg" else "png"))
-                                .crossfade(!isReturningFromPdf)
+                                .crossfade(false)
                                 .memoryCachePolicy(coil3.request.CachePolicy.ENABLED)
                                 .diskCachePolicy(coil3.request.CachePolicy.ENABLED)
                                 .build(),
@@ -731,5 +736,6 @@ fun LazyGridItemScope.ContentCard(
             }
         }
     }
+}
 
 

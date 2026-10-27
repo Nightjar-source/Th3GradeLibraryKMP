@@ -182,8 +182,16 @@ actual fun PdfViewerScreen(
         }
     }
 
-    androidx.activity.compose.BackHandler(enabled = true) {
-        onClose()
+    var backGestureProgress by remember { mutableStateOf(0f) }
+    androidx.activity.compose.PredictiveBackHandler(enabled = true) { progress ->
+        try {
+            progress.collect { backEvent ->
+                backGestureProgress = backEvent.progress
+            }
+            onClose()
+        } catch (_: kotlinx.coroutines.CancellationException) {
+            backGestureProgress = 0f
+        }
     }
 
     val scope = rememberCoroutineScope()
@@ -380,7 +388,7 @@ actual fun PdfViewerScreen(
                 ),
                 exit = androidx.compose.animation.fadeOut(
                     animationSpec = androidx.compose.animation.core.tween(
-                        durationMillis = 180,
+                        durationMillis = 350,
                         easing = androidx.compose.animation.core.FastOutSlowInEasing
                     )
                 ),
@@ -409,6 +417,13 @@ actual fun PdfViewerScreen(
     val rootModifier = Modifier
         .fillMaxSize()
         .then(sharedBoundsModifier)
+        .graphicsLayer {
+            if (backGestureProgress > 0f) {
+                val scale = 1f - (backGestureProgress * 0.08f)
+                scaleX = scale
+                scaleY = scale
+            }
+        }
         .clip(androidx.compose.foundation.shape.RoundedCornerShape(safeCornerRadius))
         .background(MaterialTheme.colorScheme.background)
 
@@ -424,7 +439,7 @@ actual fun PdfViewerScreen(
                         tween(durationMillis = 35, easing = LinearEasing)
                     } else {
                         // Closing: stays hidden for 85% of collapse, fades in at the last 10-15% (180ms delay, 45ms duration)
-                        tween(durationMillis = 45, delayMillis = 180, easing = FastOutSlowInEasing)
+                        tween(durationMillis = 60, delayMillis = 280, easing = FastOutSlowInEasing)
                     }
                 },
                 targetValueByState = { state: androidx.compose.animation.EnterExitState ->

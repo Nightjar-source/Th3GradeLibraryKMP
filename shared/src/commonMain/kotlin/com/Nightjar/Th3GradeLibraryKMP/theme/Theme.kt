@@ -184,7 +184,7 @@ fun Modifier.expressiveButtonMorph(
  */
 fun Modifier.screenEntranceStagger(index: Int = 0, itemId: String? = null): Modifier = composed {
     val isLowEnd = LocalIsLowEndDevice.current
-    if (isLowEnd || index > 12) return@composed this
+    if (isLowEnd) return@composed this
 
     val isReturningFromPdf = LocalIsReturningFromPdf.current
     val itemKey = itemId ?: index.toString()
@@ -207,15 +207,16 @@ fun Modifier.screenEntranceStagger(index: Int = 0, itemId: String? = null): Modi
 
     val animProgress = androidx.compose.runtime.remember(screenKey, itemKey) { androidx.compose.animation.core.Animatable(0f) }
     val density = androidx.compose.ui.platform.LocalDensity.current
-    val offsetYPx = androidx.compose.runtime.remember(density) { with(density) { 24.dp.toPx() } }
+    val offsetYPx = androidx.compose.runtime.remember(density) { with(density) { 14.dp.toPx() } }
 
     androidx.compose.runtime.LaunchedEffect(screenKey, itemKey) {
-        val staggerDelay = (index.coerceIn(0, 8) * 36L).coerceAtMost(240L)
+        val relativeIndex = (index % 8).coerceIn(0, 7)
+        val staggerDelay = (relativeIndex * 30L).coerceAtMost(210L)
         if (staggerDelay > 0) kotlinx.coroutines.delay(staggerDelay)
         animProgress.animateTo(
             targetValue = 1f,
             animationSpec = androidx.compose.animation.core.spring(
-                dampingRatio = 0.72f, // Ultra-moist fluid organic spring matching caliq5
+                dampingRatio = 0.74f, // Ultra-moist fluid organic spring matching caliq5
                 stiffness = androidx.compose.animation.core.Spring.StiffnessLow
             )
         )
@@ -224,10 +225,11 @@ fun Modifier.screenEntranceStagger(index: Int = 0, itemId: String? = null): Modi
 
     val p = animProgress.value
     this.graphicsLayer {
-        this.alpha = p
+        // Zero-flash: starts gently visible (0.40f) so elements never pop abruptly from black/zero
+        this.alpha = 0.40f + 0.60f * p
         this.translationY = (1f - p) * offsetYPx
-        this.scaleX = 0.95f + 0.05f * p
-        this.scaleY = 0.95f + 0.05f * p
+        this.scaleX = 0.97f + 0.03f * p
+        this.scaleY = 0.97f + 0.03f * p
         this.clip = false
     }
 }
@@ -243,16 +245,9 @@ fun Modifier.screenEntranceCascade(index: Int = 0, itemId: String? = null): Modi
 fun Modifier.popInOnInitialLoad(index: Int = 0, itemId: String? = null): Modifier = this.screenEntranceStagger(index, itemId)
 
 /**
- * Unified adaptive entrance: Screen Entrance Cascade for initial visible items (0..8).
- * Scrolled items (> 8) are rendered instantly without overhead to preserve 120 FPS scrolling.
+ * Unified adaptive entrance: Screen Entrance Cascade for visible items with fluid relative staggering.
  */
-fun Modifier.adaptiveItemEntrance(index: Int = 0, itemId: String? = null): Modifier = composed {
-    if (index <= 8) {
-        this.screenEntranceCascade(index, itemId)
-    } else {
-        this
-    }
-}
+fun Modifier.adaptiveItemEntrance(index: Int = 0, itemId: String? = null): Modifier = this.screenEntranceCascade(index, itemId)
 
 val KufiReemFontFamily: FontFamily
     @Composable

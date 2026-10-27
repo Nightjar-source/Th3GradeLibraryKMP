@@ -88,6 +88,20 @@ fun scheduleBackgroundSync(context: Context, forceReplace: Boolean = false) {
 
 class MainActivity : ComponentActivity() {
     private var currentSpeechRecognizer: android.speech.SpeechRecognizer? = null
+    private var onSpeechResultCallback: ((String) -> Unit)? = null
+    private var onSpeechEndCallback: (() -> Unit)? = null
+
+    private val speechRecognitionLauncher = registerForActivityResult(
+        androidx.activity.result.contract.ActivityResultContracts.StartActivityForResult()
+    ) { result ->
+        if (result.resultCode == RESULT_OK && result.data != null) {
+            val matches = result.data?.getStringArrayListExtra(android.speech.RecognizerIntent.EXTRA_RESULTS)
+            if (!matches.isNullOrEmpty()) {
+                onSpeechResultCallback?.invoke(matches[0])
+            }
+        }
+        onSpeechEndCallback?.invoke()
+    }
     private val bookIdState = mutableStateOf<String?>(null)
     private val isNoteState = mutableStateOf(false)
     private val pageState = mutableStateOf<String?>(null)
@@ -393,12 +407,36 @@ class MainActivity : ComponentActivity() {
                     return
                 }
 
-                currentSpeechRecognizer?.destroy()
-                currentSpeechRecognizer = android.speech.SpeechRecognizer.createSpeechRecognizer(this@MainActivity)
                 val speechIntent = Intent(android.speech.RecognizerIntent.ACTION_RECOGNIZE_SPEECH).apply {
                     putExtra(android.speech.RecognizerIntent.EXTRA_LANGUAGE_MODEL, android.speech.RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
                     putExtra(android.speech.RecognizerIntent.EXTRA_LANGUAGE, "ar")
                     putExtra(android.speech.RecognizerIntent.EXTRA_PARTIAL_RESULTS, true)
+                }
+
+                if (!android.speech.SpeechRecognizer.isRecognitionAvailable(this@MainActivity)) {
+                    try {
+                        onSpeechResultCallback = onResult
+                        onSpeechEndCallback = onEnd
+                        speechRecognitionLauncher.launch(speechIntent)
+                    } catch (e: Exception) {
+                        onEnd()
+                        Toast.makeText(this@MainActivity, "البحث الصوتي غير متوفر على جهازك", Toast.LENGTH_SHORT).show()
+                    }
+                    return
+                }
+
+                currentSpeechRecognizer?.destroy()
+                try {
+                    currentSpeechRecognizer = android.speech.SpeechRecognizer.createSpeechRecognizer(this@MainActivity)
+                } catch (e: Exception) {
+                    try {
+                        onSpeechResultCallback = onResult
+                        onSpeechEndCallback = onEnd
+                        speechRecognitionLauncher.launch(speechIntent)
+                    } catch (_: Exception) {
+                        onEnd()
+                    }
+                    return
                 }
 
                 currentSpeechRecognizer?.setRecognitionListener(object : android.speech.RecognitionListener {
@@ -434,7 +472,17 @@ class MainActivity : ComponentActivity() {
                 })
                 
                 android.os.Handler(android.os.Looper.getMainLooper()).post {
-                    currentSpeechRecognizer?.startListening(speechIntent)
+                    try {
+                        currentSpeechRecognizer?.startListening(speechIntent)
+                    } catch (e: Exception) {
+                        try {
+                            onSpeechResultCallback = onResult
+                            onSpeechEndCallback = onEnd
+                            speechRecognitionLauncher.launch(speechIntent)
+                        } catch (_: Exception) {
+                            onEnd()
+                        }
+                    }
                 }
             }
 

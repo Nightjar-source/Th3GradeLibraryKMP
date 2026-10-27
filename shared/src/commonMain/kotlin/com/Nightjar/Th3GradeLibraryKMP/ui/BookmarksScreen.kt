@@ -231,7 +231,15 @@ fun BookmarksScreen(
                             BookAccordionItem(
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .adaptiveItemEntrance(index, bookId),
+                                    .adaptiveItemEntrance(index, bookId)
+                                    .animateItem(
+                                        fadeInSpec = null,
+                                        fadeOutSpec = null,
+                                        placementSpec = spring(
+                                            dampingRatio = 0.82f,
+                                            stiffness = 320f
+                                        )
+                                    ),
                                 item = book,
                                 pages = pages,
                                 isPageSaved = { pageIdx -> savedPages.contains("${book.id}:$pageIdx") },
