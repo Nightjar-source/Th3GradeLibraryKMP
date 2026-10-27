@@ -240,6 +240,12 @@ fun NewsScreen(
                             GridCells.Fixed(1)
                         }
                     }
+                    val firstVisible = remember { derivedStateOf { lazyGridState.firstVisibleItemIndex } }.value
+                    val isScrolling = remember { derivedStateOf { lazyGridState.isScrollInProgress } }.value
+                    CompositionLocalProvider(
+                        com.Nightjar.Th3GradeLibraryKMP.theme.LocalFirstVisibleItemIndex provides firstVisible,
+                        com.Nightjar.Th3GradeLibraryKMP.theme.LocalIsScrollInProgress provides isScrolling
+                    ) {
                     LazyVerticalGrid(
                         columns = dynamicNewsColumns,
                         state = lazyGridState,
@@ -337,6 +343,7 @@ fun NewsScreen(
                                 )
                             }
                         }
+                    }
                     }
                 }
 

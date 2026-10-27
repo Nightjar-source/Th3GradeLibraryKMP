@@ -277,7 +277,9 @@ class AppViewModel : ViewModel() {
                 if (newPage != "pdf") {
                     screenNavCounter++
                 }
-                pageHistory.value = current.filter { it != newPage } + newPage
+                // Official Material 3 Navigation pattern:
+                // popUpTo(startDestination) { saveState = true }, launchSingleTop = true, restoreState = true
+                pageHistory.value = listOf("home", newPage)
                 page = newPage
             }
         }

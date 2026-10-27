@@ -68,6 +68,8 @@ val LocalIsNavigatingBack = compositionLocalOf { false }
 val LocalSeenEntranceItems = compositionLocalOf<androidx.compose.runtime.snapshots.SnapshotStateMap<String, Boolean>?> { null }
 val LocalScreenEntranceKey = compositionLocalOf { "default_screen" }
 val LocalIsReturningFromPdf = compositionLocalOf { false }
+val LocalFirstVisibleItemIndex = compositionLocalOf { 0 }
+val LocalIsScrollInProgress = compositionLocalOf { false }
 
 data class ResponsiveLayoutInfo(
     val width: Dp = 360.dp,
@@ -205,13 +207,23 @@ fun Modifier.screenEntranceStagger(index: Int = 0, itemId: String? = null): Modi
     val alreadySeen = seenMap?.get(itemKey) == true
     if (alreadySeen) return@composed this
 
+    val isScrolling = LocalIsScrollInProgress.current
+    if (isScrolling) {
+        // Fast 120 FPS scrolling: newly scrolled items render instantly with zero delay
+        seenMap?.put(itemKey, true)
+        return@composed this
+    }
+
+    val firstVisible = LocalFirstVisibleItemIndex.current
+    // Viewport-relative visual index: top-most visible item is ALWAYS 0, whether top, middle, or end of list!
+    val relativeIndex = (index - firstVisible).coerceIn(0, 8)
+    val staggerDelay = (relativeIndex * 30L).coerceAtMost(220L)
+
     val animProgress = androidx.compose.runtime.remember(screenKey, itemKey) { androidx.compose.animation.core.Animatable(0f) }
     val density = androidx.compose.ui.platform.LocalDensity.current
     val offsetYPx = androidx.compose.runtime.remember(density) { with(density) { 14.dp.toPx() } }
 
     androidx.compose.runtime.LaunchedEffect(screenKey, itemKey) {
-        val relativeIndex = (index % 8).coerceIn(0, 7)
-        val staggerDelay = (relativeIndex * 30L).coerceAtMost(210L)
         if (staggerDelay > 0) kotlinx.coroutines.delay(staggerDelay)
         animProgress.animateTo(
             targetValue = 1f,
