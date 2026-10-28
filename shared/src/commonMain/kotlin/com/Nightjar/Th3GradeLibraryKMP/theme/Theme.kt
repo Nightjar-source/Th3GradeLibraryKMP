@@ -217,7 +217,7 @@ fun Modifier.screenEntranceStagger(index: Int = 0, itemId: String? = null): Modi
     val firstVisible = LocalFirstVisibleItemIndex.current
     // Viewport-relative visual index: top-most visible item is ALWAYS 0, whether top, middle, or end of list!
     val relativeIndex = (index - firstVisible).coerceIn(0, 8)
-    val staggerDelay = (relativeIndex * 30L).coerceAtMost(220L)
+    val staggerDelay = (relativeIndex * 16L).coerceAtMost(130L)
 
     val animProgress = androidx.compose.runtime.remember(screenKey, itemKey) { androidx.compose.animation.core.Animatable(0f) }
     val density = androidx.compose.ui.platform.LocalDensity.current

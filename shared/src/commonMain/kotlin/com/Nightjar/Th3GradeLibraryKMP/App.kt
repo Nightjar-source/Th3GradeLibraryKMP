@@ -571,14 +571,16 @@ fun AppContent(
                                     .padding(pageContentPadding),
                                 contentAlignment = Alignment.TopCenter
                             ) {
-                                val seenKeysForScreen = remember(targetPage, screenNavCounter) {
-                                    screenEntranceSeenMap.getOrPut("${targetPage}_$screenNavCounter") { androidx.compose.runtime.mutableStateMapOf() }
+                                val currentCategoryKey = if (targetPage == "list") (selectedCategory ?: "books") else ""
+                                val screenEntranceKey = "${targetPage}_${currentCategoryKey}_$screenNavCounter"
+                                val seenKeysForScreen = remember(targetPage, currentCategoryKey, screenNavCounter) {
+                                    screenEntranceSeenMap.getOrPut(screenEntranceKey) { androidx.compose.runtime.mutableStateMapOf() }
                                 }
                                 CompositionLocalProvider(
                                     LocalAnimatedVisibilityScope provides this@AnimatedContent,
                                     com.Nightjar.Th3GradeLibraryKMP.theme.LocalIsNavigatingBack provides isNavigatingBack,
                                     com.Nightjar.Th3GradeLibraryKMP.theme.LocalSeenEntranceItems provides seenKeysForScreen,
-                                    com.Nightjar.Th3GradeLibraryKMP.theme.LocalScreenEntranceKey provides "${targetPage}_$screenNavCounter",
+                                    com.Nightjar.Th3GradeLibraryKMP.theme.LocalScreenEntranceKey provides screenEntranceKey,
                                     com.Nightjar.Th3GradeLibraryKMP.theme.LocalIsReturningFromPdf provides isReturningFromPdf
                                 ) { saveableStateHolder.SaveableStateProvider(targetPage) {
                                 when (targetPage) {
@@ -681,7 +683,7 @@ fun AppContent(
                             visible = isPdfVisible,
                             enter = androidx.compose.animation.EnterTransition.None,
                             exit = androidx.compose.animation.ExitTransition.None,
-                            modifier = Modifier.fillMaxSize().zIndex(100f)
+                            modifier = Modifier.fillMaxSize().zIndex(50f)
                         ) {
                             val pdfTransition = this@AnimatedVisibility.transition
                             androidx.compose.runtime.LaunchedEffect(pdfTransition.currentState, pdfTransition.targetState) {
@@ -761,7 +763,7 @@ fun AppContent(
                         .then(
                             if (topHeaderSharedScope != null) {
                                 with(topHeaderSharedScope) {
-                                    Modifier.renderInSharedTransitionScopeOverlay(zIndexInOverlay = 50f)
+                                    Modifier.renderInSharedTransitionScopeOverlay(zIndexInOverlay = 100f)
                                 }
                             } else Modifier
                         )
@@ -1301,7 +1303,7 @@ fun AppContent(
             modifier = Modifier.align(Alignment.BottomCenter).fillMaxWidth().zIndex(200f).then(
                 if (LocalSharedTransitionScope.current != null) {
                     with(LocalSharedTransitionScope.current!!) {
-                        Modifier.renderInSharedTransitionScopeOverlay(zIndexInOverlay = 50f)
+                        Modifier.renderInSharedTransitionScopeOverlay(zIndexInOverlay = 100f)
                     }
                 } else Modifier
             )
@@ -1510,7 +1512,7 @@ fun AppContent(
             modifier = Modifier.align(Alignment.CenterEnd).fillMaxHeight().zIndex(250f).then(
                 if (LocalSharedTransitionScope.current != null) {
                     with(LocalSharedTransitionScope.current!!) {
-                        Modifier.renderInSharedTransitionScopeOverlay(zIndexInOverlay = 60f)
+                        Modifier.renderInSharedTransitionScopeOverlay(zIndexInOverlay = 100f)
                     }
                 } else Modifier
             )
