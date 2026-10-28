@@ -687,7 +687,8 @@ fun AppContent(
                         ) {
                             val pdfTransition = this@AnimatedVisibility.transition
                             androidx.compose.runtime.LaunchedEffect(pdfTransition.currentState, pdfTransition.targetState) {
-                                if (!pdfTransition.targetState && !pdfTransition.currentState) {
+                                if (pdfTransition.currentState == androidx.compose.animation.EnterExitState.PostExit &&
+                                    pdfTransition.targetState == androidx.compose.animation.EnterExitState.PostExit) {
                                     com.Nightjar.Th3GradeLibraryKMP.ui.TransitionTargetTracker.reset()
                                     viewModel.onTransitionFinished()
                                 }
@@ -1715,7 +1716,7 @@ fun AppContent(
             modifier = Modifier.zIndex(500f).then(
                 if (LocalSharedTransitionScope.current != null) {
                     with(LocalSharedTransitionScope.current!!) {
-                        Modifier.renderInSharedTransitionScopeOverlay(zIndexInOverlay = 100f)
+                        Modifier.renderInSharedTransitionScopeOverlay(zIndexInOverlay = 500f)
                     }
                 } else Modifier
             )
