@@ -3,4 +3,6 @@
     <string name="app_name">كتب وملازم الثالث متوسط</string>
     <string name="shortcut_news_title">الأخبار والتبليغات</string>
     <string name="shortcut_bookmarks_title">المحفوظات</string>
+    <string name="widget_name">مكتبة الثالث متوسط</string>
+    <string name="widget_description">الوصول السريع للكتب والملازم والمحفوظات ومتابعة القراءة</string>
 </resources>

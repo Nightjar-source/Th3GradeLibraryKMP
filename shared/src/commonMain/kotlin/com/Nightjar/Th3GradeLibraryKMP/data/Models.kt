@@ -30,7 +30,7 @@ data class AppSettings(
     val theme: String = "system", // system, light, dark
     val pureBlackMode: Boolean = false,
     val pureWhiteMode: Boolean = false,
-    val useMaterialYou: Boolean = false,
+    val useMaterialYou: Boolean = true,
     val primaryColor: String = "#2563eb",
     val pdfScrollDirection: String = "vertical", // vertical, horizontal
     val syncInterval: String = "30m",   // on_open, 15m, 30m, 1h, 6h, 12h, 24h

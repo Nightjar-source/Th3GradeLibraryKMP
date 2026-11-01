@@ -226,7 +226,7 @@ object SyncEngine {
     private fun loadLocalSettings() {
         try {
             val theme = settings.getString("theme", "system")
-            val useMaterialYou = settings.getBoolean("useMaterialYou", false)
+            val useMaterialYou = settings.getBoolean("useMaterialYou", true)
             val primaryColor = settings.getString("primaryColor", "#2563eb")
             val syncInterval = settings.getString("syncInterval", "30m")
             val cacheClearInterval = settings.getString("cacheClearInterval", "6m")
