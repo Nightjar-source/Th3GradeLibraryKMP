@@ -5,7 +5,6 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.composed
 import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.graphics.TransformOrigin
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
 import androidx.compose.ui.input.nestedscroll.NestedScrollSource
@@ -15,19 +14,19 @@ import androidx.compose.ui.unit.Velocity
 import kotlinx.coroutines.launch
 
 /**
- * Samsung One UI tactile reachability overscroll effect.
- * Pulling down at top gently stretches and squashes items into reach.
- * Upward bounce at the bottom is strictly disabled (bottomEnabled = false) to prevent reverse rebounds.
+ * Samsung One UI Reachability pull-down effect (One-Handed Operation).
+ * Pulling down at the top smoothly translates content down towards the middle of the screen
+ * allowing comfortable one-handed interaction and tapping without any scale or size distortion.
+ * Upward bounce at the bottom is strictly disabled.
  */
 fun Modifier.elasticOverscroll(
-    maxStretchRatio: Float = 0.12f,
+    maxReachDistancePx: Float = 260f,
     topEnabled: Boolean = true,
     bottomEnabled: Boolean = false
 ): Modifier = composed {
     val isLowEnd = com.Nightjar.Th3GradeLibraryKMP.theme.LocalIsLowEndDevice.current
     if (isLowEnd) return@composed this
 
-    var componentHeight by remember { mutableStateOf(0f) }
     val overscrollOffset = remember { Animatable(0f) }
     val scope = rememberCoroutineScope()
 
@@ -56,13 +55,13 @@ fun Modifier.elasticOverscroll(
                 available: Offset,
                 source: NestedScrollSource
             ): Offset {
-                // Strictly allow top pull-down only; never bounce upwards at the bottom!
+                // Smoothly pull down content from top into the middle of the screen
                 if (source == NestedScrollSource.UserInput && available.y > 0f && topEnabled) {
-                    val maxOffset = if (componentHeight > 0) (componentHeight * maxStretchRatio).coerceAtMost(160f) else 140f
                     val current = overscrollOffset.value
-                    val progress = (current / maxOffset).coerceIn(0f, 1f)
-                    val resistance = 0.40f * (1f - progress * 0.75f)
-                    val targetOffset = (current + available.y * resistance).coerceIn(0f, maxOffset)
+                    val progress = (current / maxReachDistancePx).coerceIn(0f, 1f)
+                    // Natural fluid dampening: easy at start, gently resists near max reach
+                    val resistance = 0.55f * (1f - progress * 0.50f)
+                    val targetOffset = (current + available.y * resistance).coerceIn(0f, maxReachDistancePx)
                     scope.launch { overscrollOffset.snapTo(targetOffset) }
                     return Offset(0f, available.y)
                 }
@@ -74,8 +73,8 @@ fun Modifier.elasticOverscroll(
                     overscrollOffset.animateTo(
                         0f,
                         spring(
-                            dampingRatio = 0.78f,
-                            stiffness = 300f
+                            dampingRatio = 0.82f,
+                            stiffness = Spring.StiffnessMediumLow
                         )
                     )
                     return available
@@ -90,17 +89,12 @@ fun Modifier.elasticOverscroll(
     }
 
     val offsetVal = overscrollOffset.value
-    val maxOffset = if (componentHeight > 0) (componentHeight * maxStretchRatio).coerceAtMost(160f) else 140f
-    val progress = (offsetVal / maxOffset).coerceIn(0f, 1f)
 
     this
-        .onSizeChanged { componentHeight = it.height.toFloat() }
         .nestedScroll(nestedScrollConnection)
         .graphicsLayer {
+            // Pure downward translation to center area for one-handed reachability
+            // Zero scale distortion (scaleX = 1f, scaleY = 1f) preserving crisp original elements
             this.translationY = offsetVal
-            // Tactile Samsung One UI compression/squash effect on top pull
-            this.scaleX = 1f + (progress * 0.02f)
-            this.scaleY = 1f - (progress * 0.012f)
-            this.transformOrigin = TransformOrigin(0.5f, 0f)
         }
 }
