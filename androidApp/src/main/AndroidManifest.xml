@@ -53,8 +53,8 @@
             <layout
                 android:defaultWidth="960dp"
                 android:defaultHeight="700dp"
-                android:minWidth="360dp"
-                android:minHeight="480dp" />
+                android:minWidth="260dp"
+                android:minHeight="260dp" />
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />

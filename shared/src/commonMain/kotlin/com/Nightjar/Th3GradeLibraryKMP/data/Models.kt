@@ -33,7 +33,7 @@ data class AppSettings(
     val useMaterialYou: Boolean = false,
     val primaryColor: String = "#2563eb",
     val pdfScrollDirection: String = "vertical", // vertical, horizontal
-    val syncInterval: String = "on_open",   // on_open (Cloud-driven Zero Battery), 15m, 30m, 1h, 12h, 24h
+    val syncInterval: String = "30m",   // on_open, 15m, 30m, 1h, 6h, 12h, 24h
     val cacheClearInterval: String = "6m", // 7d, 1m, 3m, 6m, never
     val notificationSound: Boolean = false,
     val lastSync: Long = 0,
