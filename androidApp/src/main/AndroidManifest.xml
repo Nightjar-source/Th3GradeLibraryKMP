@@ -68,11 +68,6 @@
                 <data android:scheme="th3books" android:host="library" />
             </intent-filter>
 
-            <!-- Native Android XR Spatial Panel (October 2026 Standard) -->
-            <property
-                android:name="android.window.PROPERTY_XR_ACTIVITY_START_MODE"
-                android:value="XR_ACTIVITY_START_MODE_HOME_SPACE" />
-
             <!-- Samsung DeX & Multi-window Continuity -->
             <meta-data android:name="com.samsung.android.keepalive.density" android:value="true" />
             <meta-data android:name="com.samsung.android.multidisplay.keep_process_alive" android:value="true" />
@@ -98,16 +93,6 @@
             android:name=".AppCleanupService"
             android:process=":cleanup"
             android:stopWithTask="false" />
-
-        <!-- AI Assistant / Agent Integration (October 2026 Standards) -->
-        <service
-            android:name=".LibraryAppFunctionService"
-            android:exported="true"
-            android:permission="android.permission.BIND_APP_FUNCTION_SERVICE">
-            <intent-filter>
-                <action android:name="androidx.appfunctions.AppFunctionService" />
-            </intent-filter>
-        </service>
 
         <!-- Official Firebase Cloud Messaging Service (FCM v1) Zero-Battery Push -->
         <service

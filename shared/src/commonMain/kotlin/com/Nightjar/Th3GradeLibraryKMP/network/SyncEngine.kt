@@ -370,6 +370,9 @@ object SyncEngine {
             "24h"     -> 24 * 60 * 60 * 1000L
             else      -> 30 * 60 * 1000L // default 30m
         }
+        if (!forced && intervalMs > 0L && timeSinceSync < intervalMs) {
+            return@withContext 0
+        }
 
         // 1. We removed the 10-minute barrier in favor of the Dead Man's Switch architecture.
         // The Alarm will be dynamically pushed forward by WorkManager upon success.
@@ -398,11 +401,11 @@ object SyncEngine {
             suspend fun fetchWithFallbacks(): com.prof18.rssparser.model.RssChannel {
                 var lastException: Throwable? = null
                 
-                // المحاولة صفر: بوابة كلاود فلار ووركر السحابية فائقة السرعة
+                // المحاولة الأولى: الرابط الأصلي للخلاصة مباشرة (FeedBurner)
                 try {
-                    return kotlinx.coroutines.withTimeout(10000L) {
-                        val channel = rssParser.getRssChannel(cfWorkerUrl)
-                        if (channel.items.isEmpty()) throw Exception("Empty channel returned by Cloudflare Worker")
+                    return kotlinx.coroutines.withTimeout(15000L) {
+                        val channel = rssParser.getRssChannel(originalUrl)
+                        if (channel.items.isEmpty()) throw Exception("Empty channel returned by original URL")
                         channel
                     }
                 } catch (e: kotlinx.coroutines.CancellationException) {
@@ -414,11 +417,11 @@ object SyncEngine {
                     lastException = e
                 }
 
-                // المحاولة الأولى: الرابط الأصلي بمهلة مناسبة (45 ثانية)
+                // المحاولة الثانية: بوابة كلاود فلار ووركر السحابية السريعة (Cloudflare Edge Gateway Backup)
                 try {
-                    return kotlinx.coroutines.withTimeout(45000L) {
-                        val channel = rssParser.getRssChannel(originalUrl)
-                        if (channel.items.isEmpty()) throw Exception("Empty channel returned by original URL")
+                    return kotlinx.coroutines.withTimeout(10000L) {
+                        val channel = rssParser.getRssChannel(cfWorkerUrl)
+                        if (channel.items.isEmpty()) throw Exception("Empty channel returned by Cloudflare Worker")
                         channel
                     }
                 } catch (e: kotlinx.coroutines.CancellationException) {

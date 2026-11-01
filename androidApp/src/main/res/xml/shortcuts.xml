@@ -4,7 +4,7 @@
     <capability android:name="actions.intent.OPEN_APP_FEATURE">
         <intent
             android:action="android.intent.action.VIEW"
-            android:targetPackage="com.Nightjar.Th3GradeLibraryKMP.cloud"
+            android:targetPackage="com.Nightjar.Th3GradeLibraryKMP"
             android:targetClass="com.Nightjar.Th3GradeLibraryKMP.MainActivity"
             android:data="th3books://library">
             <parameter
@@ -17,7 +17,7 @@
     <capability android:name="actions.intent.GET_THING">
         <intent
             android:action="android.intent.action.VIEW"
-            android:targetPackage="com.Nightjar.Th3GradeLibraryKMP.cloud"
+            android:targetPackage="com.Nightjar.Th3GradeLibraryKMP"
             android:targetClass="com.Nightjar.Th3GradeLibraryKMP.MainActivity"
             android:data="th3books://library">
             <parameter
@@ -35,7 +35,7 @@
         android:shortcutLongLabel="@string/shortcut_news_title">
         <intent
             android:action="android.intent.action.VIEW"
-            android:targetPackage="com.Nightjar.Th3GradeLibraryKMP.cloud"
+            android:targetPackage="com.Nightjar.Th3GradeLibraryKMP"
             android:targetClass="com.Nightjar.Th3GradeLibraryKMP.MainActivity"
             android:data="th3books://library?page=news" />
     </shortcut>
@@ -49,7 +49,7 @@
         android:shortcutLongLabel="@string/shortcut_bookmarks_title">
         <intent
             android:action="android.intent.action.VIEW"
-            android:targetPackage="com.Nightjar.Th3GradeLibraryKMP.cloud"
+            android:targetPackage="com.Nightjar.Th3GradeLibraryKMP"
             android:targetClass="com.Nightjar.Th3GradeLibraryKMP.MainActivity"
             android:data="th3books://library?page=bookmarks" />
     </shortcut>

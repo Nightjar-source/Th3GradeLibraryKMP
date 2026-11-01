@@ -388,17 +388,11 @@ fun AppContent(
         }
     }
 
-    // Auto-fetch on start ONLY if the setting is "on_open" (sync on open)
-    LaunchedEffect(appSettings.syncInterval) {
-        if (appSettings.syncInterval == "on_open") {
-            if (appSettings.lastSync > 0L) {
-                scope.launch(kotlinx.coroutines.Dispatchers.Default) {
-                    SyncEngine.fetchAndSync(forced = false)
-                }
-            }
+    // Auto-fetch on start when the app opens and splash screen finishes
+    LaunchedEffect(Unit) {
+        scope.launch(kotlinx.coroutines.Dispatchers.Default) {
+            SyncEngine.fetchAndSync(forced = false)
         }
-        // Removed the while(true) loop that was causing continuous UI updates.
-        // Background sync is handled properly by WorkManager according to the user's interval.
     }
 
     // First time install auto-fetch & notification permission: trigger only after onboarding finish
