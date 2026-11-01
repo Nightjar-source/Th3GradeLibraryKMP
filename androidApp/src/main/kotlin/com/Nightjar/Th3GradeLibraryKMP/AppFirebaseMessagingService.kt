@@ -65,7 +65,11 @@ class AppFirebaseMessagingService : FirebaseMessagingService() {
         saveToCache(title, link, imageUrl, pubDate, content)
 
         // 2. Display System Notification respecting user's sound preferences
-        showNotification(title, content, link, imageUrl)
+        val syncInterval = SyncEngine.appSettings.value.syncInterval
+        // إذا اختار المستخدم "عند فتح التطبيق فقط"، يتم حفظ الخبر بالكاش بصمت ولا يزعجه إشعار في شريط النظام
+        if (syncInterval != "on_open") {
+            showNotification(title, content, link, imageUrl)
+        }
     }
 
     private fun saveToCache(title: String, link: String, imageUrl: String, pubDate: String, content: String) {
