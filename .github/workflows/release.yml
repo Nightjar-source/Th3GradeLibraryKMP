@@ -9,7 +9,7 @@ on:
       tag_name:
         description: 'Tag name for release'
         required: false
-        default: 'v2.1.0-cloud'
+        default: 'v2.1.4-cloud'
 
 permissions:
   contents: write
@@ -43,10 +43,14 @@ jobs:
       - name: Make gradlew executable
         run: chmod +x ./gradlew
 
-      - name: Decode Keystore from GitHub Secrets
+      - name: Decode Google Services and Keystore from GitHub Secrets
         run: |
-          echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 --decode > androidApp/Nightjar.keystore
+          if [ -n "$GOOGLE_SERVICES_JSON" ]; then
+            echo "$GOOGLE_SERVICES_JSON" > androidApp/google-services.json
+          fi
+          echo "$KEYSTORE_BASE64" | base64 --decode > androidApp/Nightjar.keystore
         env:
+          GOOGLE_SERVICES_JSON: ${{ secrets.GOOGLE_SERVICES_JSON }}
           KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
 
       - name: Build Android Release APK
@@ -79,13 +83,12 @@ jobs:
             تطبيق «كتب وملازم الثالث متوسط 2027 العراق» - الإصدار ${{ steps.release_info.outputs.tag }}
 
             التحديثات والمميزات:
-            - دعم كامل لأحدث معايير Android Jetpack Compose 2026/2027 ومبادئ Navigation 3.
-            - إصلاح وتفعيل التوسع والتقلص العائم لقارئ الـ PDF (Shared Element Transitions) بدقة وانسيابية كاملة من الغلاف أو مستطيل الصفحة المحفوظة بدون أي وميض أو قفزات مفاجئة.
-            - شاشة المحفوظات: دوران دقيق لسهم المنسدلة بين 0 و 180 درجة فقط، ظهور فوري لخط التقسيم عند التوسع (t=0)، حركات توسع وتقلص سائلة ورطبة، وعزل مستطيلات الصفحات داخل الكارت لمنع القفز لليمين.
-            - انسيابية الحذف والإضافة: انكماش القارئ أولاً لمستطيل الصفحة ثم اختفائها بانسيابية، والتوسع التلقائي للصفحات المضافة حديثاً.
-            - شاشة المكتبة: تنقل فوري وسلس بين وضعي القائمة والشبكة مع ثبات الأغلفة ومنع التمرير التلقائي أو قفزات الكتب عند إغلاق القارئ.
-            - فتح القارئ مباشرة وبدون أي وميض عبر الاختصارات الخارجية وروابط التطبيق.
-            - تنظيف فوري وشامل لملفات الـ PDF المؤقتة عبر خدمة Cleanup المستقلة بمجرد إغلاق التطبيق من قائمة التطبيقات الحديثة.
+            - دعم كامل للبنية السحابية المحدثة وإلغاء الاستهلاك الخلفي للبطارية.
+            - تكامل بوابة Cloudflare Worker فائقة السرعة للأخبار وتدفق تحميل ملفات الكتب.
+            - إشعارات فورية سحابية عبر Firebase FCM v1 مجاناً وبدون أي استهلاك لموارد الهاتف.
+            - تكيف رسمي متكامل مع أجهزة التابلت والشاشات العريضة ووضع سطح المكتب Samsung DeX والهواتف المطوية.
+            - واجهة One UI متقدمة مع سحب سلس وتمرير طبيعي بدون تشويه.
+            - بنية حزم رسمية متوافقة مع متجر Google Play مع حزمة com.Nightjar.Th3GradeLibraryKMP.cloud.
           files: |
             androidApp/build/outputs/apk/release/Th3GradeLibrary_${{ steps.release_info.outputs.tag }}.apk
             androidApp/build/outputs/apk/release/كتب_وملازم_الثالث_متوسط_${{ steps.release_info.outputs.tag }}.apk
