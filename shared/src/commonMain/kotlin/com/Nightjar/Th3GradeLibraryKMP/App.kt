@@ -391,7 +391,7 @@ fun AppContent(
     // Auto-fetch on start when the app opens and splash screen finishes
     LaunchedEffect(Unit) {
         scope.launch(kotlinx.coroutines.Dispatchers.Default) {
-            SyncEngine.fetchAndSync(forced = false)
+            SyncEngine.fetchAndSync(forced = true)
         }
     }
 

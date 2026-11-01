@@ -65,7 +65,7 @@ class AppFirebaseMessagingService : FirebaseMessagingService() {
         saveToCache(title, link, imageUrl, pubDate, content)
 
         // 2. Display System Notification respecting user's sound preferences
-        showNotification(title, content, link)
+        showNotification(title, content, link, imageUrl)
     }
 
     private fun saveToCache(title: String, link: String, imageUrl: String, pubDate: String, content: String) {
@@ -101,7 +101,7 @@ class AppFirebaseMessagingService : FirebaseMessagingService() {
         }
     }
 
-    private fun showNotification(title: String, content: String, link: String) {
+    private fun showNotification(title: String, content: String, link: String, imageUrl: String) {
         val notificationManager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
         createChannels(notificationManager)
 
@@ -123,15 +123,46 @@ class AppFirebaseMessagingService : FirebaseMessagingService() {
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
 
+        // Download rich notification image/thumbnail with safety timeout (max 4s)
+        var imageBitmap: android.graphics.Bitmap? = null
+        if (imageUrl.isNotEmpty()) {
+            try {
+                val url = java.net.URL(imageUrl)
+                val connection = url.openConnection() as java.net.HttpURLConnection
+                connection.connectTimeout = 4000
+                connection.readTimeout = 4000
+                connection.doInput = true
+                connection.connect()
+                val inputStream = connection.inputStream
+                imageBitmap = BitmapFactory.decodeStream(inputStream)
+            } catch (e: Exception) {
+                // Silently fallback to standard text notification if image fails or timeouts
+            }
+        }
+
         val notificationBuilder = NotificationCompat.Builder(this, channelId)
             .setSmallIcon(R.drawable.ic_notification)
             .setContentTitle("أخبار الثالث متوسط")
             .setContentText(title)
-            .setStyle(NotificationCompat.BigTextStyle().bigText(if (content.isNotBlank()) "$title\n$content" else title))
             .setPriority(if (soundEnabled) NotificationCompat.PRIORITY_HIGH else NotificationCompat.PRIORITY_LOW)
             .setAutoCancel(true)
             .setContentIntent(pendingIntent)
             .setGroup(GROUP_KEY)
+
+        if (imageBitmap != null) {
+            notificationBuilder
+                .setLargeIcon(imageBitmap)
+                .setStyle(
+                    NotificationCompat.BigPictureStyle()
+                        .bigPicture(imageBitmap)
+                        .setSummaryText(if (content.isNotBlank()) content else title)
+                        .bigLargeIcon(null as android.graphics.Bitmap?)
+                )
+        } else {
+            notificationBuilder.setStyle(
+                NotificationCompat.BigTextStyle().bigText(if (content.isNotBlank()) "$title\n$content" else title)
+            )
+        }
 
         val notificationId = (System.currentTimeMillis() % 100000).toInt() + NOTIFICATION_ID_BASE
         notificationManager.notify(notificationId, notificationBuilder.build())

@@ -401,7 +401,23 @@ object SyncEngine {
             suspend fun fetchWithFallbacks(): com.prof18.rssparser.model.RssChannel {
                 var lastException: Throwable? = null
                 
-                // المحاولة الأولى: الرابط الأصلي للخلاصة مباشرة (FeedBurner)
+                // المحاولة الأولى: بوابة كلاود فلار السحابية المعالجة مسبقاً وفائقة السرعة (<200ms)
+                try {
+                    return kotlinx.coroutines.withTimeout(8000L) {
+                        val channel = rssParser.getRssChannel(cfWorkerUrl)
+                        if (channel.items.isEmpty()) throw Exception("Empty channel returned by Cloudflare Worker")
+                        channel
+                    }
+                } catch (e: kotlinx.coroutines.CancellationException) {
+                    if (e !is kotlinx.coroutines.TimeoutCancellationException) throw e
+                    lastException = e
+                } catch (e: Exception) {
+                    lastException = e
+                } catch (e: Throwable) {
+                    lastException = e
+                }
+
+                // المحاولة الثانية: الرابط الأصلي للخلاصة كبديل احتياطي (FeedBurner Fallback)
                 try {
                     return kotlinx.coroutines.withTimeout(15000L) {
                         val channel = rssParser.getRssChannel(originalUrl)
@@ -417,23 +433,6 @@ object SyncEngine {
                     lastException = e
                 }
 
-                // المحاولة الثانية: بوابة كلاود فلار ووركر السحابية السريعة (Cloudflare Edge Gateway Backup)
-                try {
-                    return kotlinx.coroutines.withTimeout(10000L) {
-                        val channel = rssParser.getRssChannel(cfWorkerUrl)
-                        if (channel.items.isEmpty()) throw Exception("Empty channel returned by Cloudflare Worker")
-                        channel
-                    }
-                } catch (e: kotlinx.coroutines.CancellationException) {
-                    if (e !is kotlinx.coroutines.TimeoutCancellationException) throw e
-                    lastException = e
-                } catch (e: Exception) {
-                    lastException = e
-                } catch (e: Throwable) {
-                    lastException = e
-                }
-
-                // محاولة جلب البيانات عبر البروكسيات كحالة طوارئ بمهلة قصيرة (6 ثواني)
                 for (url in proxyList) {
                     try {
                         return kotlinx.coroutines.withTimeout(6000L) {
