@@ -25,6 +25,38 @@
 -keep class coil3.** { *; }
 -keepclassmembers class * extends androidx.compose.ui.graphics.painter.Painter { *; }
 
+# 3.6 حماية إعلانات Google AdMob الرسمية لمنع R8 من حذفها أو تشويهها
+-keep public class com.google.android.gms.ads.** {
+   public *;
+}
+-keep public class com.google.ads.** {
+   public *;
+}
+-keep public class com.google.android.gms.ads.AdView {
+   public *;
+}
+-keep public class com.google.android.gms.ads.AdListener {
+   public *;
+}
+-keep public class com.google.android.gms.ads.AdRequest {
+   public *;
+}
+-keep public class com.google.android.gms.ads.AdSize {
+   public *;
+}
+-keep public class com.google.android.gms.ads.MobileAds {
+   public *;
+}
+-keepclassmembers class * extends com.google.android.gms.ads.AdListener {
+   public *;
+}
+-dontwarn com.google.android.gms.ads.**
+
+# 3.7 حماية خدمات إشعارات Firebase Cloud Messaging (FCM v1)
+-keep class com.google.firebase.messaging.** { *; }
+-keep class com.google.firebase.iid.** { *; }
+-dontwarn com.google.firebase.messaging.**
+
 # 4. الحفاظ على أسماء مكونات Coroutines الحساسة
 -keepnames class kotlinx.coroutines.internal.MainDispatcherFactory {}
 -keepnames class kotlinx.coroutines.CoroutineExceptionHandler {}

@@ -108,6 +108,15 @@
                 <action android:name="androidx.appfunctions.AppFunctionService" />
             </intent-filter>
         </service>
+
+        <!-- Official Firebase Cloud Messaging Service (FCM v1) Zero-Battery Push -->
+        <service
+            android:name=".AppFirebaseMessagingService"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="com.google.firebase.MESSAGING_EVENT" />
+            </intent-filter>
+        </service>
     </application>
 
 </manifest>

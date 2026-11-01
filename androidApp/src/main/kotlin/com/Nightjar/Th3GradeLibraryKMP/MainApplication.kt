@@ -51,6 +51,9 @@ class MainApplication : LibraryApplication(), SingletonImageLoader.Factory {
             e.printStackTrace()
         }
 
+        // Subscribe to Firebase Cloud Messaging topic for instant zero-battery news alerts
+        AppFirebaseMessagingService.subscribeToNewsTopic()
+
         // Pre-warm Coil ImageLoader asynchronously on IO thread to eliminate first-screen image pipeline delay
         kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.IO).launch {
             try {

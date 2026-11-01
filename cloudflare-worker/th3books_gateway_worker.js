@@ -5,16 +5,46 @@
  * 1. Telegram Bot File Proxy (/file/:file_id)
  * 2. Edge-Cached News RSS Feed (/news) with Developer Announcement injection
  * 3. Developer Announcement API (/developer-announcement)
- * 4. Scheduled Cron Handler for FCM v1 Push Notifications
+ * 4. Scheduled Cron Handler (every 10m) for FCM v1 Push Notifications
+ *    According to guide: الوكيل/إشعارات_فايربيس_السحابية.md
  */
 
 const BOT_TOKEN = "8862454952:AAGepkN8WMIZVSRWFLAHC24NTSdMZ4SSuFI";
 const RSS_FEED_URL = "https://feeds.feedburner.com/karraraliraqii/gkhbdxas1m0";
 const FCM_TOPIC = "news";
 
-// Firebase Service Account Credentials for FCM v1
+// Firebase Service Account Credentials for FCM v1 (Zero-Cost Serverless Push)
 const FIREBASE_PROJECT_ID = "kariqth3booksexemptioncalc";
 const FIREBASE_CLIENT_EMAIL = "firebase-adminsdk-fbsvc@kariqth3booksexemptioncalc.iam.gserviceaccount.com";
+const FIREBASE_PRIVATE_KEY = `-----BEGIN PRIVATE KEY-----
+MIIEvgIBADANBgkqhkiG9w0BAQEFAASCBKgwggSkAgEAAoIBAQDjXkkgggcse1Q0
+YfRVUt/dBIfunDGRd6Ipo1P1vvD6zWoXbw2mItwZDSUkAOk29O8GFJQghwEim7S4
+FfLyhOYK5UUbMWRdAjN2+UDoBefwf+QMo6rsrnpHacEN+lTW+pDp4Y1SXKxeoDSA
+i4jtyPpV9xh9CKaR1SUgrNgV2yHMAIcg38caBYTBRH1fiVYnP810+Is6oZqC+brj
+iTnRc8QN2OdQBkxRt7ORPOKLZstTMvIRkJnPNWBZ1VmP9FC3trxeSSFxtfmd+MwK
+i+WNERSM4SeBDmimASQGwCaVjTd7DekHbrfEHExDV+zqKmUq0FqcZpsIBKFERS+Q
+xw33HUyfAgMBAAECggEAL9eBD6QMmmGBAFy0Ktf7Xug7KgwXqgJATv6dBhKdZkie
+0Dt/5btkEKlhbUf7yqKTQPZHjOibZorY5ftIWZt5REWl2ujzs1ZpOdmMvMWxXjuq
+4rX1m0PDWw93nddUzr9+ipf5QqFZa7fOFFZIA7DMbBZIQtb1Ja5x14RHG6I2ZFQ6
+jd4Ll512PHsJn7MxMxWjR+Njtp5fBaZHH84Yuu68yesRIBefz+rZm3sGsZEf09JU
+DG0J4l4oo2DwWmAKz+CckXFNoH3X6j6+NCSoj03UcaBMEsuS4D8K/64BjMPI/6KD
+mr6Kxdy6XEhGpewhS4HgN1dYjuAqe4xrnbYrjr/5oQKBgQD1/9ksYWeSDWstwFjt
+gQn855mPoCfszEp3S9v72fLByMoqKnTJ8jlvv+90/m3y1AynTR2p+OO0JNuuUeIC
+vqUHA+GOcKi6ZKERfxePodKh76z6wAkiX7QTSRpndmqJJ7H9qB2PzkssKC0OCBPJ
+tzmqgscPXGxJ6FZK0wyAea1q5wKBgQDsnIpriY5IW9S+ByIigjegjddcP5ViC682
+aQ7Xsjt4/nqwUOId4ATwMsotDDbcfS3LXbHTl/FOUWLlSWzpsNP+KSy+Oa6sarYQ
+QfYfkE8ygOXzcdUWh+iJK/lpOrvzgarLTqTHMjvnBWX/s3DOePzVR7Un+f8pXMU2
+wVWKPiRRiQKBgQCWjoWuIdcvjkLgd251vZoNTPmw64ZD6SxSIv16AIQQkgEZGW7t
+AfChMkktw2IrUhiEdDAJjShfYoeJAthecauyxW9QrCa4HUpu2Ofkole1gGjP9qQg
+g45El2Mvm0vMsZy/8BpXnxxm5BffFJZ3yEnkz7Fg92HXQfk+RjjKkK3QVQKBgQCx
+j4P80Vx6BpfvBvFhzjCqhucPrhOPYU9aWJqv2WvyD57Ig9o8Kynpi2PXTGw7KKFe
+FPDm5gZLDJ5XjLNz56Qe/o06L5VahDYemzF1XFligAKQn2MWpmUl0182zcHQKgWe
+zmSvq43yf0WdDu7fs0GhWE+lMWF/i8PfpFRqCto8aQKBgEbYzHP1K7YK+KxdBiSb
+d1n/N/GKFBCCLbZT7WWKc5K51MnnqtPwE7iUmZb1L9DHOvH2g0P1IHI/TBRyvcYj
+UtiAzJI25ICeQgSOQU+eJB8hpjwFcHGcz0M1dDA0uIRItCwPBAhOPNKvYAGGHxvZ
+dgujgf4i2gHuo3IpvRg3ux4X
+-----END PRIVATE KEY-----
+`;
 
 // Current Active Developer Announcement
 const ACTIVE_ANNOUNCEMENT = {
@@ -24,6 +54,9 @@ const ACTIVE_ANNOUNCEMENT = {
   link: "https://t.me/bookiraqi",
   pubDate: "Sun, 01 Nov 2026 14:00:00 +0300"
 };
+
+// In-memory tracker for last sent notification GUID
+let lastNotifiedGuid = "";
 
 addEventListener('fetch', event => {
   event.respondWith(handleRequest(event.request, event));
@@ -161,23 +194,169 @@ async function handleRequest(request, event) {
     });
   }
 
+  // 5. Test Trigger FCM Endpoint (POST /trigger-push)
+  if (path === "/trigger-push" && request.method === "POST") {
+    const result = await handleScheduledEvent(true);
+    return new Response(JSON.stringify(result), {
+      headers: { "Content-Type": "application/json; charset=utf-8" }
+    });
+  }
+
   return new Response("Not Found", { status: 404 });
 }
 
-async function handleScheduledEvent() {
-  // Cron event: checks feed and sends notification if needed
+/**
+ * Scheduled Cron Handler (runs every 10 minutes)
+ * Checks FeedBurner, detects fresh items, and triggers FCM v1
+ */
+async function handleScheduledEvent(force = false) {
   try {
     const resp = await fetch(RSS_FEED_URL);
-    if (!resp.ok) return;
+    if (!resp.ok) return { error: `Feed fetch status ${resp.status}` };
+
     const xml = await resp.text();
     const itemMatch = xml.match(/<item>([\s\S]*?)<\/item>/);
-    if (!itemMatch) return;
+    if (!itemMatch) return { message: "No items found in feed" };
 
     const itemContent = itemMatch[1];
     const titleMatch = itemContent.match(/<title><!\[CDATA\[(.*?)\]\]><\/title>/) || itemContent.match(/<title>(.*?)<\/title>/);
+    const linkMatch = itemContent.match(/<link>(.*?)<\/link>/) || itemContent.match(/<guid[^>]*>(.*?)<\/guid>/);
+    const pubDateMatch = itemContent.match(/<pubDate>(.*?)<\/pubDate>/);
+    const descMatch = itemContent.match(/<description><!\[CDATA\[(.*?)\]\]><\/description>/) || itemContent.match(/<description>(.*?)<\/description>/);
+
     const title = titleMatch ? titleMatch[1].trim() : "خبر دراسي جديد";
-    console.log("Cron check complete, latest item:", title);
+    const link = linkMatch ? linkMatch[1].trim() : "";
+    const pubDate = pubDateMatch ? pubDateMatch[1].trim() : "";
+    const snippet = descMatch ? descMatch[1].replace(/<[^>]*>/g, "").trim().substring(0, 150) : "";
+    const guid = link || title;
+
+    if (!force && lastNotifiedGuid === guid) {
+      return { status: "unchanged", guid: guid };
+    }
+
+    lastNotifiedGuid = guid;
+
+    // Send FCM v1 push notification
+    const pushResult = await sendFcmNotification({
+      title: "أخبار الثالث متوسط",
+      body: title,
+      data: {
+        title: title,
+        link: link,
+        pubDate: pubDate,
+        content: snippet
+      }
+    });
+
+    return { status: "notified", title: title, push: pushResult };
   } catch (e) {
     console.error("Scheduled check error:", e);
+    return { error: e.message };
   }
+}
+
+/**
+ * Sends FCM v1 notification using Google Service Account JWT signing (Web Crypto)
+ */
+async function sendFcmNotification({ title, body, data }) {
+  try {
+    const token = await getGoogleOAuthToken();
+    const endpoint = `https://fcm.googleapis.com/v1/projects/${FIREBASE_PROJECT_ID}/messages:send`;
+
+    const message = {
+      message: {
+        topic: FCM_TOPIC,
+        notification: {
+          title: title,
+          body: body
+        },
+        data: data || {},
+        android: {
+          priority: "HIGH",
+          notification: {
+            sound: "custom_sound",
+            channel_id: "news_channel_sound",
+            default_sound: false,
+            notification_priority: "PRIORITY_MAX"
+          }
+        }
+      }
+    };
+
+    const resp = await fetch(endpoint, {
+      method: "POST",
+      headers: {
+        "Authorization": `Bearer ${token}`,
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify(message)
+    });
+
+    return await resp.json();
+  } catch (err) {
+    return { error: err.message };
+  }
+}
+
+async function getGoogleOAuthToken() {
+  const now = Math.floor(Date.now() / 1000);
+  const header = { alg: "RS256", typ: "JWT" };
+  const payload = {
+    iss: FIREBASE_CLIENT_EMAIL,
+    scope: "https://www.googleapis.com/auth/firebase.messaging",
+    aud: "https://oauth2.googleapis.com/token",
+    exp: now + 3600,
+    iat: now
+  };
+
+  const b64Url = (obj) => {
+    const str = typeof obj === "string" ? obj : JSON.stringify(obj);
+    const utf8Bytes = new TextEncoder().encode(str);
+    let binary = "";
+    for (let i = 0; i < utf8Bytes.length; i++) binary += String.fromCharCode(utf8Bytes[i]);
+    return btoa(binary).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+  };
+
+  const encodedHeader = b64Url(header);
+  const encodedPayload = b64Url(payload);
+  const signInput = `${encodedHeader}.${encodedPayload}`;
+
+  const pemContents = FIREBASE_PRIVATE_KEY
+    .replace(/-----BEGIN PRIVATE KEY-----/g, "")
+    .replace(/-----END PRIVATE KEY-----/g, "")
+    .replace(/\\n/g, "")
+    .replace(/\n/g, "")
+    .replace(/\s+/g, "");
+
+  const binaryDer = Uint8Array.from(atob(pemContents), c => c.charCodeAt(0));
+
+  const cryptoKey = await crypto.subtle.importKey(
+    "pkcs8",
+    binaryDer.buffer,
+    { name: "RSASSA-PKCS1-v1_5", hash: "SHA-256" },
+    false,
+    ["sign"]
+  );
+
+  const signature = await crypto.subtle.sign(
+    "RSASSA-PKCS1-v1_5",
+    cryptoKey,
+    new TextEncoder().encode(signInput)
+  );
+
+  let binarySig = "";
+  const sigBytes = new Uint8Array(signature);
+  for (let i = 0; i < sigBytes.length; i++) binarySig += String.fromCharCode(sigBytes[i]);
+  const encodedSig = btoa(binarySig).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+
+  const assertion = `${signInput}.${encodedSig}`;
+
+  const tokenResp = await fetch("https://oauth2.googleapis.com/token", {
+    method: "POST",
+    headers: { "Content-Type": "application/x-www-form-urlencoded" },
+    body: `grant_type=urn:ietf:params:oauth:grant-type:jwt-bearer&assertion=${assertion}`
+  });
+
+  const tokenData = await tokenResp.json();
+  return tokenData.access_token;
 }

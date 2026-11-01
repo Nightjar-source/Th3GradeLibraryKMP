@@ -5,6 +5,7 @@ plugins {
     alias(libs.plugins.androidApplication)
     alias(libs.plugins.composeMultiplatform)
     alias(libs.plugins.composeCompiler)
+    alias(libs.plugins.googleServices)
 }
 
 val copySharedResources = tasks.register<Copy>("copySharedResources") {
@@ -96,6 +97,10 @@ dependencies {
     implementation("androidx.browser:browser:1.8.0")
     implementation(libs.coil.compose)
     implementation("com.google.android.gms:play-services-ads:23.6.0")
+    implementation(platform("com.google.firebase:firebase-bom:33.9.0"))
+    implementation("com.google.firebase:firebase-messaging")
+    implementation(libs.kotlinx.serialization.json)
+    implementation("androidx.profileinstaller:profileinstaller:1.4.1")
 }
 
 tasks.matching { it.name.startsWith("merge") && it.name.endsWith("Assets") }.configureEach {
