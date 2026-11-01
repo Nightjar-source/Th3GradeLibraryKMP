@@ -42,3 +42,5 @@ credentials.json
 
 *.pdf
 release_apk/
+serviceAccountKey.json
+*serviceAccount*.json

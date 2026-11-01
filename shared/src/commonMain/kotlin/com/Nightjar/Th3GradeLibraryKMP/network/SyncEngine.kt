@@ -383,6 +383,7 @@ object SyncEngine {
         } catch (_: Exception) {}
         try {
             val rssParser = RssParser()
+            val cfWorkerUrl = "https://th3books-gateway.karrar1iq.workers.dev/news"
             val originalUrl = "https://feeds.feedburner.com/karraraliraqii/gkhbdxas1m0"
             val proxyList = listOf(
                 "https://api.allorigins.win/raw?url=$originalUrl",
@@ -397,9 +398,25 @@ object SyncEngine {
             suspend fun fetchWithFallbacks(): com.prof18.rssparser.model.RssChannel {
                 var lastException: Throwable? = null
                 
-                // المحاولة الأولى: الرابط الأصلي بمهلة طويلة (60 ثانية)
+                // المحاولة صفر: بوابة كلاود فلار ووركر السحابية فائقة السرعة
                 try {
-                    return kotlinx.coroutines.withTimeout(60000L) {
+                    return kotlinx.coroutines.withTimeout(10000L) {
+                        val channel = rssParser.getRssChannel(cfWorkerUrl)
+                        if (channel.items.isEmpty()) throw Exception("Empty channel returned by Cloudflare Worker")
+                        channel
+                    }
+                } catch (e: kotlinx.coroutines.CancellationException) {
+                    if (e !is kotlinx.coroutines.TimeoutCancellationException) throw e
+                    lastException = e
+                } catch (e: Exception) {
+                    lastException = e
+                } catch (e: Throwable) {
+                    lastException = e
+                }
+
+                // المحاولة الأولى: الرابط الأصلي بمهلة مناسبة (45 ثانية)
+                try {
+                    return kotlinx.coroutines.withTimeout(45000L) {
                         val channel = rssParser.getRssChannel(originalUrl)
                         if (channel.items.isEmpty()) throw Exception("Empty channel returned by original URL")
                         channel
