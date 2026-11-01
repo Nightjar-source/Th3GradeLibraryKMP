@@ -49,6 +49,12 @@
             android:configChanges="orientation|screenSize|screenLayout|keyboardHidden|smallestScreenSize|density|uiMode|keyboard|navigation"
             android:launchMode="singleTop"
             android:theme="@style/Theme.App.Starting">
+            <!-- Official Android Desktop Windowing Support (Pixel Tablet, Samsung DeX, ChromeOS) -->
+            <layout
+                android:defaultWidth="960dp"
+                android:defaultHeight="700dp"
+                android:minWidth="360dp"
+                android:minHeight="480dp" />
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
