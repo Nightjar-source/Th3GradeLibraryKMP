@@ -1205,7 +1205,7 @@ fun AppContent(
                     .fillMaxWidth()
                     .windowInsetsPadding(WindowInsets.safeDrawing.only(WindowInsetsSides.Horizontal + WindowInsetsSides.Bottom))
                     .offset { androidx.compose.ui.unit.IntOffset(x = 0, y = bottomBarOffsetHeightPx.roundToInt()) }
-                    .padding(bottom = 12.dp, start = 16.dp, end = 16.dp),
+                    .padding(bottom = 12.dp, start = if (screenWidthDp < 320.dp) 6.dp else 16.dp, end = if (screenWidthDp < 320.dp) 6.dp else 16.dp),
                 contentAlignment = Alignment.Center
             ) {
                 val mainNavItems = listOf(
@@ -1319,12 +1319,12 @@ fun AppContent(
                                         imageVector = item.second,
                                         contentDescription = item.first,
                                         tint = tint,
-                                        modifier = Modifier.size(24.dp)
+                                        modifier = Modifier.size(if (screenWidthDp < 320.dp) 20.dp else 24.dp)
                                     )
                                     Spacer(modifier = Modifier.height(2.dp))
                                     Text(
                                         text = item.first,
-                                        fontSize = 9.sp,
+                                        fontSize = if (screenWidthDp < 320.dp) 8.sp else 9.sp,
                                         fontWeight = FontWeight.Bold,
                                         color = tint
                                     )

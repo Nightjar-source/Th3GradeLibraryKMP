@@ -90,7 +90,7 @@ fun ShortcutsScreen(
 
             val dynamicShortcutColumns = remember(widthClass, heightClass, screenWidthDp) {
                 when (widthClass) {
-                    WindowWidthSizeClass.COMPACT -> GridCells.Fixed(2)
+                    WindowWidthSizeClass.COMPACT -> if (screenWidthDp < 340.dp) GridCells.Fixed(1) else GridCells.Fixed(2)
                     WindowWidthSizeClass.MEDIUM -> {
                         if (heightClass == WindowHeightSizeClass.COMPACT) GridCells.Fixed(4) else GridCells.Fixed(3)
                     }

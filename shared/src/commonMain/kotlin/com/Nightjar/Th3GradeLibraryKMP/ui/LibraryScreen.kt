@@ -346,8 +346,14 @@ fun LibraryScreen(
                         if (isGridView) {
                             when (widthClass) {
                                 WindowWidthSizeClass.COMPACT -> {
-                                    // Official Material 3 Compact: Phone in vertical portrait (< 600dp) -> 2 columns
-                                    GridCells.Fixed(2)
+                                    // Official Material 3 Adaptive (Android Adaptive Guidelines):
+                                    // Ultra-narrow pop-up windows & Fold 1 cover screen (< 340dp) -> 1 column
+                                    // Standard phones & Galaxy Fold 8 cover screen (420dp-428dp) -> 2 columns
+                                    if (screenWidthDp < 340.dp) {
+                                        GridCells.Fixed(1)
+                                    } else {
+                                        GridCells.Fixed(2)
+                                    }
                                 }
                                 WindowWidthSizeClass.MEDIUM -> {
                                     // Official Material 3 Medium (600dp - 840dp):
