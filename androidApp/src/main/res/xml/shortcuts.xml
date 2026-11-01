@@ -1,56 +1,95 @@
 <?xml version="1.0" encoding="utf-8"?>
 <shortcuts xmlns:android="http://schemas.android.com/apk/res/android">
-    <!-- Android App Actions for Google Assistant, Gemini & Bixby -->
-    <capability android:name="actions.intent.OPEN_APP_FEATURE">
+    <!-- Static Shortcut 1: الكتب المدرسية -->
+    <shortcut
+        android:shortcutId="shortcut_books"
+        android:enabled="true"
+        android:icon="@drawable/ic_shortcut_book"
+        android:shortcutShortLabel="@string/shortcut_books_short"
+        android:shortcutLongLabel="@string/shortcut_books_long">
         <intent
             android:action="android.intent.action.VIEW"
             android:targetPackage="com.Nightjar.Th3GradeLibraryKMP.cloud"
             android:targetClass="com.Nightjar.Th3GradeLibraryKMP.MainActivity"
-            android:data="th3books://library">
+            android:data="th3books://library?page=list&amp;category=books">
+            <extra android:name="page" android:value="list" />
+            <extra android:name="category" android:value="books" />
+        </intent>
+        <capability-binding android:key="actions.intent.OPEN_APP_FEATURE"/>
+    </shortcut>
+
+    <!-- Static Shortcut 2: الملازم والملخصات -->
+    <shortcut
+        android:shortcutId="shortcut_notes"
+        android:enabled="true"
+        android:icon="@drawable/ic_shortcut_notes"
+        android:shortcutShortLabel="@string/shortcut_notes_short"
+        android:shortcutLongLabel="@string/shortcut_notes_long">
+        <intent
+            android:action="android.intent.action.VIEW"
+            android:targetPackage="com.Nightjar.Th3GradeLibraryKMP.cloud"
+            android:targetClass="com.Nightjar.Th3GradeLibraryKMP.MainActivity"
+            android:data="th3books://library?page=list&amp;category=notes">
+            <extra android:name="page" android:value="list" />
+            <extra android:name="category" android:value="notes" />
+        </intent>
+        <capability-binding android:key="actions.intent.OPEN_APP_FEATURE"/>
+    </shortcut>
+
+    <!-- Static Shortcut 3: المحفوظات -->
+    <shortcut
+        android:shortcutId="shortcut_bookmarks"
+        android:enabled="true"
+        android:icon="@drawable/ic_shortcut_bookmark"
+        android:shortcutShortLabel="@string/shortcut_bookmarks_short"
+        android:shortcutLongLabel="@string/shortcut_bookmarks_long">
+        <intent
+            android:action="android.intent.action.VIEW"
+            android:targetPackage="com.Nightjar.Th3GradeLibraryKMP.cloud"
+            android:targetClass="com.Nightjar.Th3GradeLibraryKMP.MainActivity"
+            android:data="th3books://library?page=bookmarks">
+            <extra android:name="page" android:value="bookmarks" />
+        </intent>
+        <capability-binding android:key="actions.intent.OPEN_APP_FEATURE"/>
+    </shortcut>
+
+    <!-- Static Shortcut 4: أخبار التربية -->
+    <shortcut
+        android:shortcutId="shortcut_news"
+        android:enabled="true"
+        android:icon="@drawable/ic_shortcut_news"
+        android:shortcutShortLabel="@string/shortcut_news_short"
+        android:shortcutLongLabel="@string/shortcut_news_long">
+        <intent
+            android:action="android.intent.action.VIEW"
+            android:targetPackage="com.Nightjar.Th3GradeLibraryKMP.cloud"
+            android:targetClass="com.Nightjar.Th3GradeLibraryKMP.MainActivity"
+            android:data="th3books://library?page=news">
+            <extra android:name="page" android:value="news" />
+        </intent>
+        <capability-binding android:key="actions.intent.OPEN_APP_FEATURE"/>
+    </shortcut>
+
+    <!-- App Actions for Google Assistant, Gemini & Bixby -->
+    <capability android:name="actions.intent.OPEN_APP_FEATURE">
+        <intent
+            android:action="android.intent.action.VIEW"
+            android:targetPackage="com.Nightjar.Th3GradeLibraryKMP.cloud"
+            android:targetClass="com.Nightjar.Th3GradeLibraryKMP.MainActivity">
             <parameter
                 android:name="feature"
                 android:key="page"/>
         </intent>
     </capability>
 
-    <!-- Capability to search for books or notes via Voice Assistant -->
     <capability android:name="actions.intent.GET_THING">
         <intent
             android:action="android.intent.action.VIEW"
             android:targetPackage="com.Nightjar.Th3GradeLibraryKMP.cloud"
-            android:targetClass="com.Nightjar.Th3GradeLibraryKMP.MainActivity"
-            android:data="th3books://library">
+            android:targetClass="com.Nightjar.Th3GradeLibraryKMP.MainActivity">
             <parameter
                 android:name="thing.name"
                 android:key="search_query"/>
         </intent>
     </capability>
-
-    <!-- Static App Shortcut: Latest News -->
-    <shortcut
-        android:shortcutId="shortcut_news"
-        android:enabled="true"
-        android:icon="@drawable/ic_launcher"
-        android:shortcutShortLabel="@string/shortcut_news_title"
-        android:shortcutLongLabel="@string/shortcut_news_title">
-        <intent
-            android:action="android.intent.action.VIEW"
-            android:targetPackage="com.Nightjar.Th3GradeLibraryKMP.cloud"
-            android:targetClass="com.Nightjar.Th3GradeLibraryKMP.MainActivity"
-            android:data="th3books://library?page=news" />
-    </shortcut>
-
-    <!-- Static App Shortcut: Bookmarks -->
-    <shortcut
-        android:shortcutId="shortcut_bookmarks"
-        android:enabled="true"
-        android:icon="@drawable/ic_launcher"
-        android:shortcutShortLabel="@string/shortcut_bookmarks_title"
-        android:shortcutLongLabel="@string/shortcut_bookmarks_title">
-        <intent
-            android:action="android.intent.action.VIEW"
-            android:targetPackage="com.Nightjar.Th3GradeLibraryKMP.cloud"
-            android:targetClass="com.Nightjar.Th3GradeLibraryKMP.MainActivity"
-            android:data="th3books://library?page=bookmarks" />
-    </shortcut>
 </shortcuts>

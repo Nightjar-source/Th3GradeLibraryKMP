@@ -226,7 +226,7 @@ object SyncEngine {
     private fun loadLocalSettings() {
         try {
             val theme = settings.getString("theme", "system")
-            val useMaterialYou = settings.getBoolean("useMaterialYou", true)
+            val useMaterialYou = settings.getBoolean("useMaterialYou", false)
             val primaryColor = settings.getString("primaryColor", "#2563eb")
             val syncInterval = settings.getString("syncInterval", "30m")
             val cacheClearInterval = settings.getString("cacheClearInterval", "6m")
@@ -388,78 +388,27 @@ object SyncEngine {
             val rssParser = RssParser()
             val cfWorkerUrl = "https://th3books-gateway.karrar1iq.workers.dev/news"
             val originalUrl = "https://feeds.feedburner.com/karraraliraqii/gkhbdxas1m0"
-            val proxyList = listOf(
-                "https://api.allorigins.win/raw?url=$originalUrl",
-                "https://corsproxy.io/?url=$originalUrl",
-                "https://api.codetabs.com/v1/proxy/?quest=$originalUrl",
-                "https://thingproxy.freeboard.io/fetch/$originalUrl",
-                "https://api.cors.lol/?url=$originalUrl",
-                "https://yacdn.org/proxy/$originalUrl",
-                "https://cors.eu.org/$originalUrl"
-            )
-            
+
             suspend fun fetchWithFallbacks(): com.prof18.rssparser.model.RssChannel {
-                var lastException: Throwable? = null
-                
-                // المحاولة الأولى: بوابة كلاود فلار السحابية المعالجة مسبقاً وفائقة السرعة (<200ms)
+                // المحاولة السحابية الأولى: بوابة كلاود فلار إيدج فائقة السرعة
                 try {
                     return kotlinx.coroutines.withTimeout(8000L) {
                         val channel = rssParser.getRssChannel(cfWorkerUrl)
-                        if (channel.items.isEmpty()) throw Exception("Empty channel returned by Cloudflare Worker")
+                        if (channel.items.isEmpty()) throw Exception("Empty channel from Cloudflare")
                         channel
                     }
-                } catch (e: kotlinx.coroutines.CancellationException) {
-                    if (e !is kotlinx.coroutines.TimeoutCancellationException) throw e
-                    lastException = e
                 } catch (e: Exception) {
-                    lastException = e
-                } catch (e: Throwable) {
-                    lastException = e
+                    if (e is kotlinx.coroutines.CancellationException && e !is kotlinx.coroutines.TimeoutCancellationException) throw e
                 }
 
-                // المحاولة الثانية: الرابط الأصلي للخلاصة كبديل احتياطي (FeedBurner Fallback)
-                try {
-                    return kotlinx.coroutines.withTimeout(15000L) {
-                        val channel = rssParser.getRssChannel(originalUrl)
-                        if (channel.items.isEmpty()) throw Exception("Empty channel returned by original URL")
-                        channel
-                    }
-                } catch (e: kotlinx.coroutines.CancellationException) {
-                    if (e !is kotlinx.coroutines.TimeoutCancellationException) throw e
-                    lastException = e
-                } catch (e: Exception) {
-                    lastException = e
-                } catch (e: Throwable) {
-                    lastException = e
+                // بديل طوارئ صامت ومباشر
+                return kotlinx.coroutines.withTimeout(12000L) {
+                    val channel = rssParser.getRssChannel(originalUrl)
+                    if (channel.items.isEmpty()) throw Exception("Empty channel from Feedburner")
+                    channel
                 }
-
-                for (url in proxyList) {
-                    try {
-                        return kotlinx.coroutines.withTimeout(6000L) {
-                            val channel = rssParser.getRssChannel(url)
-                            if (channel.items.isEmpty()) {
-                                throw Exception("Empty channel returned by proxy")
-                            }
-                            channel
-                        }
-                    } catch (e: kotlinx.coroutines.CancellationException) {
-                        // إذا تم إلغاء الكوروتين بالكامل (مثلاً خروج المستخدم)، ارمِ الخطأ فوراً
-                        if (e !is kotlinx.coroutines.TimeoutCancellationException) throw e
-                        lastException = e
-                    } catch (e: Exception) {
-                        // حظر الشبكة، مشاكل SSL، وأخطاء الخوادم مثل:
-                        // 404 (Not Found), 500 (Internal Server Error)
-                        // 502 (Bad Gateway), 503 (Service Unavailable)
-                        // سيتم اصطيادها جميعاً هنا وتخطيها للذهاب إلى البروكسي التالي
-                        lastException = e
-                    } catch (e: Throwable) {
-                        // أي أخطاء أخرى غير متوقعة
-                        lastException = e
-                    }
-                }
-                throw Exception("فشلت جميع البروكسيات في جلب البيانات (الأخطاء المحتملة: 404, 500, 502, أو Timeout). آخر خطأ: ${lastException?.message}")
             }
-            
+
             val channel = fetchWithFallbacks()
 
             val fetchedItems = channel.items.map { item ->

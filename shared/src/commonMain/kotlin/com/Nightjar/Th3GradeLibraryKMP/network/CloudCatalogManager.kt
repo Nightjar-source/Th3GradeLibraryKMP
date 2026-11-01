@@ -131,7 +131,7 @@ object CloudCatalogManager {
     suspend fun refreshManifest() {
         withContext(Dispatchers.IO) {
             try {
-                val urls = listOf(GITHUB_MANIFEST_RAW, JSDELIVR_MANIFEST_CDN)
+                val urls = listOf("https://th3books-gateway.karrar1iq.workers.dev/manifest", GITHUB_MANIFEST_RAW, JSDELIVR_MANIFEST_CDN)
                 for (url in urls) {
                     try {
                         val response = httpClient.get(url)
