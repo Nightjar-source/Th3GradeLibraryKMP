@@ -159,17 +159,39 @@ object CloudCatalogManager {
 
     fun getMeta(item: BookItem): CloudBookMeta? {
         val current = _manifest.value
-        return if (item.isNote) {
-            current.notes[item.id]
-        } else {
-            current.books[item.id]
+        val fromMap = if (item.isNote) current.notes[item.id] else current.books[item.id]
+        if (fromMap != null) return fromMap
+
+        val fromList = (current.books_list + current.notes_list).firstOrNull { it.id == item.id }
+        if (fromList != null) {
+            return CloudBookMeta(
+                msg_id = fromList.msg_id,
+                fallback_filename = fromList.pdf_path.substringAfterLast("/"),
+                title = fromList.title,
+                file_id = fromList.file_id,
+                file_size = fromList.file_size,
+                stream_url = fromList.stream_url,
+                backup_github_url = fromList.backup_github_url,
+                backup_telegram_url = fromList.backup_telegram_url,
+                telegram_channel_url = fromList.telegram_channel_url,
+                telegram_deep_link = fromList.telegram_deep_link,
+                direct_url = fromList.stream_url,
+                cover_url = fromList.cover_url
+            )
         }
+        return null
     }
 
     fun convertToDirectUrl(url: String): String {
         if (url.isBlank()) return ""
         if (url.contains("drive.google.com") && url.contains("/d/")) {
             val fileId = url.substringAfter("/d/").substringBefore("/").substringBefore("?")
+            if (fileId.isNotBlank()) {
+                return "https://drive.usercontent.google.com/download?id=$fileId&export=download"
+            }
+        }
+        if (url.contains("drive.google.com") && url.contains("id=")) {
+            val fileId = url.substringAfter("id=").substringBefore("&")
             if (fileId.isNotBlank()) {
                 return "https://drive.usercontent.google.com/download?id=$fileId&export=download"
             }
