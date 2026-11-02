@@ -48,22 +48,24 @@ object AllItems {
     }
 
     val dynamicBooks: List<BookItem>
-        get() {
-            val list = com.Nightjar.Th3GradeLibraryKMP.network.CloudCatalogManager.dynamicBooks.value
-            return if (list.isNotEmpty()) list else staticBooks
-        }
+        get() = com.Nightjar.Th3GradeLibraryKMP.network.CloudCatalogManager.dynamicBooks.value
 
     val dynamicNotes: List<BookItem>
-        get() {
-            val list = com.Nightjar.Th3GradeLibraryKMP.network.CloudCatalogManager.dynamicNotes.value
-            return if (list.isNotEmpty()) list else staticNotes
-        }
+        get() = com.Nightjar.Th3GradeLibraryKMP.network.CloudCatalogManager.dynamicNotes.value
 
     val books: List<BookItem>
-        get() = dynamicBooks
+        get() {
+            val hidden = com.Nightjar.Th3GradeLibraryKMP.network.CloudCatalogManager.manifest.value.hidden_ids.toSet()
+            val merged = (staticBooks + dynamicBooks).distinctBy { it.id }
+            return merged.filter { it.id !in hidden }
+        }
 
     val notes: List<BookItem>
-        get() = dynamicNotes
+        get() {
+            val hidden = com.Nightjar.Th3GradeLibraryKMP.network.CloudCatalogManager.manifest.value.hidden_ids.toSet()
+            val merged = (staticNotes + dynamicNotes).distinctBy { it.id }
+            return merged.filter { it.id !in hidden }
+        }
 
     val staticBooks = listOf(
         BookItem("b1", "كتاب الاجتماعيات", "ajh", "files/books/ajtmaa.pdf", false, "المنهج الوزاري المعتمد 2027", "#f59e0b", "#d97706"),

@@ -61,7 +61,13 @@ actual object BookDownloadManager {
             when (intent.action) {
                 ACTION_PAUSE -> pauseDownload(item)
                 ACTION_RESUME -> context?.let { downloadItem(it, item) }
-                ACTION_CANCEL -> cancelDownload(item)
+                ACTION_CANCEL -> {
+                    if (_isBatchDownloading.value) {
+                        cancelAll()
+                    } else {
+                        cancelDownload(item)
+                    }
+                }
             }
         }
     }
@@ -398,11 +404,15 @@ actual object BookDownloadManager {
     }
 
     actual fun cancelDownload(item: BookItem) {
-        activeJobs[item.id]?.cancel()
-        tempFiles[item.id]?.delete()
-        tempFiles.remove(item.id)
+        val job = activeJobs.remove(item.id)
+        job?.cancel()
+        tempFiles.remove(item.id)?.delete()
         activeItems.remove(item.id)
         updateState(item.id, ItemDownloadState(status = DownloadStatus.IDLE, progress = 0f))
+        if (_isBatchDownloading.value) {
+            _isBatchDownloading.value = false
+        }
+        _activeNoticeMessage.value = null
         appContext?.let { ctx ->
             val nm = ctx.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
             if (activeJobs.isEmpty()) {

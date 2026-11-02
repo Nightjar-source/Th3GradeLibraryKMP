@@ -42,17 +42,13 @@ class MainApplication : LibraryApplication(), SingletonImageLoader.Factory {
         super.onCreate()
         instance = this
         
-        // Clean up old temporary PDF and tmp files on startup
-        AppCleanupService.cleanAllTemporaryPdfFiles(this)
-
-        try {
-            startService(android.content.Intent(this, AppCleanupService::class.java))
-        } catch (e: Exception) {
-            e.printStackTrace()
+        // Move disk cleanup and FCM topic subscription to background IO coroutine
+        kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.IO).launch {
+            try {
+                AppCleanupService.cleanAllTemporaryPdfFiles(this@MainApplication)
+                AppFirebaseMessagingService.subscribeToNewsTopic()
+            } catch (_: Exception) {}
         }
-
-        // Subscribe to Firebase Cloud Messaging topic for instant zero-battery news alerts
-        AppFirebaseMessagingService.subscribeToNewsTopic()
 
         // Pre-warm Coil ImageLoader asynchronously on IO thread to eliminate first-screen image pipeline delay
         kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.IO).launch {

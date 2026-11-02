@@ -268,7 +268,7 @@ fun BookAccordionItem(
                     m?.cover_url?.takeIf { it.isNotBlank() }
                 }
                 val hasCloudCover = !cloudCoverUrl.isNullOrBlank()
-                val hasBundledCover = item.coverResName.isNotBlank() && item.coverResName != "app_icon" && item.coverResName != "ajh" && item.id != "b_abood"
+                val hasBundledCover = item.coverResName.isNotBlank() && item.coverResName != "app_icon" && item.id != "b_abood"
 
                 if (hasCloudCover || hasBundledCover) {
                     val coverData = remember(item, cloudCoverUrl) {

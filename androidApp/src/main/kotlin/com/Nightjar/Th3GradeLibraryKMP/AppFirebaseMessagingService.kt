@@ -61,14 +61,31 @@ class AppFirebaseMessagingService : FirebaseMessagingService() {
         val pubDate = data["pubDate"] ?: ""
         val content = data["content"] ?: remoteMessage.notification?.body ?: ""
 
-        // 1. Silent Local Cache Update (Smart Watermark deduplication)
-        saveToCache(title, link, imageUrl, pubDate, content)
+        // Filter out temporary developer test items from persisting in student feed
+        val isDevTest = title.contains("المطور") || title.contains("تجريبي") || link.startsWith("dev_")
+        if (!isDevTest) {
+            // 1. Silent Local Cache Update (Smart Watermark deduplication)
+            saveToCache(title, link, imageUrl, pubDate, content)
+        }
 
-        // 2. Display System Notification respecting user's sound preferences
+        // 2. Display System Notification respecting user's sync schedule to prevent 10-minute spam
         val syncInterval = SyncEngine.appSettings.value.syncInterval
-        // إذا اختار المستخدم "عند فتح التطبيق فقط"، يتم حفظ الخبر بالكاش بصمت ولا يزعجه إشعار في شريط النظام
         if (syncInterval != "on_open") {
-            showNotification(title, content, link, imageUrl)
+            val intervalMs = when (syncInterval) {
+                "15m" -> 15 * 60 * 1000L
+                "30m" -> 30 * 60 * 1000L
+                "1h"  -> 60 * 60 * 1000L
+                "6h"  -> 6 * 60 * 60 * 1000L
+                "12h" -> 12 * 60 * 60 * 1000L
+                "24h" -> 24 * 60 * 60 * 1000L
+                else  -> 30 * 60 * 1000L
+            }
+            val lastNotif = AppDataStore.getLong("last_fcm_news_alert_time", 0L)
+            val now = System.currentTimeMillis()
+            if (isDevTest || now - lastNotif >= intervalMs) {
+                AppDataStore.putLong("last_fcm_news_alert_time", now)
+                showNotification(title, content, link, imageUrl)
+            }
         }
     }
 

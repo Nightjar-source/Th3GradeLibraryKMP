@@ -130,75 +130,7 @@ fun LibraryScreen(
                     onScrollableStateChanged(canScroll)
                 }
 
-                // First-time Launch Download Options Prompt
-        val screenContext = coil3.compose.LocalPlatformContext.current
-        var hasSeenDownloadOptions by remember { 
-            mutableStateOf(com.Nightjar.Th3GradeLibraryKMP.data.AppDataStore.getBoolean("has_seen_download_options", false)) 
-        }
-        var showDownloadDialog by remember { mutableStateOf(!hasSeenDownloadOptions) }
-
-        if (showDownloadDialog) {
-            AlertDialog(
-                onDismissRequest = {
-                    com.Nightjar.Th3GradeLibraryKMP.data.AppDataStore.putBoolean("has_seen_download_options", true)
-                    showDownloadDialog = false
-                },
-                containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
-                titleContentColor = MaterialTheme.colorScheme.onSurface,
-                textContentColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                shape = RoundedCornerShape(28.dp),
-                tonalElevation = 6.dp,
-                title = {
-                    Text(
-                        "خيارات التحميل لأول مرة",
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 18.sp
-                    )
-                },
-                text = {
-                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                        Text(
-                            "مرحباً بك في مكتبة الثالث متوسط! اختر الطريقة المفضلة لتنزيل الكتب والملازم:",
-                            fontSize = 14.sp,
-                            color = MaterialTheme.colorScheme.onSurface
-                        )
-                        Surface(
-                            color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.5f),
-                            shape = RoundedCornerShape(12.dp)
-                        ) {
-                            Text(
-                                "جاري تحميل الملفات لأول مرة وبعدها ستكون الملفات أوفلاين بدون أي إنترنت.",
-                                modifier = Modifier.padding(10.dp),
-                                fontSize = 12.sp,
-                                color = MaterialTheme.colorScheme.onPrimaryContainer
-                            )
-                        }
-                    }
-                },
-                confirmButton = {
-                    Button(
-                        onClick = {
-                            com.Nightjar.Th3GradeLibraryKMP.data.AppDataStore.putBoolean("has_seen_download_options", true)
-                            showDownloadDialog = false
-                            val all = com.Nightjar.Th3GradeLibraryKMP.data.AllItems.books + com.Nightjar.Th3GradeLibraryKMP.data.AllItems.notes
-                            com.Nightjar.Th3GradeLibraryKMP.network.BookDownloadManager.downloadAll(screenContext, all)
-                        }
-                    ) {
-                        Text("تنزيل الكل الآن")
-                    }
-                },
-                dismissButton = {
-                    TextButton(
-                        onClick = {
-                            com.Nightjar.Th3GradeLibraryKMP.data.AppDataStore.putBoolean("has_seen_download_options", true)
-                            showDownloadDialog = false
-                        }
-                    ) {
-                        Text("تنزيل فردي عند الحاجة")
-                    }
-                }
-            )
-        }
+// First-time launch download options prompt removed; user selects downloads on demand
                     
                 Box(
                     modifier = Modifier.fillMaxSize(),
@@ -416,12 +348,12 @@ fun LibraryScreen(
         }
     }
 
-        // Floating Alert Notification Banner for Cloud Downloads (Floating Stadium Pill over content)
+        // Floating Alert Notification Banner for Cloud Downloads (Disappears automatically)
         val activeNotice by com.Nightjar.Th3GradeLibraryKMP.network.BookDownloadManager.activeNoticeMessage.collectAsState()
         Box(
             modifier = Modifier
-                .fillMaxSize()
-                .padding(top = dynamicTopPadding + 10.dp)
+                .fillMaxWidth()
+                .padding(top = dynamicTopPadding + 6.dp)
                 .zIndex(300f),
             contentAlignment = Alignment.TopCenter
         ) {
@@ -429,46 +361,46 @@ fun LibraryScreen(
                 visible = activeNotice != null,
                 enter = slideInVertically(
                     initialOffsetY = { -it },
-                    animationSpec = spring(dampingRatio = 0.78f, stiffness = 320f)
+                    animationSpec = spring(dampingRatio = androidx.compose.animation.core.Spring.DampingRatioNoBouncy, stiffness = 320f)
                 ) + fadeIn(tween(220)),
                 exit = slideOutVertically(
                     targetOffsetY = { -it },
-                    animationSpec = spring(dampingRatio = 0.78f, stiffness = 320f)
+                    animationSpec = spring(dampingRatio = androidx.compose.animation.core.Spring.DampingRatioNoBouncy, stiffness = 320f)
                 ) + fadeOut(tween(180))
             ) {
-            Surface(
-                shape = CircleShape,
-                color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.96f),
-                tonalElevation = 6.dp,
-                shadowElevation = 8.dp,
-                modifier = Modifier
-                    .widthIn(max = 480.dp)
-                    .padding(horizontal = 20.dp)
-                    .border(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.35f), CircleShape)
-            ) {
-                Row(
-                    modifier = Modifier.padding(horizontal = 20.dp, vertical = 10.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.Center
+                Surface(
+                    shape = CircleShape,
+                    color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.96f),
+                    tonalElevation = 8.dp,
+                    shadowElevation = 10.dp,
+                    modifier = Modifier
+                        .widthIn(max = 460.dp)
+                        .padding(horizontal = 16.dp)
+                        .border(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.4f), CircleShape)
                 ) {
-                    Icon(
-                        imageVector = Icons.Default.CloudDownload,
-                        contentDescription = null,
-                        tint = MaterialTheme.colorScheme.onPrimaryContainer,
-                        modifier = Modifier.size(20.dp)
-                    )
-                    Spacer(modifier = Modifier.width(10.dp))
-                    Text(
-                        text = activeNotice ?: "",
-                        fontSize = 13.sp,
-                        fontWeight = FontWeight.SemiBold,
-                        color = MaterialTheme.colorScheme.onPrimaryContainer,
-                        maxLines = 2,
-                        overflow = TextOverflow.Ellipsis
-                    )
+                    Row(
+                        modifier = Modifier.padding(horizontal = 18.dp, vertical = 9.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.Center
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.CloudDownload,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.onPrimaryContainer,
+                            modifier = Modifier.size(18.dp)
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(
+                            text = activeNotice ?: "",
+                            fontSize = 12.5.sp,
+                            fontWeight = FontWeight.SemiBold,
+                            color = MaterialTheme.colorScheme.onPrimaryContainer,
+                            maxLines = 2,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                    }
                 }
             }
-        }
         }
     }
 }
@@ -758,7 +690,7 @@ val platformContext = coil3.compose.LocalPlatformContext.current
                             m?.cover_url?.takeIf { it.isNotBlank() }
                         }
                         val hasCloudCover = !cloudCoverUrl.isNullOrBlank()
-                        val hasBundledCover = item.coverResName.isNotBlank() && item.coverResName != "app_icon" && item.coverResName != "ajh" && item.id != "b_abood"
+                        val hasBundledCover = item.coverResName.isNotBlank() && item.coverResName != "app_icon" && item.id != "b_abood"
 
                         if (hasCloudCover || hasBundledCover) {
                             val coverData = remember(item, cloudCoverUrl) {

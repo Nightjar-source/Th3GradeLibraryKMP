@@ -390,21 +390,21 @@ object SyncEngine {
             val originalUrl = "https://feeds.feedburner.com/karraraliraqii/gkhbdxas1m0"
 
             suspend fun fetchWithFallbacks(): com.prof18.rssparser.model.RssChannel {
-                // المحاولة السحابية الأولى: بوابة كلاود فلار إيدج فائقة السرعة
+                // المحاولة الأساسية الأولى: رابط الخلاصة الأصلي المباشر (يوفر حصة كلاود فلار بالكامل)
                 try {
-                    return kotlinx.coroutines.withTimeout(8000L) {
-                        val channel = rssParser.getRssChannel(cfWorkerUrl)
-                        if (channel.items.isEmpty()) throw Exception("Empty channel from Cloudflare")
+                    return kotlinx.coroutines.withTimeout(9000L) {
+                        val channel = rssParser.getRssChannel(originalUrl)
+                        if (channel.items.isEmpty()) throw Exception("Empty channel from Feedburner")
                         channel
                     }
                 } catch (e: Exception) {
                     if (e is kotlinx.coroutines.CancellationException && e !is kotlinx.coroutines.TimeoutCancellationException) throw e
                 }
 
-                // بديل طوارئ صامت ومباشر
-                return kotlinx.coroutines.withTimeout(12000L) {
-                    val channel = rssParser.getRssChannel(originalUrl)
-                    if (channel.items.isEmpty()) throw Exception("Empty channel from Feedburner")
+                // البديل الاحتياطي السحابي: بوابة كلاود فلار إيدج فائقة السرعة عند تعثر الرابط المباشر
+                return kotlinx.coroutines.withTimeout(8000L) {
+                    val channel = rssParser.getRssChannel(cfWorkerUrl)
+                    if (channel.items.isEmpty()) throw Exception("Empty channel from Cloudflare")
                     channel
                 }
             }

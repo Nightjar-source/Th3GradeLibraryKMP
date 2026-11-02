@@ -1,20 +1,27 @@
 package com.Nightjar.Th3GradeLibraryKMP.ui
 
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
-import androidx.compose.ui.draw.clip
+import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.BatteryAlert
+import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.MenuBook
 import androidx.compose.material.icons.filled.NotificationsActive
 import androidx.compose.material.icons.filled.Security
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -55,10 +62,13 @@ fun OnboardingScreen(
             ) {
                 Spacer(modifier = Modifier.height(if (isWide && screenHeightDp < 520.dp) 16.dp else 28.dp))
                 
-                // Welcome Card (Dynamic width on tablet/DeX/landscape vs portrait phone)
+                // Welcome Hero Card
                 val welcomeCardMaxWidth = if (isWide) 640.dp else 520.dp
                 Card(
-                    modifier = Modifier.widthIn(max = welcomeCardMaxWidth).fillMaxWidth().padding(bottom = if (isWide) 20.dp else 32.dp),
+                    modifier = Modifier
+                        .widthIn(max = welcomeCardMaxWidth)
+                        .fillMaxWidth()
+                        .padding(bottom = if (isWide) 20.dp else 28.dp),
                     shape = RoundedCornerShape(24.dp),
                     colors = CardDefaults.cardColors(containerColor = Color.Transparent),
                     elevation = CardDefaults.cardElevation(0.dp)
@@ -84,42 +94,46 @@ fun OnboardingScreen(
                                 modifier = Modifier.padding(bottom = 12.dp)
                             )
                             Text(
-                                text = "أهلاً بكم في تطبيق مكتبة الثالث متوسط!",
+                                text = "أهلاً بك في مكتبة الثالث متوسط!",
                                 style = MaterialTheme.typography.titleLarge.copy(
                                     fontWeight = FontWeight.Bold,
                                     fontSize = if (isWide && screenHeightDp < 520.dp) 19.sp else 22.sp
                                 ),
-                                textAlign = TextAlign.Justify,
+                                textAlign = TextAlign.Center,
                                 color = MaterialTheme.colorScheme.onPrimaryContainer,
                                 modifier = Modifier.padding(bottom = 10.dp)
                             )
                             Text(
-                                text = "نوفر لك أحدث الملازم، الكتب المدرسية، الأخبار الرسمية، والمحفوظات لتعمل بدون إنترنت بسلاسة وبأفضل تجربة.",
+                                text = "نوفر لك أحدث الكتب المدرسية والملازم الوزارية والأخبار الموثوقة لتعمل في هاتفك أوفلاين مدى الحياة بأعلى سرعة وأقل استهلاك للإنترنت.",
                                 style = MaterialTheme.typography.bodyLarge.copy(
                                     fontSize = if (isWide && screenHeightDp < 520.dp) 14.sp else 16.sp
                                 ),
-                                textAlign = TextAlign.Justify,
-                                color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.85f)
+                                textAlign = TextAlign.Center,
+                                color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.88f)
                             )
                         }
                     }
                 }
 
-                Spacer(modifier = Modifier.height(8.dp))
+                Spacer(modifier = Modifier.height(4.dp))
 
-                // Title
+                // Section Title
                 Text(
-                    text = "لضمان عمل التطبيق بشكل ممتاز على هاتفك واستمتع، نحتاج إلى 3 خطوات سريعة:",
-                    style = MaterialTheme.typography.titleLarge.copy(
+                    text = "دليلك السريع للبدء واستخدام التطبيق:",
+                    style = MaterialTheme.typography.titleMedium.copy(
                         fontWeight = FontWeight.Bold,
-                        fontSize = if (isWide && screenHeightDp < 520.dp) 17.sp else 19.sp
+                        fontSize = if (isWide && screenHeightDp < 520.dp) 16.sp else 18.sp
                     ),
-                    textAlign = TextAlign.Justify,
+                    textAlign = TextAlign.Start,
                     color = MaterialTheme.colorScheme.onBackground,
                     modifier = Modifier
                         .widthIn(max = if (isWide) 680.dp else 520.dp)
-                        .padding(bottom = if (isWide) 20.dp else 32.dp)
+                        .fillMaxWidth()
+                        .padding(bottom = 16.dp)
                 )
+
+                // Educational and Action Steps
+                val cardWidth = if (isWide) Modifier.widthIn(min = 280.dp, max = 340.dp) else Modifier.fillMaxWidth()
 
                 if (isWide) {
                     @OptIn(androidx.compose.foundation.layout.ExperimentalLayoutApi::class)
@@ -129,29 +143,29 @@ fun OnboardingScreen(
                         verticalArrangement = Arrangement.spacedBy(16.dp)
                     ) {
                         OnboardingStepCard(
-                            modifier = Modifier.widthIn(min = 280.dp, max = 340.dp),
+                            modifier = cardWidth,
+                            icon = { Icon(Icons.Default.MenuBook, null, tint = MaterialTheme.colorScheme.primary) },
+                            title = "1. تحميل وتصفح الكتب:",
+                            description = "اضغط على أي كتاب أو ملزمة لبدء تنزيلها مباشرة. بمجرد اكتمال التنزيل، ستفتح فوراً وتصبح متاحة أوفلاين في هاتفك بدون أي إنترنت.",
+                            buttonText = null,
+                            onClick = null
+                        )
+                        OnboardingStepCard(
+                            modifier = cardWidth,
                             icon = { Icon(Icons.Default.NotificationsActive, null, tint = MaterialTheme.colorScheme.primary) },
-                            title = "1. إشعارات النظام:",
-                            description = "لتبقى على اطلاع بآخر التحديثات والتنبيهات.",
+                            title = "2. إشعارات الكتب والتحديثات:",
+                            description = "فعّل الإشعارات لتصلك تنبيهات الملازم الجديدة، الأخبار الوزارية، والنتائج فور صدورها.",
                             buttonText = "تفعيل الإشعارات",
                             onClick = { platformActionHandler.requestNotificationPermission() }
                         )
                         OnboardingStepCard(
-                            modifier = Modifier.widthIn(min = 280.dp, max = 340.dp),
-                            icon = { Icon(Icons.Default.Security, null, tint = MaterialTheme.colorScheme.error) },
-                            title = "2. منع إيقاف نشاط التطبيق:",
-                            description = "تنبيه هام: يُرجى الانتقال للإعدادات وإيقاف خيار \"إيقاف مؤقت لنشاط التطبيق في حال عدم استخدامه\" لضمان استمرار الخدمة في الخلفية.",
-                            buttonText = "فتح إعدادات التطبيق",
-                            onClick = { platformActionHandler.requestAutoRevokeExemption() }
-                        )
-                        OnboardingStepCard(
-                            modifier = Modifier.widthIn(min = 280.dp, max = 340.dp),
-                            icon = { Icon(Icons.Default.BatteryAlert, null, tint = MaterialTheme.colorScheme.primary) },
-                            title = "3. تخطي خمول البطارية:",
-                            description = "استثناء التطبيق من قيود توفير الطاقة لضمان المزامنة.",
-                            buttonText = "تفعيل الآن",
+                            modifier = cardWidth,
+                            icon = { Icon(Icons.Default.BatteryAlert, null, tint = MaterialTheme.colorScheme.secondary) },
+                            title = "3. استقرار التنزيل (اختياري):",
+                            description = "تخطي قيود البطارية لضمان استمرار تحميل الكتب والملازم في الخلفية حتى عند قفل الشاشة.",
+                            buttonText = "ضبط البطارية",
                             onClick = {
-                                platformActionHandler.showToast("يرجى اختيار 'بدون قيود' أو 'عدم التحسين' لضمان عمل التطبيق في الخلفية")
+                                platformActionHandler.showToast("يرجى اختيار 'بدون قيود' لضمان التحميل عند قفل الشاشة")
                                 platformActionHandler.requestBatteryOptimizationExemption()
                             }
                         )
@@ -159,32 +173,32 @@ fun OnboardingScreen(
                 } else {
                     Column(
                         modifier = Modifier.widthIn(max = 520.dp).fillMaxWidth(),
-                        verticalArrangement = Arrangement.spacedBy(16.dp)
+                        verticalArrangement = Arrangement.spacedBy(14.dp)
                     ) {
                         OnboardingStepCard(
-                            modifier = Modifier.fillMaxWidth(),
+                            modifier = cardWidth,
+                            icon = { Icon(Icons.Default.MenuBook, null, tint = MaterialTheme.colorScheme.primary) },
+                            title = "1. تحميل وتصفح الكتب:",
+                            description = "اضغط على أي كتاب أو ملزمة لبدء تنزيلها مباشرة. بمجرد اكتمال التنزيل، ستفتح فوراً وتصبح متاحة أوفلاين في هاتفك بدون أي إنترنت.",
+                            buttonText = null,
+                            onClick = null
+                        )
+                        OnboardingStepCard(
+                            modifier = cardWidth,
                             icon = { Icon(Icons.Default.NotificationsActive, null, tint = MaterialTheme.colorScheme.primary) },
-                            title = "1. إشعارات النظام:",
-                            description = "لتبقى على اطلاع بآخر التحديثات والتنبيهات.",
+                            title = "2. إشعارات الكتب والتحديثات:",
+                            description = "فعّل الإشعارات لتصلك تنبيهات الملازم الجديدة، الأخبار الوزارية، والنتائج فور صدورها.",
                             buttonText = "تفعيل الإشعارات",
                             onClick = { platformActionHandler.requestNotificationPermission() }
                         )
                         OnboardingStepCard(
-                            modifier = Modifier.fillMaxWidth(),
-                            icon = { Icon(Icons.Default.Security, null, tint = MaterialTheme.colorScheme.error) },
-                            title = "2. منع إيقاف نشاط التطبيق:",
-                            description = "تنبيه هام: يُرجى الانتقال للإعدادات وإيقاف خيار \"إيقاف مؤقت لنشاط التطبيق في حال عدم استخدامه\" لضمان استمرار الخدمة في الخلفية.",
-                            buttonText = "فتح إعدادات التطبيق",
-                            onClick = { platformActionHandler.requestAutoRevokeExemption() }
-                        )
-                        OnboardingStepCard(
-                            modifier = Modifier.fillMaxWidth(),
-                            icon = { Icon(Icons.Default.BatteryAlert, null, tint = MaterialTheme.colorScheme.primary) },
-                            title = "3. تخطي خمول البطارية:",
-                            description = "استثناء التطبيق من قيود توفير الطاقة لضمان المزامنة.",
-                            buttonText = "تفعيل الآن",
+                            modifier = cardWidth,
+                            icon = { Icon(Icons.Default.BatteryAlert, null, tint = MaterialTheme.colorScheme.secondary) },
+                            title = "3. استقرار التنزيل (اختياري):",
+                            description = "تخطي قيود البطارية لضمان استمرار تحميل الكتب والملازم في الخلفية حتى عند قفل الشاشة.",
+                            buttonText = "ضبط البطارية",
                             onClick = {
-                                platformActionHandler.showToast("يرجى اختيار 'بدون قيود' أو 'عدم التحسين' لضمان عمل التطبيق في الخلفية")
+                                platformActionHandler.showToast("يرجى اختيار 'بدون قيود' لضمان التحميل عند قفل الشاشة")
                                 platformActionHandler.requestBatteryOptimizationExemption()
                             }
                         )
@@ -192,12 +206,12 @@ fun OnboardingScreen(
                 }
                 
                 Spacer(modifier = Modifier.height(32.dp))
-                // Extra space so the user can scroll past the floating button
-                Spacer(modifier = Modifier.height(140.dp))
+                // Extra space for bottom button clearance
+                Spacer(modifier = Modifier.height(130.dp))
             }
         }
 
-        // Bottom Continue Button with soft progressive fade
+        // Bottom Continue Button (Completely unblocked)
         Box(
             modifier = Modifier
                 .fillMaxWidth()
@@ -207,39 +221,27 @@ fun OnboardingScreen(
                         colors = listOf(
                             Color.Transparent,
                             MaterialTheme.colorScheme.background.copy(alpha = 0.5f),
-                            MaterialTheme.colorScheme.background.copy(alpha = 0.9f),
+                            MaterialTheme.colorScheme.background.copy(alpha = 0.95f),
                             MaterialTheme.colorScheme.background
                         )
                     )
                 )
                 .navigationBarsPadding()
                 .windowInsetsPadding(WindowInsets.safeDrawing.only(WindowInsetsSides.Horizontal))
-                .padding(top = 48.dp, bottom = 24.dp, start = 24.dp, end = 24.dp),
+                .padding(top = 40.dp, bottom = 24.dp, start = 24.dp, end = 24.dp),
             contentAlignment = Alignment.Center
         ) {
             Button(
-                onClick = {
-                    val enabledCount = listOf(
-                        platformActionHandler.areNotificationsEnabled(),
-                        platformActionHandler.isBatteryOptimizationIgnored(),
-                        platformActionHandler.isAutoRevokeWhitelisted()
-                    ).count { it }
-
-                    if (enabledCount >= 2) {
-                        onComplete()
-                    } else {
-                        platformActionHandler.showToast("يرجى تفعيل صلاحيتين على الأقل للمتابعة")
-                    }
-                },
+                onClick = { onComplete() },
                 modifier = Modifier
                     .widthIn(max = 400.dp)
                     .fillMaxWidth()
-                    .height(64.dp),
-                shape = RoundedCornerShape(50), // Oval
+                    .height(60.dp),
+                shape = RoundedCornerShape(50),
                 elevation = ButtonDefaults.buttonElevation(
-                    defaultElevation = 8.dp,
-                    pressedElevation = 4.dp,
-                    hoveredElevation = 10.dp
+                    defaultElevation = 6.dp,
+                    pressedElevation = 2.dp,
+                    hoveredElevation = 8.dp
                 ),
                 colors = ButtonDefaults.buttonColors(
                     containerColor = MaterialTheme.colorScheme.primary,
@@ -247,8 +249,8 @@ fun OnboardingScreen(
                 )
             ) {
                 Text(
-                    text = "متابعة للتطبيق",
-                    fontSize = 20.sp,
+                    text = "متابعة إلى التطبيق",
+                    fontSize = 19.sp,
                     fontWeight = FontWeight.Bold
                 )
             }
@@ -262,55 +264,77 @@ fun OnboardingStepCard(
     icon: @Composable () -> Unit,
     title: String,
     description: String,
-    buttonText: String,
-    onClick: () -> Unit
+    buttonText: String?,
+    onClick: (() -> Unit)?
 ) {
     Card(
-        modifier = modifier
-            .fillMaxWidth()
-            .padding(bottom = 16.dp),
-        shape = RoundedCornerShape(16.dp),
+        modifier = modifier,
+        shape = RoundedCornerShape(20.dp),
         colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
+            containerColor = MaterialTheme.colorScheme.surfaceContainerHigh
+        ),
+        elevation = CardDefaults.cardElevation(2.dp),
+        border = androidx.compose.foundation.BorderStroke(
+            width = 1.dp,
+            color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f)
         )
     ) {
         Column(
-            modifier = Modifier.padding(16.dp),
-            horizontalAlignment = Alignment.CenterHorizontally
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(20.dp),
+            verticalArrangement = Arrangement.spacedBy(10.dp)
         ) {
             Row(
                 verticalAlignment = Alignment.CenterVertically,
-                modifier = Modifier.fillMaxWidth()
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                icon()
-                Spacer(modifier = Modifier.width(8.dp))
+                Box(
+                    modifier = Modifier
+                        .size(44.dp)
+                        .clip(CircleShape)
+                        .background(MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.6f)),
+                    contentAlignment = Alignment.Center
+                ) {
+                    icon()
+                }
                 Text(
                     text = title,
                     style = MaterialTheme.typography.titleMedium.copy(
                         fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.onSurface
-                    )
+                        fontSize = 16.sp
+                    ),
+                    color = MaterialTheme.colorScheme.onSurface
                 )
             }
-            Spacer(modifier = Modifier.height(8.dp))
+
             Text(
                 text = description,
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                textAlign = TextAlign.Justify,
-                modifier = Modifier.fillMaxWidth()
-            )
-            Spacer(modifier = Modifier.height(16.dp))
-            Button(
-                onClick = onClick,
-                modifier = Modifier.fillMaxWidth(),
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = MaterialTheme.colorScheme.secondaryContainer,
-                    contentColor = MaterialTheme.colorScheme.onSecondaryContainer
+                style = MaterialTheme.typography.bodyMedium.copy(
+                    fontSize = 13.5.sp,
+                    lineHeight = 20.sp
                 ),
-                shape = RoundedCornerShape(12.dp)
-            ) {
-                Text(text = buttonText, fontWeight = FontWeight.Bold)
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+
+            if (buttonText != null && onClick != null) {
+                Button(
+                    onClick = onClick,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(top = 4.dp),
+                    shape = RoundedCornerShape(12.dp),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = MaterialTheme.colorScheme.secondaryContainer,
+                        contentColor = MaterialTheme.colorScheme.onSecondaryContainer
+                    )
+                ) {
+                    Text(
+                        text = buttonText,
+                        fontSize = 14.sp,
+                        fontWeight = FontWeight.SemiBold
+                    )
+                }
             }
         }
     }

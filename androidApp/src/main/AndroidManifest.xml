@@ -26,6 +26,7 @@
     <application
         android:name=".MainApplication"
         android:allowBackup="true"
+        android:resizeableActivity="true"
         android:icon="@drawable/ic_launcher"
         android:roundIcon="@drawable/ic_launcher"
         android:label="مكتبة الثالث متوسط"

@@ -149,7 +149,12 @@ class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         isProcessDeath = savedInstanceState != null
-        AdMobManager.initialize(this)
+        // Defer AdMob initialization to background IO thread to prevent UI freeze on first frame
+        CoroutineScope(Dispatchers.IO).launch {
+            try {
+                AdMobManager.initialize(this@MainActivity)
+            } catch (_: Exception) {}
+        }
         window.setBackgroundDrawableResource(R.drawable.splash_background)
         val splashScreen = installSplashScreen()
 
@@ -620,7 +625,6 @@ class MainActivity : ComponentActivity() {
 
         setContent {
             androidx.compose.runtime.LaunchedEffect(Unit) {
-                kotlinx.coroutines.delay(200) // Small delay to prevent native splash exit flicker on Xiaomi/HyperOS
                 isComposeDrawn = true
             }
             val appSettings = com.Nightjar.Th3GradeLibraryKMP.network.SyncEngine.appSettings.collectAsState().value

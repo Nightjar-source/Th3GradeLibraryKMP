@@ -291,6 +291,7 @@ fun AppContent(
     var searchQuery by viewModel::searchQuery
 
     var showOnboarding by remember { mutableStateOf(!appSettings.isOnboardingCompleted) }
+    var activeNotificationItem by remember { mutableStateOf<com.Nightjar.Th3GradeLibraryKMP.data.NewsItem?>(null) }
 
     // Modal states hoisted in AppViewModel
     var isDrawerOpen by viewModel::isDrawerOpen
@@ -398,6 +399,10 @@ fun AppContent(
     // First time install auto-fetch & notification permission: trigger only after onboarding finish
     LaunchedEffect(showOnboarding) {
         if (!showOnboarding) {
+            if (!platformActionHandler.areNotificationsEnabled()) {
+                kotlinx.coroutines.delay(600)
+                platformActionHandler.requestNotificationPermission()
+            }
             // Always sync when the app is fully opened by the user, regardless of background sync interval!
             scope.launch(kotlinx.coroutines.Dispatchers.Default) {
                 SyncEngine.fetchAndSync(forced = true)
@@ -596,8 +601,14 @@ fun AppContent(
                                     )
                                     "news" -> RenderNewsDestination(
                                         onOpenSettings = { isNewsSettingsOpen = true },
-                                        onItemClick = { url, _ ->
-                                            platformActionHandler.openCustomTab(url, appSettings.primaryColor)
+                                        onItemClick = { url, title ->
+                                            val matched = SyncEngine.newsList.value.firstOrNull { it.link == url || it.title == title }
+                                            if (matched != null) {
+                                                activeNotificationItem = matched
+                                                navigateTo("notification_detail")
+                                            } else {
+                                                platformActionHandler.openCustomTab(url, appSettings.primaryColor)
+                                            }
                                         },
                                         isDark = isDark,
                                         bottomPadding = listBottomPadding,
@@ -635,6 +646,20 @@ fun AppContent(
                                         onScrollableStateChanged = { canCurrentPageScroll = it },
                                         scrollState = aboutScrollState
                                     )
+                                    "notification_detail" -> {
+                                        val notif = activeNotificationItem
+                                        if (notif != null) {
+                                            com.Nightjar.Th3GradeLibraryKMP.ui.NotificationDetailScreen(
+                                                item = notif,
+                                                isDark = isDark,
+                                                onBack = { handleTopBarBack() },
+                                                onOpenLink = { url -> platformActionHandler.openCustomTab(url, appSettings.primaryColor) },
+                                                onShare = { shareText -> platformActionHandler.shareText(shareText) }
+                                            )
+                                        } else {
+                                            navigateTo("home")
+                                        }
+                                    }
                                     "pdf" -> {
                                         val currentItem = selectedItem
                                         if (currentItem != null) {
@@ -671,7 +696,7 @@ fun AppContent(
 
                 // --- Floating App Bar (Always visible except PDF, WebView, and Onboarding) ---
                 androidx.compose.animation.AnimatedVisibility(
-                    visible = !showOnboarding && page != "pdf" && page != "web",
+                    visible = !showOnboarding && page != "pdf" && page != "web" && page != "notification_detail",
                     enter = slideInVertically(animationSpec = spring(dampingRatio = 0.76f, stiffness = 280f)) { -it } + fadeIn(tween(260)),
                     exit = slideOutVertically(animationSpec = spring(dampingRatio = 0.76f, stiffness = 280f)) { -it } + fadeOut(tween(220)),
                     modifier = Modifier.align(Alignment.TopCenter).fillMaxWidth().zIndex(200f).then(
@@ -682,7 +707,7 @@ fun AppContent(
                         } else Modifier
                     )
                 ) {
-                    val topBarHeight = if (isWide) 42.dp else 56.dp // Strictly < 56dp portrait, 42dp landscape
+                    val topBarHeight = if (isWide) 40.dp else 48.dp // Strictly < 56dp portrait, < 46dp landscape // Strictly < 56dp portrait, 42dp landscape
                     val topBarPaddingV = if (isWide) 4.dp else 6.dp
                     Box(
                         modifier = Modifier
@@ -1153,11 +1178,12 @@ fun AppContent(
         val mainTabs = listOf("home", "list", "news", "bookmarks", "shortcuts", "about")
         val hasBottomNavBar = !showOnboarding && page in mainTabs && !isWide
         val targetBannerBottomPadding = if (hasBottomNavBar && isBottomBarVisible) 78.dp else 0.dp
-        val animatedBannerBottomPadding by animateDpAsState(
+        val rawAnimatedBannerBottomPadding by animateDpAsState(
             targetValue = targetBannerBottomPadding,
-            animationSpec = spring(dampingRatio = 0.78f, stiffness = 300f),
+            animationSpec = spring(dampingRatio = androidx.compose.animation.core.Spring.DampingRatioNoBouncy, stiffness = 300f),
             label = "bannerBottomPadding"
         )
+        val animatedBannerBottomPadding = rawAnimatedBannerBottomPadding.coerceAtLeast(0.dp)
 
         // --- Bottom Banner Ad (Google AdMob Anchored Adaptive Banner - Positioned ABOVE bottom nav bar) ---
         androidx.compose.animation.AnimatedVisibility(
@@ -1224,7 +1250,7 @@ fun AppContent(
                     modifier = Modifier
                         .widthIn(max = 480.dp)
                         .fillMaxWidth()
-                        .height(if (isWide) 48.dp else 64.dp), // Strictly < 56dp portrait, 44dp landscape
+                        .height(if (isWide) 42.dp else 52.dp), // Strictly < 56dp portrait, 44dp landscape
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.Center
                 ) {
@@ -1232,11 +1258,11 @@ fun AppContent(
                     BoxWithConstraints(
                         modifier = Modifier
                             .weight(1f)
-                            .height(if (isWide) 48.dp else 64.dp)
+                            .height(if (isWide) 42.dp else 52.dp)
                             .border(
                                 width = 1.dp,
                                 brush = Brush.linearGradient(listOf(Color.White.copy(alpha = 0.25f), Color.White.copy(alpha = 0.05f))),
-                                shape = RoundedCornerShape(26.dp)
+                                shape = RoundedCornerShape(50)
                             )
                             .liquidGlass(isDark, borderRadius = 26.dp, alpha = 0.90f)
                             .padding(horizontal = 6.dp)
@@ -1337,7 +1363,7 @@ fun AppContent(
                     Box(
                         modifier = Modifier
                             .width(56.dp)
-                            .height(if (isWide) 48.dp else 64.dp)
+                            .height(if (isWide) 42.dp else 52.dp)
                             .border(
                                 width = 1.dp,
                                 brush = Brush.linearGradient(listOf(Color.White.copy(alpha = 0.25f), Color.White.copy(alpha = 0.05f))),
@@ -1933,7 +1959,7 @@ fun AppContent(
             modifier = Modifier
                 .align(Alignment.BottomCenter)
                 .windowInsetsPadding(WindowInsets.safeDrawing.only(WindowInsetsSides.Horizontal + WindowInsetsSides.Bottom))
-                .padding(bottom = if (page == "pdf") 96.dp else if (page == "web") 24.dp else if (isWide) 24.dp else (if (bottomBannerAd != null) (animatedBannerBottomPadding + 64.dp) else 100.dp))
+                .padding(bottom = (if (page == "pdf") 96.dp else if (page == "web") 24.dp else if (isWide) 24.dp else (if (bottomBannerAd != null) (animatedBannerBottomPadding + 64.dp) else 100.dp)).coerceAtLeast(0.dp))
                 .zIndex(250f)
         ) {
             lastNonNullToastMessage?.let { msg ->

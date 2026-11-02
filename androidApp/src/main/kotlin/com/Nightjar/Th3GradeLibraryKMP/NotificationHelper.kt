@@ -76,6 +76,7 @@ object NotificationHelper {
     fun showNotifications(context: Context, titles: List<String>, count: Int, withSound: Boolean) {
         ensureNotificationChannels(context)
         if (!NotificationManagerCompat.from(context).areNotificationsEnabled()) return
+        if (titles.isEmpty()) return
 
         val openIntent = PendingIntent.getActivity(
             context,
@@ -90,55 +91,39 @@ object NotificationHelper {
         val targetChannelId = if (withSound) CHANNEL_SOUND_ID else CHANNEL_SILENT_ID
         val soundUri = if (withSound) getCustomSoundUri(context) else null
 
-        titles.take(5).forEachIndexed { index, title ->
-            val notif = NotificationCompat.Builder(context, targetChannelId)
-                .setSmallIcon(R.drawable.ic_notification)
-                .setContentTitle(title) // Bold title when collapsed
-                .setStyle(NotificationCompat.BigTextStyle()
-                    .setBigContentTitle("") // Hide bold title when expanded to prevent duplication
-                    .bigText(title)         // Show full title as text when expanded
-                )
-                .setSilent(!withSound) // Ensure it is silent if withSound is false
-                .setPriority(NotificationCompat.PRIORITY_HIGH) // Always High for heads up!
-                .setContentIntent(openIntent)
-                .setAutoCancel(true)
-                .setGroup("news_group")
-                .apply { if (soundUri != null) setSound(soundUri) else setSilent(true) }
-                .build()
+        // Unified Single Bundled Notification: lists items from newest to oldest
+        val displayCount = if (count > 0) count else titles.size
+        val mainTitle = if (displayCount == 1) titles.first() else "مكتبة الثالث متوسط: تم نشر $displayCount أخبار جديدة"
+        val collapsedSummary = if (displayCount == 1) titles.first() else titles.take(3).joinToString(" • ")
 
-            try {
-                NotificationManagerCompat.from(context).notify(index + 1, notif)
-            } catch (e: SecurityException) {
-                e.printStackTrace()
-            }
+        val inboxStyle = NotificationCompat.InboxStyle().apply {
+            setBigContentTitle(mainTitle)
+            setSummaryText("آخر التحديثات الوزارية")
+            // Add lines from newest to oldest
+            titles.take(6).forEach { addLine("• $it") }
         }
 
-        if (count > 1) {
-            val collapsedText = titles.take(3).joinToString("، ") + if (titles.size > 3) "..." else ""
-            val summary = NotificationCompat.Builder(context, targetChannelId)
-                .setSmallIcon(R.drawable.ic_notification)
-                .setContentTitle("أخبار جديدة ($count)")
-                .setContentText(collapsedText) // Show titles comma separated before expanding
-                .setStyle(
-                    NotificationCompat.InboxStyle()
-                        .setSummaryText("آخر الأخبار")
-                        .also { style ->
-                            titles.take(5).forEach { style.addLine(it) }
-                        }
-                )
-                .setPriority(NotificationCompat.PRIORITY_HIGH) // Always High for heads up!
-                .setContentIntent(openIntent)
-                .setAutoCancel(true)
-                .setGroup("news_group")
-                .setGroupSummary(true)
-                .setSilent(true)
-                .build()
-
-            try {
-                NotificationManagerCompat.from(context).notify(SUMMARY_NOTIFICATION_ID, summary)
-            } catch (e: SecurityException) {
-                e.printStackTrace()
+        val builder = NotificationCompat.Builder(context, targetChannelId)
+            .setSmallIcon(R.drawable.ic_notification)
+            .setContentTitle(mainTitle)
+            .setContentText(collapsedSummary)
+            .setStyle(inboxStyle)
+            .setPriority(NotificationCompat.PRIORITY_HIGH)
+            .setContentIntent(openIntent)
+            .setAutoCancel(true)
+            .apply {
+                if (withSound && soundUri != null) {
+                    setSound(soundUri)
+                } else {
+                    setSilent(true)
+                }
             }
+
+        try {
+            // Use SUMMARY_NOTIFICATION_ID so all updates overwrite cleanly into ONE notification
+            NotificationManagerCompat.from(context).notify(SUMMARY_NOTIFICATION_ID, builder.build())
+        } catch (e: SecurityException) {
+            e.printStackTrace()
         }
     }
 }
