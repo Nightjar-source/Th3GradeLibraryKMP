@@ -653,8 +653,8 @@ fun AppContent(
                                                 item = notif,
                                                 isDark = isDark,
                                                 onBack = { handleTopBarBack() },
-                                                onOpenLink = { url -> platformActionHandler.openCustomTab(url, appSettings.primaryColor) },
-                                                onShare = { shareText -> platformActionHandler.shareText(shareText) }
+                                                onOpenLink = { url: String -> platformActionHandler.openCustomTab(url, appSettings.primaryColor) },
+                                                onShare = { shareText: String -> platformActionHandler.shareText(shareText) }
                                             )
                                         } else {
                                             navigateTo("home")
