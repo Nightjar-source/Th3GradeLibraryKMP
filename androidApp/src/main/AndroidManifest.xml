@@ -42,6 +42,17 @@
             android:name="com.google.android.gms.ads.APPLICATION_ID"
             android:value="ca-app-pub-3940256099942544~3347511713"/>
 
+        <!-- Official Firebase Default Notification Styling -->
+        <meta-data
+            android:name="com.google.firebase.messaging.default_notification_icon"
+            android:resource="@drawable/ic_notification" />
+        <meta-data
+            android:name="com.google.firebase.messaging.default_notification_color"
+            android:resource="@color/notification_color" />
+        <meta-data
+            android:name="com.google.firebase.messaging.default_notification_channel_id"
+            android:value="news_sync_channel_sound_v2" />
+
         <activity
             android:name=".MainActivity" 
             android:exported="true"
@@ -52,10 +63,8 @@
             android:theme="@style/Theme.App.Starting">
             <!-- Official Android Desktop Windowing Support (Pixel Tablet, Samsung DeX, ChromeOS) -->
             <layout
-                android:defaultWidth="960dp"
-                android:defaultHeight="700dp"
-                android:minWidth="260dp"
-                android:minHeight="260dp" />
+                android:minWidth="100dp"
+                android:minHeight="100dp" />
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />

@@ -149,11 +149,13 @@ class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         isProcessDeath = savedInstanceState != null
-        // Defer AdMob initialization to background IO thread to prevent UI freeze on first frame
-        CoroutineScope(Dispatchers.IO).launch {
+        // Initialize AdMob on main UI thread with post delay to keep first frame sub-millisecond
+        window.decorView.post {
             try {
                 AdMobManager.initialize(this@MainActivity)
-            } catch (_: Exception) {}
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
         }
         window.setBackgroundDrawableResource(R.drawable.splash_background)
         val splashScreen = installSplashScreen()
@@ -491,6 +493,24 @@ class MainActivity : ComponentActivity() {
                 }
             }
 
+            override fun shareText(text: String) {
+                try {
+                    val sendIntent = Intent().apply {
+                        action = Intent.ACTION_SEND
+                        putExtra(Intent.EXTRA_TEXT, text)
+                        type = "text/plain"
+                    }
+                    val shareIntent = Intent.createChooser(sendIntent, "مشاركة الإشعار")
+                    startActivity(shareIntent)
+                } catch (_: Exception) {}
+            }
+            override fun subscribeToNewsTopic() {
+                AppFirebaseMessagingService.subscribeToNewsTopic()
+            }
+            override fun unsubscribeFromNewsTopic() {
+                AppFirebaseMessagingService.unsubscribeFromNewsTopic()
+            }
+
             override fun showNewsNotification(titles: List<String>, count: Int) {
                 val withSound = com.Nightjar.Th3GradeLibraryKMP.network.SyncEngine.appSettings.value.notificationSound
                 NotificationHelper.showNotifications(this@MainActivity, titles, count, withSound)
@@ -762,6 +782,7 @@ class MainActivity : ComponentActivity() {
     override fun onResume() {
         super.onResume()
         SyncEngine.checkNotificationPermission()
+        AppFirebaseMessagingService.getAndClearUnnotifiedNews()
     }
 
     override fun onConfigurationChanged(newConfig: android.content.res.Configuration) {

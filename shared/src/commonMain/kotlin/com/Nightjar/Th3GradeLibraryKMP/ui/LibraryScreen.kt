@@ -348,56 +348,119 @@ fun LibraryScreen(
         }
     }
 
-        // Floating Alert Notification Banner for Cloud Downloads (Disappears automatically)
+        // Floating Alert Dynamic Island Capsule for Cloud Downloads
         val activeNotice by com.Nightjar.Th3GradeLibraryKMP.network.BookDownloadManager.activeNoticeMessage.collectAsState()
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(top = dynamicTopPadding + 6.dp)
+                .padding(top = dynamicTopPadding + 8.dp)
                 .zIndex(300f),
             contentAlignment = Alignment.TopCenter
         ) {
             androidx.compose.animation.AnimatedVisibility(
                 visible = activeNotice != null,
                 enter = slideInVertically(
-                    initialOffsetY = { -it },
-                    animationSpec = spring(dampingRatio = androidx.compose.animation.core.Spring.DampingRatioNoBouncy, stiffness = 320f)
-                ) + fadeIn(tween(220)),
+                    initialOffsetY = { -it / 2 },
+                    animationSpec = spring(dampingRatio = Spring.DampingRatioLowBouncy, stiffness = 380f)
+                ) + expandVertically(expandFrom = Alignment.Top) + fadeIn(tween(220)),
                 exit = slideOutVertically(
-                    targetOffsetY = { -it },
-                    animationSpec = spring(dampingRatio = androidx.compose.animation.core.Spring.DampingRatioNoBouncy, stiffness = 320f)
-                ) + fadeOut(tween(180))
+                    targetOffsetY = { -it / 2 },
+                    animationSpec = spring(dampingRatio = Spring.DampingRatioNoBouncy, stiffness = 420f)
+                ) + shrinkVertically(shrinkTowards = Alignment.Top) + fadeOut(tween(180))
             ) {
+                val noticeText = activeNotice ?: ""
+                val isDownloading = noticeText.contains("%") || noticeText.contains("جاري تنزيل") || noticeText.contains("جاري تحميل")
+                val isCompleted = noticeText.contains("اكتمل") || noticeText.contains("✓")
+                val isPaused = noticeText.contains("إيقاف") || noticeText.contains("مؤقتاً")
+
                 Surface(
-                    shape = CircleShape,
-                    color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.96f),
-                    tonalElevation = 8.dp,
-                    shadowElevation = 10.dp,
+                    shape = RoundedCornerShape(26.dp),
+                    color = MaterialTheme.colorScheme.surfaceColorAtElevation(6.dp).copy(alpha = 0.96f),
+                    tonalElevation = 10.dp,
+                    shadowElevation = 12.dp,
                     modifier = Modifier
-                        .widthIn(max = 460.dp)
+                        .widthIn(min = 180.dp, max = 460.dp)
                         .padding(horizontal = 16.dp)
-                        .border(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.4f), CircleShape)
+                        .border(
+                            width = 1.dp,
+                            color = when {
+                                isCompleted -> Color(0xFF10B981).copy(alpha = 0.55f)
+                                isPaused -> Color(0xFFF59E0B).copy(alpha = 0.55f)
+                                else -> MaterialTheme.colorScheme.primary.copy(alpha = 0.45f)
+                            },
+                            shape = RoundedCornerShape(26.dp)
+                        )
                 ) {
                     Row(
-                        modifier = Modifier.padding(horizontal = 18.dp, vertical = 9.dp),
+                        modifier = Modifier
+                            .animateContentSize(
+                                animationSpec = spring(
+                                    dampingRatio = Spring.DampingRatioLowBouncy,
+                                    stiffness = Spring.StiffnessMediumLow
+                                )
+                            )
+                            .padding(horizontal = 16.dp, vertical = 9.dp),
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.Center
                     ) {
-                        Icon(
-                            imageVector = Icons.Default.CloudDownload,
-                            contentDescription = null,
-                            tint = MaterialTheme.colorScheme.onPrimaryContainer,
-                            modifier = Modifier.size(18.dp)
-                        )
-                        Spacer(modifier = Modifier.width(8.dp))
+                        // Leading Status Icon / Mini Progress Ring
+                        if (isCompleted) {
+                            Icon(
+                                imageVector = Icons.Default.CheckCircle,
+                                contentDescription = null,
+                                tint = Color(0xFF10B981),
+                                modifier = Modifier.size(19.dp)
+                            )
+                        } else if (isPaused) {
+                            Icon(
+                                imageVector = Icons.Default.PauseCircle,
+                                contentDescription = null,
+                                tint = Color(0xFFF59E0B),
+                                modifier = Modifier.size(19.dp)
+                            )
+                        } else if (isDownloading) {
+                            CircularProgressIndicator(
+                                strokeWidth = 2.4.dp,
+                                color = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.size(18.dp)
+                            )
+                        } else {
+                            Icon(
+                                imageVector = Icons.Default.CloudDownload,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.size(19.dp)
+                            )
+                        }
+
+                        Spacer(modifier = Modifier.width(10.dp))
+
                         Text(
-                            text = activeNotice ?: "",
+                            text = noticeText,
                             fontSize = 12.5.sp,
                             fontWeight = FontWeight.SemiBold,
-                            color = MaterialTheme.colorScheme.onPrimaryContainer,
+                            color = MaterialTheme.colorScheme.onSurface,
                             maxLines = 2,
-                            overflow = TextOverflow.Ellipsis
+                            overflow = TextOverflow.Ellipsis,
+                            modifier = Modifier.weight(1f, fill = false)
                         )
+
+                        Spacer(modifier = Modifier.width(8.dp))
+
+                        // Trailing Dismiss / Cancel Action
+                        IconButton(
+                            onClick = {
+                                com.Nightjar.Th3GradeLibraryKMP.network.BookDownloadManager.cancelAll()
+                            },
+                            modifier = Modifier.size(24.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Close,
+                                contentDescription = "إلغاء",
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.75f),
+                                modifier = Modifier.size(15.dp)
+                            )
+                        }
                     }
                 }
             }

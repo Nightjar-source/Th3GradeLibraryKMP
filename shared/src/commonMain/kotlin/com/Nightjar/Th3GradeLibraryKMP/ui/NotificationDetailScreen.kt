@@ -124,7 +124,7 @@ fun NotificationDetailScreen(
                     // Share Icon Action
                     IconButton(
                         onClick = {
-                            val shareText = "${item.title}\n\n${item.contentSnippet}\n\n${item.link}"
+                            val shareText = "${item.title}\n\n${item.contentSnippet ?: ""}\n\n${item.link}"
                             onShare(shareText)
                         }
                     ) {
@@ -157,7 +157,7 @@ fun NotificationDetailScreen(
                 // Body Content
                 SelectionContainer {
                     Text(
-                        text = item.contentSnippet,
+                        text = item.contentSnippet ?: "",
                         style = MaterialTheme.typography.bodyLarge.copy(
                             fontSize = 16.sp,
                             lineHeight = 26.sp,

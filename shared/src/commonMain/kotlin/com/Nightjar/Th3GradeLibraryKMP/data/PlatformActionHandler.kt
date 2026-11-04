@@ -27,4 +27,7 @@ interface PlatformActionHandler {
     fun clearDiskCache() {}
     /** Dynamically updates system status bar and 3-button navigation bar icon appearance in real time */
     fun updateSystemBars(isLightStatusBars: Boolean, isLightNavigationBars: Boolean) {}
+    fun shareText(text: String) {}
+    fun subscribeToNewsTopic() {}
+    fun unsubscribeFromNewsTopic() {}
 }

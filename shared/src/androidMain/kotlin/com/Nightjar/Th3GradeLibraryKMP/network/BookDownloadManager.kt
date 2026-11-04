@@ -108,6 +108,63 @@ actual object BookDownloadManager {
         }
     }
 
+    private fun updateDynamicProgress(ctx: Context, justFinishedItem: BookItem? = null) {
+        val count = activeJobs.size
+        if (count == 0) {
+            if (justFinishedItem != null) {
+                val typeLabel = if (!justFinishedItem.isNote) "الكتاب" else "الملزمة"
+                _activeNoticeMessage.value = "اكتمل تنزيل $typeLabel: ${justFinishedItem.title} بنجاح ✓"
+                scope.launch {
+                    delay(3500)
+                    if (activeJobs.isEmpty()) _activeNoticeMessage.value = null
+                }
+            } else if (!_isBatchDownloading.value) {
+                _activeNoticeMessage.value = null
+            }
+            return
+        }
+
+        val items = activeJobs.keys.mapNotNull { activeItems[it] }
+        if (items.isEmpty()) return
+
+        if (items.size == 1) {
+            val item = items.first()
+            val state = _itemStates.value[item.id]
+            val pct = ((state?.progress ?: 0f) * 100).toInt()
+            val typeLabel = if (!item.isNote) "الكتاب" else "الملزمة"
+            _activeNoticeMessage.value = "جاري تنزيل $typeLabel: ${item.title} ($pct%)"
+
+            updateNotification(
+                ctx,
+                title = "جاري تحميل: ${item.title} ($pct%)",
+                text = "جاري التحميل بأقصى سرعة...",
+                progress = pct,
+                itemId = item.id
+            )
+        } else {
+            // Multi-download in progress (e.g. الأحياء والفيزياء)
+            val titlesWithPcts = items.map { it to (((_itemStates.value[it.id]?.progress) ?: 0f) * 100).toInt() }
+            val avgProgress = (titlesWithPcts.map { it.second }.average()).toInt()
+
+            if (items.size == 2) {
+                val (it1, pct1) = titlesWithPcts[0]
+                val (it2, pct2) = titlesWithPcts[1]
+                _activeNoticeMessage.value = "جاري تنزيل ملفين: ${it1.title} ($pct1%) • ${it2.title} ($pct2%)"
+            } else {
+                val (it1, pct1) = titlesWithPcts[0]
+                _activeNoticeMessage.value = "جاري تنزيل ${items.size} ملفات: ${it1.title} ($pct1%) و${items.size - 1} ملفات أخرى ($avgProgress%)"
+            }
+
+            updateNotification(
+                ctx,
+                title = "جاري تنزيل ${items.size} ملفات ($avgProgress%)",
+                text = items.joinToString(" • ") { "${it.title} (${((_itemStates.value[it.id]?.progress ?: 0f) * 100).toInt()}%)" },
+                progress = avgProgress,
+                itemId = null
+            )
+        }
+    }
+
     private fun ensureNotificationChannel(context: Context) {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             val channel = NotificationChannel(
@@ -241,7 +298,8 @@ actual object BookDownloadManager {
 
             try {
                 updateState(item.id, ItemDownloadState(status = DownloadStatus.DOWNLOADING, progress = 0f))
-                _activeNoticeMessage.value = "جاري التحميل من سحابة الكتب والملازم يرجى الانتظار قليلاً لأول مرة فقط ويكون كل شيء أوفلاين..."
+                val itemType = if (!item.isNote) "الكتاب" else "الملزمة"
+                _activeNoticeMessage.value = "جاري الاتصال بالسحابة لتنزيل $itemType: ${item.title}..."
 
                 val candidateUrls = CloudCatalogManager.getStreamCandidateUrls(item)
                 if (candidateUrls.isEmpty()) {
@@ -319,13 +377,7 @@ actual object BookDownloadManager {
                                                     bytesDownloaded = bytesCopied,
                                                     totalBytes = totalBytes
                                                 ))
-                                                updateNotification(
-                                                    ctx,
-                                                    title = "جاري تحميل: ${item.title} (${(progress * 100).toInt()}%)",
-                                                    text = "جاري التحميل بأقصى سرعة...",
-                                                    progress = (progress * 100).toInt(),
-                                                    itemId = item.id
-                                                )
+                                                updateDynamicProgress(ctx)
                                             }
                                         }
                                     }
@@ -338,14 +390,10 @@ actual object BookDownloadManager {
                                     }
                                     tempTarget.renameTo(permanentFile)
                                     updateState(item.id, ItemDownloadState(status = DownloadStatus.COMPLETED, progress = 1f))
-                                    updateNotification(
-                                        ctx,
-                                        title = "اكتمل تحميل: ${item.title}",
-                                        text = "أصبح الكتاب متاحاً الآن أوفلاين بدون إنترنت",
-                                        progress = 100,
-                                        itemId = item.id
-                                    )
+                                    updateState(item.id, ItemDownloadState(status = DownloadStatus.COMPLETED, progress = 1f))
                                     downloadSuccess = true
+                                    activeJobs.remove(item.id)
+                                    updateDynamicProgress(ctx, justFinishedItem = item)
                                     break@retryLoop
                                 } else {
                                     throw Exception("الملف المحمل غير مكتمل")
@@ -368,6 +416,8 @@ actual object BookDownloadManager {
                 }
 
             } catch (ce: CancellationException) {
+                val typeLabel = if (!item.isNote) "الكتاب" else "الملزمة"
+                _activeNoticeMessage.value = "تم إيقاف تنزيل $typeLabel: ${item.title} مؤقتاً"
                 updateState(item.id, ItemDownloadState(status = DownloadStatus.PAUSED))
                 updateNotification(
                     ctx,
@@ -399,8 +449,9 @@ actual object BookDownloadManager {
     }
 
     actual fun pauseDownload(item: BookItem) {
-        activeJobs[item.id]?.cancel()
+        activeJobs.remove(item.id)?.cancel()
         updateState(item.id, ItemDownloadState(status = DownloadStatus.PAUSED))
+        appContext?.let { updateDynamicProgress(it) }
     }
 
     actual fun cancelDownload(item: BookItem) {
@@ -412,10 +463,10 @@ actual object BookDownloadManager {
         if (_isBatchDownloading.value) {
             _isBatchDownloading.value = false
         }
-        _activeNoticeMessage.value = null
         appContext?.let { ctx ->
-            val nm = ctx.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+            updateDynamicProgress(ctx)
             if (activeJobs.isEmpty()) {
+                val nm = ctx.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
                 nm.cancel(NOTIFICATION_ID)
             }
         }
@@ -446,7 +497,10 @@ actual object BookDownloadManager {
                     downloadItem(ctx, item)
                     activeJobs[item.id]?.join()
                     completedCount++
-                    _batchProgress.value = (completedCount.toFloat() / totalCount.toFloat()).coerceIn(0f, 1f)
+                    val pct = (completedCount.toFloat() / totalCount.toFloat()).coerceIn(0f, 1f)
+                    _batchProgress.value = pct
+                    val pctInt = (pct * 100).toInt()
+                    _activeNoticeMessage.value = "جاري تنزيل جميع الملفات: " + pctInt + "%" 
                 }
 
                 updateNotification(

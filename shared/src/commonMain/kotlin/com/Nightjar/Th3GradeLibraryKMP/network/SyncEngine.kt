@@ -272,6 +272,11 @@ object SyncEngine {
         settings.putBoolean("isOnboardingCompleted", newSettings.isOnboardingCompleted)
         settings.putBoolean("autoDownloadOnUpdate", newSettings.autoDownloadOnUpdate)
         platformActionHandler?.rescheduleBackgroundSync()
+        if (newSettings.syncInterval == "on_open") {
+            platformActionHandler?.unsubscribeFromNewsTopic()
+        } else {
+            platformActionHandler?.subscribeToNewsTopic()
+        }
     }
 
     fun completeOnboarding() {

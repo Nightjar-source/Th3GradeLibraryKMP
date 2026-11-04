@@ -47,7 +47,8 @@ dgujgf4i2gHuo3IpvRg3ux4X
 `;
 
 // Current Active Developer Announcement
-const ACTIVE_ANNOUNCEMENT = {
+const ACTIVE_ANNOUNCEMENT = null; // Disabled - cleaned from feed
+const _DISABLED_ANNOUNCEMENT = {
   id: "dev_broadcast_v214",
   title: "📢 تنبيه من المطور: تفعيل المنظومة السحابية والتكيف الشامل",
   description: "تم تحديث تطبيق كتب وملازم الثالث متوسط ليدعم التكيف مع كافة الشاشات (الهواتف العادية، جالكسي فولد 8، النوافذ المنبثقة، والتابلت) مع مزامنة سحابية سريعة ومجانية بالكامل.",
@@ -194,7 +195,25 @@ async function handleRequest(request, event) {
     });
   }
 
-  // 5. Test Trigger FCM Endpoint (POST /trigger-push)
+    // 5. Test Trigger FCM Endpoint (POST /trigger-push)
+  if (path === "/send-test-push" || (path === "/trigger-push" && request.method === "POST")) {
+    const pushResult = await sendFcmNotification({
+      title: "وزارة التربية: إعلان نتائج الدور الثالث للصف الثالث متوسط",
+      body: "أعلنت وزارة التربية رسمياً قبل قليل نتائج الامتحانات الوزارية لطلبة الثالث متوسط 2026/2027 عبر الرابط المباشر.",
+      imageUrl: "https://images.unsplash.com/photo-1546410531-bb4caa6b424d?w=800&auto=format&fit=crop&q=80",
+      data: {
+        title: "وزارة التربية: إعلان نتائج الدور الثالث للصف الثالث متوسط",
+        link: "https://t.me/bookiraqi",
+        image_url: "https://images.unsplash.com/photo-1546410531-bb4caa6b424d?w=800&auto=format&fit=crop&q=80",
+        pubDate: new Date().toUTCString(),
+        content: "أعلنت وزارة التربية رسمياً قبل قليل نتائج الامتحانات الوزارية لطلبة الثالث متوسط 2026/2027 عبر الرابط المباشر.",
+        is_test: "true"
+      }
+    });
+    return new Response(JSON.stringify({ status: "sent", result: pushResult }), {
+      headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*" }
+    });
+  }
   if (path === "/trigger-push" && request.method === "POST") {
     const result = await handleScheduledEvent(true);
     return new Response(JSON.stringify(result), {
@@ -224,6 +243,9 @@ async function handleScheduledEvent(force = false) {
     const pubDateMatch = itemContent.match(/<pubDate>(.*?)<\/pubDate>/);
     const descMatch = itemContent.match(/<description><!\[CDATA\[(.*?)\]\]><\/description>/) || itemContent.match(/<description>(.*?)<\/description>/);
 
+    const imgMatch = itemContent.match(/<img[^>]+src=["']([^"']+)["']/i);
+    const imageUrl = imgMatch ? imgMatch[1] : "";
+
     const title = titleMatch ? titleMatch[1].trim() : "خبر دراسي جديد";
     const link = linkMatch ? linkMatch[1].trim() : "";
     const pubDate = pubDateMatch ? pubDateMatch[1].trim() : "";
@@ -236,15 +258,17 @@ async function handleScheduledEvent(force = false) {
 
     lastNotifiedGuid = guid;
 
-    // Send FCM v1 push notification
+    // Send FCM v1 pure Data-Only push (Zero WakeLock, Zero Battery, Ultra-fast delivery)
     const pushResult = await sendFcmNotification({
-      title: "أخبار الثالث متوسط",
-      body: title,
+      title: title,
+      body: snippet || "",
+      imageUrl: imageUrl || "",
       data: {
         title: title,
         link: link,
         pubDate: pubDate,
-        content: snippet
+        content: snippet || "",
+        image_url: imageUrl || ""
       }
     });
 
@@ -258,27 +282,27 @@ async function handleScheduledEvent(force = false) {
 /**
  * Sends FCM v1 notification using Google Service Account JWT signing (Web Crypto)
  */
-async function sendFcmNotification({ title, body, data }) {
+async function sendFcmNotification({ title, body, imageUrl, data }) {
   try {
     const token = await getGoogleOAuthToken();
     const endpoint = `https://fcm.googleapis.com/v1/projects/${FIREBASE_PROJECT_ID}/messages:send`;
 
+    const fcmData = Object.assign({}, data || {}, {
+      title: title || "",
+      body: body || "",
+      content: body || "",
+      image_url: imageUrl || (data && data.image_url) || ""
+    });
+
+    // Pure Data-Only FCM message:
+    // Ensures zero battery drain, zero automatic system wake-up lag,
+    // and lets Android client strictly enforce the user's sync schedule.
     const message = {
       message: {
         topic: FCM_TOPIC,
-        notification: {
-          title: title,
-          body: body
-        },
-        data: data || {},
+        data: fcmData,
         android: {
-          priority: "HIGH",
-          notification: {
-            sound: "custom_sound",
-            channel_id: "news_channel_sound",
-            default_sound: false,
-            notification_priority: "PRIORITY_MAX"
-          }
+          priority: "HIGH"
         }
       }
     };

@@ -9,8 +9,13 @@ import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.shrinkVertically
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.wrapContentHeight
+import androidx.compose.foundation.layout.height
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.Alignment
+import androidx.compose.animation.animateContentSize
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -87,15 +92,18 @@ fun AdaptiveBannerAd(
 ) {
     var isAdLoaded by remember { mutableStateOf(false) }
 
-    AnimatedVisibility(
-        visible = isAdLoaded,
-        enter = expandVertically(
-            animationSpec = spring(dampingRatio = 0.8f, stiffness = 300f)
-        ) + fadeIn(tween(250)),
-        exit = shrinkVertically() + fadeOut()
+    androidx.compose.foundation.layout.Box(
+        modifier = modifier
+            .fillMaxWidth()
+            .then(
+                if (isAdLoaded) Modifier.wrapContentHeight()
+                else Modifier.height(0.dp)
+            )
+            .animateContentSize(spring(dampingRatio = androidx.compose.animation.core.Spring.DampingRatioNoBouncy, stiffness = 300f)),
+        contentAlignment = androidx.compose.ui.Alignment.Center
     ) {
         AndroidView(
-            modifier = modifier
+            modifier = Modifier
                 .fillMaxWidth()
                 .wrapContentHeight(),
             factory = { ctx ->
@@ -103,15 +111,17 @@ fun AdaptiveBannerAd(
                     val displayMetrics = ctx.resources.displayMetrics
                     val adWidthPixels = displayMetrics.widthPixels.toFloat()
                     val density = displayMetrics.density
-                    val adWidth = (adWidthPixels / density).toInt()
+                    val adWidth = (adWidthPixels / density).toInt().coerceAtLeast(320)
                     setAdSize(AdSize.getCurrentOrientationAnchoredAdaptiveBannerAdSize(ctx, adWidth))
                     adUnitId = AdMobManager.TEST_BANNER_ID
                     adListener = object : AdListener() {
                         override fun onAdLoaded() {
+                            android.util.Log.d("AdMob", "Adaptive banner loaded successfully!")
                             isAdLoaded = true
                         }
 
                         override fun onAdFailedToLoad(error: LoadAdError) {
+                            android.util.Log.e("AdMob", "Adaptive banner failed to load: ${error.message}, code: ${error.code}")
                             isAdLoaded = false
                         }
                     }

@@ -56,11 +56,24 @@ class BackgroundSyncWorker(
                     override fun requestBatteryOptimizationExemption() {}
                     override fun canScheduleExactAlarms(): Boolean = true
                     override fun requestExactAlarmPermission() {}
+                    override fun subscribeToNewsTopic() {
+                        AppFirebaseMessagingService.subscribeToNewsTopic()
+                    }
+                    override fun unsubscribeFromNewsTopic() {
+                        AppFirebaseMessagingService.unsubscribeFromNewsTopic()
+                    }
                 }
             }
 
             // SyncEngine internally checks time intervals and sends notifications via PlatformActionHandler
             val fetchedCount = SyncEngine.fetchAndSync(forced = false)
+
+            // Deliver any accumulated silent FCM news that arrived in the quiet period
+            val pendingTitles = AppFirebaseMessagingService.getAndClearUnnotifiedNews()
+            if (fetchedCount <= 0 && pendingTitles.isNotEmpty()) {
+                val withSound = SyncEngine.appSettings.value.notificationSound
+                NotificationHelper.showNotifications(appContext, pendingTitles, pendingTitles.size, withSound)
+            }
             
             // Dead Man's Switch: If the WorkManager succeeds in running, cancel the old alarm and schedule a new one!
             // This prevents the Alarm from ever waking the device as long as WorkManager is healthy.

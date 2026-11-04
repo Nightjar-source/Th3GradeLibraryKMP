@@ -1224,7 +1224,7 @@ fun AppContent(
                 modifier = Modifier
                     .fillMaxWidth()
                     .windowInsetsPadding(WindowInsets.safeDrawing.only(WindowInsetsSides.Horizontal + WindowInsetsSides.Bottom))
-                    .offset { androidx.compose.ui.unit.IntOffset(x = 0, y = bottomBarOffsetHeightPx.roundToInt()) }
+                    .graphicsLayer { translationY = bottomBarOffsetHeightPx }
                     .padding(bottom = 12.dp, start = if (screenWidthDp < 320.dp) 6.dp else 16.dp, end = if (screenWidthDp < 320.dp) 6.dp else 16.dp),
                 contentAlignment = Alignment.Center
             ) {
