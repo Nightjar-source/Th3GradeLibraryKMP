@@ -213,7 +213,7 @@ class AppFirebaseMessagingService : FirebaseMessagingService() {
 
             val decodeOptions = BitmapFactory.Options().apply {
                 inSampleSize = inSample
-                inPreferredConfig = Bitmap.Config.RGB_565 // 50% RAM reduction
+                inPreferredConfig = Bitmap.Config.ARGB_8888 // 50% RAM reduction
             }
             val decoded = BitmapFactory.decodeByteArray(bytes, 0, bytes.size, decodeOptions) ?: return null
 

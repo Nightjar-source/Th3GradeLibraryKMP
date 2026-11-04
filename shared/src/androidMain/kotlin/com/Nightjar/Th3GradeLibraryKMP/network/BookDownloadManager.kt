@@ -484,7 +484,8 @@ actual object BookDownloadManager {
 
         if (_isBatchDownloading.value) return
         _isBatchDownloading.value = true
-        _activeNoticeMessage.value = "جاري تحميل الملفات لأول مرة وبعدها ستكون الملفات أوفلاين بدون أي إنترنت"
+        val specialTitle = "جاري تنزيل كتب وملازم الثالث متوسط الان لتكون اوف لاين بدون انترنت ..انتظر"
+        _activeNoticeMessage.value = specialTitle
 
         scope.launch {
             try {
@@ -500,13 +501,20 @@ actual object BookDownloadManager {
                     val pct = (completedCount.toFloat() / totalCount.toFloat()).coerceIn(0f, 1f)
                     _batchProgress.value = pct
                     val pctInt = (pct * 100).toInt()
-                    _activeNoticeMessage.value = "جاري تنزيل جميع الملفات: " + pctInt + "%" 
+                    _activeNoticeMessage.value = "جاري تنزيل كتب وملازم الثالث متوسط الان لتكون اوف لاين بدون انترنت ..انتظر ($pctInt%)"
+                    updateNotification(
+                        ctx,
+                        title = "جاري تنزيل كتب وملازم الثالث متوسط الان لتكون اوف لاين بدون انترنت ..انتظر",
+                        text = "جاري التنزيل: $pctInt% (مكتمل $completedCount من $totalCount)",
+                        progress = pctInt
+                    )
                 }
 
+                _activeNoticeMessage.value = "اكتملت جميع تنزيلات كتب وملازم الثالث متوسط بنجاح أوفلاين بدون إنترنت ✓"
                 updateNotification(
                     ctx,
-                    title = "اكتملت جميع التحميلات",
-                    text = "جميع الكتب والملازم الآن جاهزة أوفلاين بدون أي إنترنت!",
+                    title = "اكتملت جميع التنزيلات بنجاح",
+                    text = "جميع كتب وملازم الثالث متوسط أصبحت جاهزة الآن أوفلاين بدون إنترنت!",
                     progress = 100
                 )
             } finally {

@@ -134,6 +134,8 @@ fun OnboardingScreen(
 
                 // Educational and Action Steps
                 val cardWidth = if (isWide) Modifier.widthIn(min = 280.dp, max = 340.dp) else Modifier.fillMaxWidth()
+                val platformContext = coil3.compose.LocalPlatformContext.current
+                val isBatchDownloading by com.Nightjar.Th3GradeLibraryKMP.network.BookDownloadManager.isBatchDownloading.collectAsState()
 
                 if (isWide) {
                     @OptIn(androidx.compose.foundation.layout.ExperimentalLayoutApi::class)
@@ -146,9 +148,18 @@ fun OnboardingScreen(
                             modifier = cardWidth,
                             icon = { Icon(Icons.Default.MenuBook, null, tint = MaterialTheme.colorScheme.primary) },
                             title = "1. تحميل وتصفح الكتب:",
-                            description = "اضغط على أي كتاب أو ملزمة لبدء تنزيلها مباشرة. بمجرد اكتمال التنزيل، ستفتح فوراً وتصبح متاحة أوفلاين في هاتفك بدون أي إنترنت.",
-                            buttonText = null,
-                            onClick = null
+                            description = "اضغط على أي كتاب أو ملزمة لتنزيلها، أو حمّل كل المناهج الآن لتصفحها أوفلاين بالكامل بدون إنترنت.",
+                            buttonText = if (isBatchDownloading) "إيقاف التنزيل" else "تنزيل كل المناهج أوفلاين",
+                            onClick = {
+                                if (!isBatchDownloading) {
+                                    val all = com.Nightjar.Th3GradeLibraryKMP.data.AllItems.books + com.Nightjar.Th3GradeLibraryKMP.data.AllItems.notes
+                                    com.Nightjar.Th3GradeLibraryKMP.network.BookDownloadManager.downloadAll(platformContext, all)
+                                    platformActionHandler.showToast("بدأ تنزيل كافة كتب وملازم الثالث متوسط للعمل أوفلاين...")
+                                } else {
+                                    com.Nightjar.Th3GradeLibraryKMP.network.BookDownloadManager.cancelAll()
+                                    platformActionHandler.showToast("تم إيقاف التنزيل الجماعي")
+                                }
+                            }
                         )
                         OnboardingStepCard(
                             modifier = cardWidth,
@@ -179,9 +190,18 @@ fun OnboardingScreen(
                             modifier = cardWidth,
                             icon = { Icon(Icons.Default.MenuBook, null, tint = MaterialTheme.colorScheme.primary) },
                             title = "1. تحميل وتصفح الكتب:",
-                            description = "اضغط على أي كتاب أو ملزمة لبدء تنزيلها مباشرة. بمجرد اكتمال التنزيل، ستفتح فوراً وتصبح متاحة أوفلاين في هاتفك بدون أي إنترنت.",
-                            buttonText = null,
-                            onClick = null
+                            description = "اضغط على أي كتاب أو ملزمة لتنزيلها، أو حمّل كل المناهج الآن لتصفحها أوفلاين بالكامل بدون إنترنت.",
+                            buttonText = if (isBatchDownloading) "إيقاف التنزيل" else "تنزيل كل المناهج أوفلاين",
+                            onClick = {
+                                if (!isBatchDownloading) {
+                                    val all = com.Nightjar.Th3GradeLibraryKMP.data.AllItems.books + com.Nightjar.Th3GradeLibraryKMP.data.AllItems.notes
+                                    com.Nightjar.Th3GradeLibraryKMP.network.BookDownloadManager.downloadAll(platformContext, all)
+                                    platformActionHandler.showToast("بدأ تنزيل كافة كتب وملازم الثالث متوسط للعمل أوفلاين...")
+                                } else {
+                                    com.Nightjar.Th3GradeLibraryKMP.network.BookDownloadManager.cancelAll()
+                                    platformActionHandler.showToast("تم إيقاف التنزيل الجماعي")
+                                }
+                            }
                         )
                         OnboardingStepCard(
                             modifier = cardWidth,

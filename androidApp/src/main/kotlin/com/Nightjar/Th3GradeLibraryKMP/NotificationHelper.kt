@@ -100,7 +100,7 @@ object NotificationHelper {
 
             val decodeOptions = android.graphics.BitmapFactory.Options().apply {
                 inSampleSize = inSample
-                inPreferredConfig = Bitmap.Config.RGB_565
+                inPreferredConfig = Bitmap.Config.ARGB_8888
             }
             val decoded = android.graphics.BitmapFactory.decodeByteArray(bytes, 0, bytes.size, decodeOptions) ?: return null
 
