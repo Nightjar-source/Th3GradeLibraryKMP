@@ -348,6 +348,9 @@ fun LibraryScreen(
         }
     }
 
+    }
+}
+
 @Composable
 fun CategoryMenuCard(
     title: String,
