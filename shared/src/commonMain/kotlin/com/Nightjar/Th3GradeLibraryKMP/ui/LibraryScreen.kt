@@ -12,7 +12,10 @@ import androidx.window.core.layout.WindowWidthSizeClass
 import androidx.window.core.layout.WindowHeightSizeClass
 import androidx.compose.ui.graphics.drawscope.translate
 import kotlinx.coroutines.launch
-import androidx.compose.animation.core.*
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.spring
+import androidx.compose.animation.core.LinearOutSlowInEasing
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -67,7 +70,6 @@ import com.Nightjar.Th3GradeLibraryKMP.theme.bounceClick
 import com.Nightjar.Th3GradeLibraryKMP.theme.parseHexColor
 import com.Nightjar.Th3GradeLibraryKMP.theme.popInOnInitialLoad
 import com.Nightjar.Th3GradeLibraryKMP.theme.screenEntranceStagger
-import com.Nightjar.Th3GradeLibraryKMP.theme.screenEntranceCascade
 import com.Nightjar.Th3GradeLibraryKMP.theme.adaptiveItemEntrance
 import org.jetbrains.compose.resources.painterResource
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -112,9 +114,9 @@ fun LibraryScreen(
             .fillMaxSize()
             .padding(horizontal = 16.dp)
     ) {
-        val responsiveInfo = com.Nightjar.Th3GradeLibraryKMP.theme.LocalResponsiveLayoutInfo.current
         val isWide = widthClass != WindowWidthSizeClass.COMPACT
         val statusBarHeight = WindowInsets.statusBars.add(WindowInsets.captionBar).asPaddingValues().calculateTopPadding()
+        val dynamicTopPadding = if (isWide) statusBarHeight + 64.dp else statusBarHeight + 76.dp
         Column(modifier = Modifier.fillMaxSize()) {
             if (category == null) {
                 // Home/Categories view
@@ -128,7 +130,7 @@ fun LibraryScreen(
                     onScrollableStateChanged(canScroll)
                 }
 
-                val dynamicTopPadding = when { responsiveInfo.isPhoneLandscape -> statusBarHeight + 44.dp; isWide -> statusBarHeight + 72.dp; else -> statusBarHeight + 58.dp }
+// First-time launch download options prompt removed; user selects downloads on demand
                     
                 Box(
                     modifier = Modifier.fillMaxSize(),
@@ -149,8 +151,7 @@ fun LibraryScreen(
                             fontSize = 32.sp,
                             fontWeight = FontWeight.Bold,
                             lineHeight = 40.sp,
-                            color = MaterialTheme.colorScheme.onSurface,
-                            modifier = Modifier.screenEntranceCascade(0)
+                            color = MaterialTheme.colorScheme.onSurface
                         )
                         Spacer(modifier = Modifier.height(8.dp))
 
@@ -161,7 +162,6 @@ fun LibraryScreen(
                         ) {
                             Box(modifier = Modifier.weight(1f)) {
                                 CategoryMenuCard(
-                                    modifier = Modifier.screenEntranceCascade(1, "home_card_notes"),
                                     title = "الملازم الدراسية",
                                     desc = "أفضل الملخصات لأساتذة العراق",
                                     brush = Brush.linearGradient(listOf(Color(0xFF2DD4BF), Color(0xFF059669))),
@@ -172,7 +172,6 @@ fun LibraryScreen(
                             }
                             Box(modifier = Modifier.weight(1f)) {
                                 CategoryMenuCard(
-                                    modifier = Modifier.screenEntranceCascade(2, "home_card_books"),
                                     title = "الكتب الرسمية",
                                     desc = "المنهج الوزاري المعتمد 2027",
                                     brush = Brush.linearGradient(listOf(Color(0xFF6366F1), Color(0xFF1D4ED8))),
@@ -184,7 +183,6 @@ fun LibraryScreen(
                         }
                     } else {
                         CategoryMenuCard(
-                            modifier = Modifier.screenEntranceCascade(1, "home_card_notes"),
                             title = "الملازم الدراسية",
                             desc = "أفضل الملخصات لأساتذة العراق",
                             brush = Brush.linearGradient(listOf(Color(0xFF2DD4BF), Color(0xFF059669))),
@@ -194,7 +192,6 @@ fun LibraryScreen(
                         )
 
                         CategoryMenuCard(
-                            modifier = Modifier.screenEntranceCascade(2, "home_card_books"),
                             title = "الكتب الرسمية",
                             desc = "المنهج الوزاري المعتمد 2027",
                             brush = Brush.linearGradient(listOf(Color(0xFF6366F1), Color(0xFF1D4ED8))),
@@ -272,12 +269,18 @@ fun LibraryScreen(
                     val windowInfo = androidx.compose.ui.platform.LocalWindowInfo.current
                     val density = androidx.compose.ui.platform.LocalDensity.current
                     val screenWidthDp = with(density) { windowInfo.containerSize.width.toDp() }
-                    val dynamicTopPadding = when { responsiveInfo.isPhoneLandscape -> statusBarHeight + 44.dp; isWide -> statusBarHeight + 72.dp; else -> statusBarHeight + 58.dp }
+                    val dynamicTopPadding = if (isWide) {
+                        statusBarHeight + 64.dp
+                    } else {
+                        statusBarHeight + 76.dp
+                    }
                     val dynamicGridColumns = remember(widthClass, heightClass, screenWidthDp, isGridView) {
                         if (isGridView) {
                             when (widthClass) {
                                 WindowWidthSizeClass.COMPACT -> {
-                                    // Official Material 3 Compact: Micro window (<340dp) -> 1 column; Standard phone -> 2 columns
+                                    // Official Material 3 Adaptive (Android Adaptive Guidelines):
+                                    // Ultra-narrow pop-up windows & Fold 1 cover screen (< 340dp) -> 1 column
+                                    // Standard phones & Galaxy Fold 8 cover screen (420dp-428dp) -> 2 columns
                                     if (screenWidthDp < 340.dp) {
                                         GridCells.Fixed(1)
                                     } else {
@@ -316,12 +319,6 @@ fun LibraryScreen(
                         }
                     }
 
-                val firstVisible = remember { derivedStateOf { lazyGridState.firstVisibleItemIndex } }.value
-                val isScrolling = remember { derivedStateOf { lazyGridState.isScrollInProgress } }.value
-                CompositionLocalProvider(
-                    com.Nightjar.Th3GradeLibraryKMP.theme.LocalFirstVisibleItemIndex provides firstVisible,
-                    com.Nightjar.Th3GradeLibraryKMP.theme.LocalIsScrollInProgress provides isScrolling
-                ) {
                 LazyVerticalGrid(
                     state = lazyGridState,
                     userScrollEnabled = true,
@@ -331,26 +328,14 @@ fun LibraryScreen(
                         .fillMaxWidth()
                         .elasticOverscroll(),
                     horizontalArrangement = Arrangement.spacedBy(16.dp, Alignment.CenterHorizontally),
-                    verticalArrangement = Arrangement.spacedBy(14.dp),
+                    verticalArrangement = Arrangement.spacedBy(if (isGridView) 16.dp else 12.dp),
                     contentPadding = PaddingValues(
                         top = dynamicTopPadding, 
                         bottom = bottomPadding
                     )
                 ) {
                     itemsIndexed(items = filteredList, key = { _, item -> item.id }, contentType = { _, _ -> "library_item" }) { index, item ->
-                        val isReturning = LocalIsReturningFromPdf.current
                         ContentCard(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .adaptiveItemEntrance(index, item.id)
-                                .animateItem(
-                                    fadeInSpec = null,
-                                    fadeOutSpec = null,
-                                    placementSpec = if (isReturning) null else spring(
-                                        dampingRatio = 0.82f,
-                                        stiffness = 300f
-                                    )
-                                ),
                             item = item,
                             isGridView = isGridView,
                             isDark = isDark,
@@ -359,7 +344,124 @@ fun LibraryScreen(
                         )
                     }
                 }
-                }
+            }
+        }
+    }
+
+        // Floating Alert Dynamic Island Capsule for Cloud Downloads
+        val activeNotice by com.Nightjar.Th3GradeLibraryKMP.network.BookDownloadManager.activeNoticeMessage.collectAsState()
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(top = dynamicTopPadding + 8.dp)
+                .zIndex(300f),
+            contentAlignment = Alignment.TopCenter
+        ) {
+            androidx.compose.animation.AnimatedVisibility(
+                visible = activeNotice != null,
+                enter = slideInVertically(
+                    initialOffsetY = { -it / 2 },
+                    animationSpec = spring(dampingRatio = Spring.DampingRatioLowBouncy, stiffness = 380f)
+                ) + expandVertically(expandFrom = Alignment.Top) + fadeIn(tween(220)),
+                exit = slideOutVertically(
+                    targetOffsetY = { -it / 2 },
+                    animationSpec = spring(dampingRatio = Spring.DampingRatioNoBouncy, stiffness = 420f)
+                ) + shrinkVertically(shrinkTowards = Alignment.Top) + fadeOut(tween(180))
+            ) {
+                val noticeText = activeNotice ?: ""
+                val isDownloading = noticeText.contains("%") || noticeText.contains("جاري تنزيل") || noticeText.contains("جاري تحميل")
+                val isCompleted = noticeText.contains("اكتمل") || noticeText.contains("✓")
+                val isPaused = noticeText.contains("إيقاف") || noticeText.contains("مؤقتاً")
+
+                Surface(
+                    shape = RoundedCornerShape(26.dp),
+                    color = MaterialTheme.colorScheme.surfaceColorAtElevation(6.dp).copy(alpha = 0.96f),
+                    tonalElevation = 10.dp,
+                    shadowElevation = 12.dp,
+                    modifier = Modifier
+                        .widthIn(min = 180.dp, max = 460.dp)
+                        .padding(horizontal = 16.dp)
+                        .border(
+                            width = 1.dp,
+                            color = when {
+                                isCompleted -> Color(0xFF10B981).copy(alpha = 0.55f)
+                                isPaused -> Color(0xFFF59E0B).copy(alpha = 0.55f)
+                                else -> MaterialTheme.colorScheme.primary.copy(alpha = 0.45f)
+                            },
+                            shape = RoundedCornerShape(26.dp)
+                        )
+                ) {
+                    Row(
+                        modifier = Modifier
+                            .animateContentSize(
+                                animationSpec = spring(
+                                    dampingRatio = Spring.DampingRatioLowBouncy,
+                                    stiffness = Spring.StiffnessMediumLow
+                                )
+                            )
+                            .padding(horizontal = 16.dp, vertical = 9.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.Center
+                    ) {
+                        // Leading Status Icon / Mini Progress Ring
+                        if (isCompleted) {
+                            Icon(
+                                imageVector = Icons.Default.CheckCircle,
+                                contentDescription = null,
+                                tint = Color(0xFF10B981),
+                                modifier = Modifier.size(19.dp)
+                            )
+                        } else if (isPaused) {
+                            Icon(
+                                imageVector = Icons.Default.PauseCircle,
+                                contentDescription = null,
+                                tint = Color(0xFFF59E0B),
+                                modifier = Modifier.size(19.dp)
+                            )
+                        } else if (isDownloading) {
+                            CircularProgressIndicator(
+                                strokeWidth = 2.4.dp,
+                                color = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.size(18.dp)
+                            )
+                        } else {
+                            Icon(
+                                imageVector = Icons.Default.CloudDownload,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.size(19.dp)
+                            )
+                        }
+
+                        Spacer(modifier = Modifier.width(10.dp))
+
+                        Text(
+                            text = noticeText,
+                            fontSize = 12.5.sp,
+                            fontWeight = FontWeight.SemiBold,
+                            color = MaterialTheme.colorScheme.onSurface,
+                            maxLines = 2,
+                            overflow = TextOverflow.Ellipsis,
+                            modifier = Modifier.weight(1f, fill = false)
+                        )
+
+                        Spacer(modifier = Modifier.width(8.dp))
+
+                        // Trailing Dismiss / Cancel Action
+                        IconButton(
+                            onClick = {
+                                com.Nightjar.Th3GradeLibraryKMP.network.BookDownloadManager.cancelAll()
+                            },
+                            modifier = Modifier.size(24.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Close,
+                                contentDescription = "إلغاء",
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.75f),
+                                modifier = Modifier.size(15.dp)
+                            )
+                        }
+                    }
                 }
             }
         }
@@ -382,11 +484,26 @@ fun CategoryMenuCard(
     val isReturningFromPdf = LocalIsReturningFromPdf.current
     val screenKey = LocalScreenEntranceKey.current
 
+    var isCardVisible by remember(screenKey) { mutableStateOf(isReturningFromPdf) }
+    LaunchedEffect(screenKey) {
+        isCardVisible = true
+    }
+    val cardProgress by animateFloatAsState(
+        targetValue = if (isCardVisible) 1f else 0f,
+        animationSpec = tween(
+            durationMillis = 500,
+            delayMillis = if (isReturningFromPdf) 0 else index * 90,
+            easing = androidx.compose.animation.core.CubicBezierEasing(0.16f, 1f, 0.3f, 1f)
+        ),
+        label = "categoryCardProgress_$index"
+    )
+
+    val density = androidx.compose.ui.platform.LocalDensity.current
+    val slideOffsetPx = remember(density) { with(density) { 28.dp.toPx() } }
     val orb1Brush = remember { Brush.radialGradient(listOf(Color.White.copy(alpha = 0.22f), Color.Transparent)) }
     val orb2Brush = remember { Brush.radialGradient(listOf(Color.Black.copy(alpha = 0.12f), Color.Transparent)) }
     val borderBrush = remember { Brush.linearGradient(listOf(Color.White.copy(alpha = 0.4f), Color.White.copy(alpha = 0.05f))) }
 
-    val density = androidx.compose.ui.platform.LocalDensity.current
     val p48 = remember(density) { with(density) { 48.dp.toPx() } }
     val p96 = remember(density) { with(density) { 96.dp.toPx() } }
     val p80 = remember(density) { with(density) { 80.dp.toPx() } }
@@ -421,8 +538,13 @@ fun CategoryMenuCard(
     Card(
         modifier = modifier
             .fillMaxWidth()
-            .then(if (isWide) Modifier.aspectRatio(1.6f) else if (screenWidthDp < 360.dp) Modifier.height(150.dp) else Modifier.height(190.dp))
+            .then(if (isWide) Modifier.aspectRatio(1.6f) else Modifier.height(190.dp))
             .graphicsLayer {
+                translationY = (1f - cardProgress) * slideOffsetPx
+                alpha = if (isReturningFromPdf) 1f else (0.85f + 0.15f * cardProgress)
+                val s = 0.98f + 0.02f * cardProgress
+                scaleX = s
+                scaleY = s
                 ambientShadowColor = Color.Black.copy(alpha = 0.5f)
                 spotShadowColor = Color.Black.copy(alpha = 0.5f)
             }
@@ -476,9 +598,8 @@ fun CategoryMenuCard(
                 )
             }
 
-            val cardPadding = if (screenWidthDp < 360.dp) 16.dp else 28.dp
             Column(
-                modifier = Modifier.fillMaxSize().padding(cardPadding),
+                modifier = Modifier.fillMaxSize().padding(28.dp),
                 verticalArrangement = Arrangement.SpaceBetween,
                 horizontalAlignment = Alignment.Start
             ) {
@@ -502,7 +623,7 @@ fun CategoryMenuCard(
                     Text(
                         text = title,
                         color = Color.White,
-                        fontSize = if (screenWidthDp < 360.dp) 20.sp else 28.sp,
+                        fontSize = 28.sp,
                         fontWeight = FontWeight.Black,
                         style = androidx.compose.ui.text.TextStyle(
                             shadow = androidx.compose.ui.graphics.Shadow(
@@ -579,43 +700,42 @@ fun LazyGridItemScope.ContentCard(
         }
     } else Modifier
 
-    val contentSizeModifier = if (!isReturningFromPdf && !isThisCardTarget) {
-        Modifier.animateContentSize(
-            animationSpec = spring(
-                dampingRatio = 0.80f,
-                stiffness = 340f
-            )
-        )
-    } else Modifier
+val platformContext = coil3.compose.LocalPlatformContext.current
+    val downloadStates by com.Nightjar.Th3GradeLibraryKMP.network.BookDownloadManager.itemStates.collectAsState()
+    val itemState = downloadStates[item.id] ?: com.Nightjar.Th3GradeLibraryKMP.network.ItemDownloadState()
+    val isBookDownloaded: Boolean = remember(item, downloadStates) {
+        com.Nightjar.Th3GradeLibraryKMP.data.BookStorageEngine.isDownloaded(platformContext, item)
+    }
 
     Box(
         modifier = modifier
             .zIndex(if (isThisCardTarget) 15f else if (com.Nightjar.Th3GradeLibraryKMP.theme.LocalIsNavigatingBack.current) 1f else 0f)
             .fillMaxWidth()
             .then(sharedBoundsModifier)
-            .then(contentSizeModifier)
+            .animateContentSize(
+                animationSpec = spring(
+                    dampingRatio = 0.80f,
+                    stiffness = 340f
+                )
+            )
             .liquidGlass(isDark, borderRadius = cardCornerRadius, alpha = 0.5f)
             .clip(RoundedCornerShape(cardCornerRadius))
             .clickable {
-                TransitionTargetTracker.activeTargetId = "card_${item.id}"
-                TransitionTargetTracker.isTransitionActive = true
-                onClick()
+                if (isBookDownloaded) {
+                    TransitionTargetTracker.activeTargetId = "card_${item.id}"
+                    TransitionTargetTracker.isTransitionActive = true
+                    onClick()
+                } else {
+                    if (itemState.status == com.Nightjar.Th3GradeLibraryKMP.network.DownloadStatus.DOWNLOADING) {
+                        com.Nightjar.Th3GradeLibraryKMP.network.BookDownloadManager.pauseDownload(item)
+                    } else {
+                        com.Nightjar.Th3GradeLibraryKMP.network.BookDownloadManager.downloadItem(platformContext, item)
+                    }
+                }
             }
             .padding(12.dp)
     ) {
-        androidx.compose.animation.AnimatedContent(
-            targetState = isGridView,
-            transitionSpec = {
-                (androidx.compose.animation.fadeIn(animationSpec = androidx.compose.animation.core.tween(200, delayMillis = 40, easing = androidx.compose.animation.core.LinearOutSlowInEasing)) + 
-                 androidx.compose.animation.scaleIn(initialScale = 0.94f, animationSpec = androidx.compose.animation.core.spring(dampingRatio = 0.82f, stiffness = 320f)))
-                .togetherWith(
-                 androidx.compose.animation.fadeOut(animationSpec = androidx.compose.animation.core.tween(150, easing = androidx.compose.animation.core.FastOutLinearInEasing)) + 
-                 androidx.compose.animation.scaleOut(targetScale = 0.94f, animationSpec = androidx.compose.animation.core.tween(150))
-                ).using(androidx.compose.animation.SizeTransform(clip = false))
-            },
-            label = "cardLiquidMorph"
-        ) { gridMode ->
-            if (gridMode) {
+        if (isGridView) {
                 Column(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalAlignment = Alignment.Start
@@ -627,17 +747,200 @@ fun LazyGridItemScope.ContentCard(
                             .clip(RoundedCornerShape(16.dp))
                             .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
                     ) {
-                        coil3.compose.AsyncImage(
-                            model = coil3.request.ImageRequest.Builder(coil3.compose.LocalPlatformContext.current)
-                                .data(com.Nightjar.Th3GradeLibraryKMP.generated.resources.Res.getUri("drawable/${item.coverResName}." + if (item.coverResName in listOf("ayajaaa", "english", "englishactivity", "kss1")) "jpg" else "png"))
-                                .crossfade(false)
-                                .memoryCachePolicy(coil3.request.CachePolicy.ENABLED)
-                                .diskCachePolicy(coil3.request.CachePolicy.ENABLED)
-                                .build(),
-                            contentDescription = item.title,
-                            contentScale = ContentScale.Crop,
-                            modifier = Modifier.fillMaxSize()
-                        )
+                        val cloudManifest by com.Nightjar.Th3GradeLibraryKMP.network.CloudCatalogManager.manifest.collectAsState()
+                        val cloudCoverUrl = remember(item, cloudManifest) {
+                            val m = com.Nightjar.Th3GradeLibraryKMP.network.CloudCatalogManager.getMeta(item)
+                            m?.cover_url?.takeIf { it.isNotBlank() }
+                        }
+                        val hasCloudCover = !cloudCoverUrl.isNullOrBlank()
+                        val hasBundledCover = item.coverResName.isNotBlank() && item.coverResName != "app_icon" && item.id != "b_abood"
+
+                        if (hasCloudCover || hasBundledCover) {
+                            val coverData = remember(item, cloudCoverUrl) {
+                                if (hasCloudCover) {
+                                    cloudCoverUrl
+                                } else if (item.coverResName.startsWith("http://") || item.coverResName.startsWith("https://")) {
+                                    item.coverResName
+                                } else {
+                                    try {
+                                        com.Nightjar.Th3GradeLibraryKMP.generated.resources.Res.getUri("drawable/${item.coverResName}." + if (item.coverResName in listOf("ayajaaa", "english", "englishactivity", "kss1")) "jpg" else "png")
+                                    } catch (_: Exception) {
+                                        null
+                                    }
+                                }
+                            }
+
+                            coil3.compose.AsyncImage(
+                                model = coil3.request.ImageRequest.Builder(coil3.compose.LocalPlatformContext.current)
+                                    .data(coverData)
+                                    .crossfade(!isReturningFromPdf)
+                                    .memoryCacheKey("book_cover_${item.id}_${coverData.hashCode()}")
+                                    .diskCacheKey("book_cover_${item.id}_${coverData.hashCode()}")
+                                    .memoryCachePolicy(coil3.request.CachePolicy.ENABLED)
+                                    .diskCachePolicy(coil3.request.CachePolicy.ENABLED)
+                                    .build(),
+                                contentDescription = item.title,
+                                contentScale = ContentScale.Crop,
+                                modifier = Modifier.fillMaxSize()
+                            )
+                        } else {
+                            val pdfThumbnail = rememberPdfCoverThumbnail(item)
+                            if (pdfThumbnail != null) {
+                                androidx.compose.foundation.Image(
+                                    bitmap = pdfThumbnail,
+                                    contentDescription = null,
+                                    modifier = Modifier.fillMaxSize(),
+                                    contentScale = ContentScale.Crop
+                                )
+                            } else {
+                                Box(
+                                    modifier = Modifier
+                                        .fillMaxSize()
+                                        .background(
+                                            Brush.linearGradient(
+                                                listOf(
+                                                    parseHexColor(item.colorStart).copy(alpha = 0.25f),
+                                                    parseHexColor(item.colorEnd).copy(alpha = 0.40f)
+                                                )
+                                            )
+                                        ),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.MenuBook,
+                                        contentDescription = null,
+                                        tint = MaterialTheme.colorScheme.primary.copy(alpha = 0.45f),
+                                        modifier = Modifier.size(36.dp)
+                                    )
+                                }
+                            }
+                        }
+
+                        // M3 Expressive Download Badge / Circular Progress
+                        if (!isBookDownloaded) {
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .background(Color.Black.copy(alpha = 0.38f)),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                if (itemState.status == com.Nightjar.Th3GradeLibraryKMP.network.DownloadStatus.DOWNLOADING) {
+                                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                        CircularProgressIndicator(
+                                            progress = { itemState.progress },
+                                            modifier = Modifier.size(38.dp),
+                                            color = MaterialTheme.colorScheme.primary,
+                                            strokeWidth = 3.5.dp,
+                                            trackColor = Color.White.copy(alpha = 0.25f)
+                                        )
+                                        Spacer(modifier = Modifier.height(4.dp))
+                                        Text(
+                                            text = "${(itemState.progress * 100).toInt()}%",
+                                            fontSize = 11.sp,
+                                            fontWeight = FontWeight.Bold,
+                                            color = Color.White
+                                        )
+                                        Spacer(modifier = Modifier.height(6.dp))
+                                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                            Box(
+                                                modifier = Modifier
+                                                    .size(28.dp)
+                                                    .clip(CircleShape)
+                                                    .background(Color.Black.copy(alpha = 0.6f))
+                                                    .clickable { com.Nightjar.Th3GradeLibraryKMP.network.BookDownloadManager.pauseDownload(item) },
+                                                contentAlignment = Alignment.Center
+                                            ) {
+                                                Icon(
+                                                    imageVector = Icons.Default.Pause,
+                                                    contentDescription = "إيقاف مؤقت",
+                                                    tint = Color.White,
+                                                    modifier = Modifier.size(16.dp)
+                                                )
+                                            }
+                                            Box(
+                                                modifier = Modifier
+                                                    .size(28.dp)
+                                                    .clip(CircleShape)
+                                                    .background(MaterialTheme.colorScheme.error.copy(alpha = 0.85f))
+                                                    .clickable { com.Nightjar.Th3GradeLibraryKMP.network.BookDownloadManager.cancelDownload(item) },
+                                                contentAlignment = Alignment.Center
+                                            ) {
+                                                Icon(
+                                                    imageVector = Icons.Default.Close,
+                                                    contentDescription = "إلغاء",
+                                                    tint = Color.White,
+                                                    modifier = Modifier.size(16.dp)
+                                                )
+                                            }
+                                        }
+                                    }
+                                } else if (itemState.status == com.Nightjar.Th3GradeLibraryKMP.network.DownloadStatus.PAUSED) {
+                                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                        Icon(
+                                            imageVector = Icons.Default.PauseCircle,
+                                            contentDescription = "متوقف مؤقتاً",
+                                            tint = Color.White,
+                                            modifier = Modifier.size(34.dp)
+                                        )
+                                        Spacer(modifier = Modifier.height(4.dp))
+                                        Text(
+                                            text = "متوقف مؤقتاً",
+                                            fontSize = 10.sp,
+                                            fontWeight = FontWeight.Bold,
+                                            color = Color.White
+                                        )
+                                        Spacer(modifier = Modifier.height(6.dp))
+                                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                            Box(
+                                                modifier = Modifier
+                                                    .size(28.dp)
+                                                    .clip(CircleShape)
+                                                    .background(MaterialTheme.colorScheme.primary)
+                                                    .clickable { com.Nightjar.Th3GradeLibraryKMP.network.BookDownloadManager.downloadItem(platformContext, item) },
+                                                contentAlignment = Alignment.Center
+                                            ) {
+                                                Icon(
+                                                    imageVector = Icons.Default.PlayArrow,
+                                                    contentDescription = "استئناف",
+                                                    tint = Color.White,
+                                                    modifier = Modifier.size(16.dp)
+                                                )
+                                            }
+                                            Box(
+                                                modifier = Modifier
+                                                    .size(28.dp)
+                                                    .clip(CircleShape)
+                                                    .background(MaterialTheme.colorScheme.error.copy(alpha = 0.85f))
+                                                    .clickable { com.Nightjar.Th3GradeLibraryKMP.network.BookDownloadManager.cancelDownload(item) },
+                                                contentAlignment = Alignment.Center
+                                            ) {
+                                                Icon(
+                                                    imageVector = Icons.Default.Close,
+                                                    contentDescription = "إلغاء",
+                                                    tint = Color.White,
+                                                    modifier = Modifier.size(16.dp)
+                                                )
+                                            }
+                                        }
+                                    }
+                                } else {
+                                    Box(
+                                        modifier = Modifier
+                                            .size(38.dp)
+                                            .clip(CircleShape)
+                                            .background(MaterialTheme.colorScheme.surface.copy(alpha = 0.90f)),
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        Icon(
+                                            imageVector = Icons.Default.ArrowDownward,
+                                            contentDescription = "تنزيل",
+                                            tint = MaterialTheme.colorScheme.primary,
+                                            modifier = Modifier.size(20.dp)
+                                        )
+                                    }
+                                }
+                            }
+                        }
                     }
 
                     Spacer(modifier = Modifier.height(10.dp))
@@ -689,17 +992,93 @@ fun LazyGridItemScope.ContentCard(
                             .clip(RoundedCornerShape(14.dp))
                             .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
                     ) {
-                        coil3.compose.AsyncImage(
-                            model = coil3.request.ImageRequest.Builder(coil3.compose.LocalPlatformContext.current)
-                                .data(com.Nightjar.Th3GradeLibraryKMP.generated.resources.Res.getUri("drawable/${item.coverResName}." + if (item.coverResName in listOf("ayajaaa", "english", "englishactivity", "kss1")) "jpg" else "png"))
-                                .crossfade(false)
-                                .memoryCachePolicy(coil3.request.CachePolicy.ENABLED)
-                                .diskCachePolicy(coil3.request.CachePolicy.ENABLED)
-                                .build(),
-                            contentDescription = item.title,
-                            contentScale = ContentScale.Crop,
-                            modifier = Modifier.fillMaxSize()
-                        )
+                        val hasCustomCoverList = remember(item) {
+                            val m = com.Nightjar.Th3GradeLibraryKMP.network.CloudCatalogManager.getMeta(item)
+                            !m?.cover_url.isNullOrBlank() || item.coverResName.isNotBlank()
+                        }
+                        if (!hasCustomCoverList) {
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .background(
+                                        Brush.linearGradient(
+                                            listOf(parseHexColor(item.colorStart), parseHexColor(item.colorEnd))
+                                        )
+                                    ),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.MenuBook,
+                                    contentDescription = null,
+                                    tint = Color.White,
+                                    modifier = Modifier.size(28.dp)
+                                )
+                            }
+                        } else {
+                            coil3.compose.AsyncImage(
+                                model = coil3.request.ImageRequest.Builder(coil3.compose.LocalPlatformContext.current)
+                                    .data(
+                                        remember(item) {
+                                            val m = com.Nightjar.Th3GradeLibraryKMP.network.CloudCatalogManager.getMeta(item)
+                                            val u = m?.cover_url
+                                            if (!u.isNullOrBlank()) {
+                                                u
+                                            } else if (item.coverResName.startsWith("http://") || item.coverResName.startsWith("https://")) {
+                                                item.coverResName
+                                            } else {
+                                                try {
+                                                    com.Nightjar.Th3GradeLibraryKMP.generated.resources.Res.getUri("drawable/${item.coverResName}." + if (item.coverResName in listOf("ayajaaa", "english", "englishactivity", "kss1")) "jpg" else "png")
+                                                } catch (_: Exception) {
+                                                    com.Nightjar.Th3GradeLibraryKMP.generated.resources.Res.getUri("drawable/app_icon.png")
+                                                }
+                                            }
+                                        }
+                                    )
+                                    .crossfade(!isReturningFromPdf)
+                                    .memoryCacheKey("book_cover_${item.id}_${(com.Nightjar.Th3GradeLibraryKMP.network.CloudCatalogManager.getMeta(item)?.cover_url ?: item.coverResName).hashCode()}")
+                                    .diskCacheKey("book_cover_${item.id}_${(com.Nightjar.Th3GradeLibraryKMP.network.CloudCatalogManager.getMeta(item)?.cover_url ?: item.coverResName).hashCode()}")
+                                    .memoryCachePolicy(coil3.request.CachePolicy.ENABLED)
+                                    .diskCachePolicy(coil3.request.CachePolicy.ENABLED)
+                                    .build(),
+                                contentDescription = item.title,
+                                contentScale = ContentScale.Crop,
+                                modifier = Modifier.fillMaxSize()
+                            )
+                        }
+
+                        if (!isBookDownloaded) {
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .background(Color.Black.copy(alpha = 0.38f)),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                if (itemState.status == com.Nightjar.Th3GradeLibraryKMP.network.DownloadStatus.DOWNLOADING) {
+                                    CircularProgressIndicator(
+                                        progress = { itemState.progress },
+                                        modifier = Modifier.size(28.dp),
+                                        color = MaterialTheme.colorScheme.primary,
+                                        strokeWidth = 3.dp,
+                                        trackColor = Color.White.copy(alpha = 0.25f)
+                                    )
+                                } else {
+                                    Box(
+                                        modifier = Modifier
+                                            .size(28.dp)
+                                            .clip(CircleShape)
+                                            .background(MaterialTheme.colorScheme.surface.copy(alpha = 0.90f)),
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        Icon(
+                                            imageVector = Icons.Default.ArrowDownward,
+                                            contentDescription = "تنزيل",
+                                            tint = MaterialTheme.colorScheme.primary,
+                                            modifier = Modifier.size(16.dp)
+                                        )
+                                    }
+                                }
+                            }
+                        }
                     }
 
                     Spacer(modifier = Modifier.width(16.dp))
@@ -750,6 +1129,3 @@ fun LazyGridItemScope.ContentCard(
             }
         }
     }
-}
-
-

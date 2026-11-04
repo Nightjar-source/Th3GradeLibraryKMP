@@ -68,22 +68,6 @@ val LocalIsNavigatingBack = compositionLocalOf { false }
 val LocalSeenEntranceItems = compositionLocalOf<androidx.compose.runtime.snapshots.SnapshotStateMap<String, Boolean>?> { null }
 val LocalScreenEntranceKey = compositionLocalOf { "default_screen" }
 val LocalIsReturningFromPdf = compositionLocalOf { false }
-val LocalFirstVisibleItemIndex = compositionLocalOf { 0 }
-val LocalIsScrollInProgress = compositionLocalOf { false }
-
-data class ResponsiveLayoutInfo(
-    val width: Dp = 360.dp,
-    val height: Dp = 640.dp,
-    val isLandscape: Boolean = false,
-    val isWide: Boolean = false,
-    val isPhoneLandscape: Boolean = false,
-    val widthClass: androidx.window.core.layout.WindowWidthSizeClass = androidx.window.core.layout.WindowWidthSizeClass.COMPACT,
-    val heightClass: androidx.window.core.layout.WindowHeightSizeClass = androidx.window.core.layout.WindowHeightSizeClass.MEDIUM,
-    val gridColumns: Int = 2,
-    val railWidth: Dp = 52.dp
-)
-
-val LocalResponsiveLayoutInfo = compositionLocalOf { ResponsiveLayoutInfo() }
 
 // Glassmorphism modifier optimized with hardware-accelerated drawWithCache
 fun Modifier.liquidGlass(
@@ -151,13 +135,12 @@ fun Modifier.expressiveButtonMorph(
     restRadius: androidx.compose.ui.unit.Dp = 24.dp,
     pressedRadius: androidx.compose.ui.unit.Dp = 8.dp,
     pressedScale: Float = 0.92f,
-    interactionSource: androidx.compose.foundation.interaction.MutableInteractionSource? = null,
+    interactionSource: androidx.compose.foundation.interaction.MutableInteractionSource,
     backgroundColor: Color? = null,
     borderWidth: androidx.compose.ui.unit.Dp? = null,
     borderColor: Color? = null
 ): Modifier = composed {
-    val actualSource = interactionSource ?: androidx.compose.runtime.remember { androidx.compose.foundation.interaction.MutableInteractionSource() }
-    val isPressed by actualSource.collectIsPressedAsState()
+    val isPressed by interactionSource.collectIsPressedAsState()
     val cornerRadius by androidx.compose.animation.core.animateDpAsState(
         targetValue = if (isPressed) pressedRadius else restRadius,
         animationSpec = androidx.compose.animation.core.spring(dampingRatio = 0.52f, stiffness = 420f),
@@ -189,6 +172,7 @@ fun Modifier.screenEntranceStagger(index: Int = 0, itemId: String? = null): Modi
     if (isLowEnd) return@composed this
 
     val isReturningFromPdf = LocalIsReturningFromPdf.current
+    val isNavigatingBack = LocalIsNavigatingBack.current
     val itemKey = itemId ?: index.toString()
     val isActiveSharedTarget = com.Nightjar.Th3GradeLibraryKMP.ui.TransitionTargetTracker.isTransitionActive &&
             (com.Nightjar.Th3GradeLibraryKMP.ui.TransitionTargetTracker.activeTargetId == "card_$itemKey" ||
@@ -198,8 +182,8 @@ fun Modifier.screenEntranceStagger(index: Int = 0, itemId: String? = null): Modi
     val screenKey = LocalScreenEntranceKey.current
     val seenMap = LocalSeenEntranceItems.current
 
-    // When returning from PDF or on active shared target: keep 100% stationary with zero movement!
-    if (isReturningFromPdf || isActiveSharedTarget) {
+    // When returning from PDF or navigating back or on active shared target: keep 100% stationary with zero movement!
+    if (isReturningFromPdf || isNavigatingBack || isActiveSharedTarget) {
         seenMap?.put(itemKey, true)
         return@composed this
     }
@@ -207,29 +191,18 @@ fun Modifier.screenEntranceStagger(index: Int = 0, itemId: String? = null): Modi
     val alreadySeen = seenMap?.get(itemKey) == true
     if (alreadySeen) return@composed this
 
-    val isScrolling = LocalIsScrollInProgress.current
-    if (isScrolling) {
-        // Fast 120 FPS scrolling: newly scrolled items render instantly with zero delay
-        seenMap?.put(itemKey, true)
-        return@composed this
-    }
-
-    val firstVisible = LocalFirstVisibleItemIndex.current
-    // Viewport-relative visual index: top-most visible item is ALWAYS 0, whether top, middle, or end of list!
-    val relativeIndex = (index - firstVisible).coerceIn(0, 8)
-    val staggerDelay = (relativeIndex * 16L).coerceAtMost(130L)
-
     val animProgress = androidx.compose.runtime.remember(screenKey, itemKey) { androidx.compose.animation.core.Animatable(0f) }
     val density = androidx.compose.ui.platform.LocalDensity.current
     val offsetYPx = androidx.compose.runtime.remember(density) { with(density) { 14.dp.toPx() } }
 
     androidx.compose.runtime.LaunchedEffect(screenKey, itemKey) {
+        val staggerDelay = ((index % 8).coerceIn(0, 7) * 24L)
         if (staggerDelay > 0) kotlinx.coroutines.delay(staggerDelay)
         animProgress.animateTo(
             targetValue = 1f,
             animationSpec = androidx.compose.animation.core.spring(
-                dampingRatio = 0.74f, // Ultra-moist fluid organic spring matching caliq5
-                stiffness = androidx.compose.animation.core.Spring.StiffnessLow
+                dampingRatio = 0.76f, // Ultra-moist fluid organic spring (كالجبنة)
+                stiffness = 320f
             )
         )
         seenMap?.put(itemKey, true)
@@ -237,11 +210,10 @@ fun Modifier.screenEntranceStagger(index: Int = 0, itemId: String? = null): Modi
 
     val p = animProgress.value
     this.graphicsLayer {
-        // Zero-flash: starts gently visible (0.40f) so elements never pop abruptly from black/zero
-        this.alpha = 0.40f + 0.60f * p
+        this.alpha = 0.30f + 0.70f * p // Base alpha 0.30f eliminates harsh dark/white flashes!
         this.translationY = (1f - p) * offsetYPx
-        this.scaleX = 0.97f + 0.03f * p
-        this.scaleY = 0.97f + 0.03f * p
+        this.scaleX = 0.985f + 0.015f * p
+        this.scaleY = 0.985f + 0.015f * p
         this.clip = false
     }
 }
@@ -257,9 +229,10 @@ fun Modifier.screenEntranceCascade(index: Int = 0, itemId: String? = null): Modi
 fun Modifier.popInOnInitialLoad(index: Int = 0, itemId: String? = null): Modifier = this.screenEntranceStagger(index, itemId)
 
 /**
- * Unified adaptive entrance: Screen Entrance Cascade for visible items with fluid relative staggering.
+ * Unified adaptive entrance: Screen Entrance Cascade for initial visible items (0..8).
+ * Scrolled items (> 8) are rendered instantly without overhead to preserve 120 FPS scrolling.
  */
-fun Modifier.adaptiveItemEntrance(index: Int = 0, itemId: String? = null): Modifier = this.screenEntranceCascade(index, itemId)
+fun Modifier.adaptiveItemEntrance(index: Int = 0, itemId: String? = null): Modifier = this.screenEntranceCascade(index % 8, itemId)
 
 val KufiReemFontFamily: FontFamily
     @Composable

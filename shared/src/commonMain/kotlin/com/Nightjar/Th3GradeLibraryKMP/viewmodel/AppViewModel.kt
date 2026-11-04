@@ -27,13 +27,11 @@ class AppViewModel : ViewModel() {
     var isNavigatingBack by mutableStateOf(false)
     var isReturningFromPdf by mutableStateOf(false)
     var screenNavCounter by mutableStateOf(0)
-    var navigationDirection by mutableStateOf(1)
 
     // ===== Content Selection =====
     var selectedItem by mutableStateOf<BookItem?>(null)
     var pdfInitialPage by mutableStateOf<Int?>(null)
     var isFromBookmarks by mutableStateOf(false)
-    var isFromShortcut by mutableStateOf(false)
     var pdfSourcePage by mutableStateOf("home")
 
     // ===== Modals and Dialogs =====
@@ -80,7 +78,6 @@ class AppViewModel : ViewModel() {
                 if (target != null) {
                     com.Nightjar.Th3GradeLibraryKMP.ui.TransitionTargetTracker.activeTargetId = "card_${target.id}"
                     com.Nightjar.Th3GradeLibraryKMP.ui.TransitionTargetTracker.isTransitionActive = true
-                    isFromShortcut = true
                     selectedItem = target
                     pdfInitialPage = com.Nightjar.Th3GradeLibraryKMP.network.SyncEngine.lastReadPages.value[target.id]
                     com.Nightjar.Th3GradeLibraryKMP.network.SyncEngine.saveSelectedCategory(if (target.isNote) "notes" else "books")
@@ -91,12 +88,6 @@ class AppViewModel : ViewModel() {
                     page = "pdf"
                     persistState()
                 }
-            } else if (initialPage != null && initialPage != page) {
-                navigateTo(initialPage)
-            }
-            if (!initialSearchQuery.isNullOrEmpty()) {
-                searchQuery = initialSearchQuery
-                isSearchOpen = true
             }
             return
         }
@@ -115,7 +106,6 @@ class AppViewModel : ViewModel() {
             if (target != null) {
                 com.Nightjar.Th3GradeLibraryKMP.ui.TransitionTargetTracker.activeTargetId = "card_${target.id}"
                 com.Nightjar.Th3GradeLibraryKMP.ui.TransitionTargetTracker.isTransitionActive = true
-                isFromShortcut = true
                 selectedItem = target
                 pdfInitialPage = com.Nightjar.Th3GradeLibraryKMP.network.SyncEngine.lastReadPages.value[target.id]
                 com.Nightjar.Th3GradeLibraryKMP.network.SyncEngine.saveSelectedCategory(if (target.isNote) "notes" else "books")
@@ -218,23 +208,21 @@ class AppViewModel : ViewModel() {
      */
     fun popPage(): Boolean {
         isNavigatingBack = true
-        navigationDirection = -1
         val current = pageHistory.value
         val wasOnPdf = current.lastOrNull() == "pdf"
         if (wasOnPdf) {
             isReturningFromPdf = true
-            selectedItem?.let { item ->
-                com.Nightjar.Th3GradeLibraryKMP.ui.TransitionTargetTracker.activeTargetId = "card_${item.id}"
-                com.Nightjar.Th3GradeLibraryKMP.ui.TransitionTargetTracker.isTransitionActive = true
-            }
         }
         if (current.size > 1) {
             val updated = current.dropLast(1)
             pageHistory.value = updated
             page = updated.last()
+            if (!wasOnPdf) {
+                screenNavCounter++
+            }
             persistState()
             viewModelScope.launch {
-                delay(420)
+                delay(450)
                 isNavigatingBack = false
                 if (wasOnPdf) {
                     isReturningFromPdf = false
@@ -243,7 +231,7 @@ class AppViewModel : ViewModel() {
             return true
         }
         viewModelScope.launch {
-            delay(420)
+            delay(450)
             isNavigatingBack = false
             if (wasOnPdf) {
                 isReturningFromPdf = false
@@ -257,16 +245,11 @@ class AppViewModel : ViewModel() {
      */
     fun navigateTo(newPage: String) {
         isNavigatingBack = false
-        if (newPage != "home" && newPage != "list") {
+        if (newPage != "home" && newPage != "list" && newPage != "bookmarks") {
             isReturningFromPdf = false
         }
         isAppSettingsOpen = false
         isNewsSettingsOpen = false
-        val tabOrder = listOf("home", "list", "news", "bookmarks", "shortcuts", "about")
-        val oldIdx = tabOrder.indexOf(page).takeIf { it >= 0 } ?: 0
-        val newIdx = tabOrder.indexOf(newPage).takeIf { it >= 0 } ?: 0
-        navigationDirection = if (newIdx >= oldIdx) 1 else -1
-
         if (newPage == "home") {
             if (page != "home") screenNavCounter++
             pageHistory.value = listOf("home")
@@ -277,9 +260,7 @@ class AppViewModel : ViewModel() {
                 if (newPage != "pdf") {
                     screenNavCounter++
                 }
-                // Official Material 3 Navigation pattern:
-                // popUpTo(startDestination) { saveState = true }, launchSingleTop = true, restoreState = true
-                pageHistory.value = listOf("home", newPage)
+                pageHistory.value = current.filter { it != newPage } + newPage
                 page = newPage
             }
         }
@@ -304,25 +285,20 @@ class AppViewModel : ViewModel() {
     /**
      * Clears selected item with 450ms delay for close cover spring animation, protected against race conditions.
      */
-    /**
-     * Resets transition and navigation states immediately when AnimatedContent finishes its transition.
-     */
-    fun onTransitionFinished() {
-        isReturningFromPdf = false
-        isNavigatingBack = false
-        if (page != "pdf") {
-            selectedItem = null
-            pdfInitialPage = null
-            isFromBookmarks = false
-            isFromShortcut = false
-            pdfSourcePage = "home"
-            com.Nightjar.Th3GradeLibraryKMP.ui.TransitionTargetTracker.reset()
-            persistState()
-        }
-    }
-
     fun clearSelectedItem() {
         clearSelectedItemJob?.cancel()
         popPage()
+        clearSelectedItemJob = viewModelScope.launch {
+            delay(450)
+            if (page != "pdf") {
+                selectedItem = null
+                pdfInitialPage = null
+                isFromBookmarks = false
+                pdfSourcePage = "home"
+                com.Nightjar.Th3GradeLibraryKMP.ui.TransitionTargetTracker.reset()
+                persistState()
+            }
+            isNavigatingBack = false
+        }
     }
 }

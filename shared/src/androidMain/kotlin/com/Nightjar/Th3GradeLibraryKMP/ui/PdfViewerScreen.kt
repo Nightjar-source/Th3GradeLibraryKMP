@@ -34,13 +34,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.Spring
-import androidx.compose.animation.core.tween
-import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.animateDp
-import androidx.compose.animation.core.FastOutLinearInEasing
-import androidx.compose.animation.core.LinearOutSlowInEasing
-import androidx.compose.animation.core.LinearEasing
-import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.draw.clipToBounds
@@ -118,6 +112,8 @@ actual fun PdfViewerScreen(
     var tempFile by remember(item) { mutableStateOf<File?>(null) }
     var pdfRenderer by remember { mutableStateOf<PdfRenderer?>(null) }
     var loadingError by remember(item) { mutableStateOf<String?>(null) }
+    var downloadProgress by remember(item) { mutableStateOf(0f) }
+    var isDownloading by remember(item) { mutableStateOf(false) }
     var orientation by remember(appSettings.pdfScrollDirection) { mutableStateOf(appSettings.pdfScrollDirection) }
     var isZoomed by remember(item) { mutableStateOf(false) }
 
@@ -182,16 +178,8 @@ actual fun PdfViewerScreen(
         }
     }
 
-    var backGestureProgress by remember { mutableStateOf(0f) }
-    androidx.activity.compose.PredictiveBackHandler(enabled = true) { progress ->
-        try {
-            progress.collect { backEvent ->
-                backGestureProgress = backEvent.progress
-            }
-            onClose()
-        } catch (_: kotlinx.coroutines.CancellationException) {
-            backGestureProgress = 0f
-        }
+    androidx.activity.compose.BackHandler(enabled = true) {
+        onClose()
     }
 
     val scope = rememberCoroutineScope()
@@ -203,39 +191,95 @@ actual fun PdfViewerScreen(
         activeViewingBookId = item.id
         pendingCacheCleanups.remove("pdf_${item.id}.pdf")?.cancel()
         try {
-            val file = File(context.cacheDir, "pdf_${item.id}.pdf")
-            if (!file.exists() || file.length() == 0L) {
+            val file = com.Nightjar.Th3GradeLibraryKMP.data.BookStorageEngine.getPermanentFile(context, item)
+            if (!file.exists() || file.length() < 1024L) {
                 withContext(Dispatchers.IO) {
-                    val tempTarget = File(context.cacheDir, "pdf_${item.id}_${System.currentTimeMillis()}.tmp")
+                    val storageDir = com.Nightjar.Th3GradeLibraryKMP.data.BookStorageEngine.getStorageDir(context)
+                    val tempTarget = File(storageDir, "temp_${item.id}_${System.currentTimeMillis()}.tmp")
+                    var streamSuccess = false
+
+                    // Tier 1: Try bundled assets (for backward compatibility if asset exists)
                     val assetManager = context.assets
                     val possiblePaths = listOf(
                         "composeResources/com.Nightjar.Th3GradeLibraryKMP.generated.resources/${item.pdfPath}",
                         "composeResources/shared.generated.resources/${item.pdfPath}",
-                        "composeResources/com.Nightjar.Th3GradeLibraryKMP.generated.resources/${item.pdfPath}",
                         item.pdfPath
                     )
                     
-                    var inputStream: java.io.InputStream? = null
                     for (path in possiblePaths) {
                         try {
-                            inputStream = assetManager.open(path)
-                            if (inputStream != null) break
-                        } catch (e: Exception) { }
-                    }
-
-                    if (inputStream != null) {
-                        inputStream.use { input ->
-                            java.io.FileOutputStream(tempTarget).use { output ->
-                                input.copyTo(output, 32 * 1024)
+                            assetManager.open(path).use { input ->
+                                java.io.FileOutputStream(tempTarget).use { output ->
+                                    input.copyTo(output, 32 * 1024)
+                                }
                             }
-                        }
-                    } else {
-                        val bytes = Res.readBytes(item.pdfPath)
-                        tempTarget.writeBytes(bytes)
+                            if (tempTarget.exists() && tempTarget.length() > 0L) {
+                                streamSuccess = true
+                                break
+                            }
+                        } catch (_: Exception) {}
                     }
 
-                    if (tempTarget.exists() && tempTarget.length() > 0L) {
+                    // Tier 2: Stream on-demand from Cloudflare Gateway / Telegram CDN
+                    if (!streamSuccess) {
+                        try {
+                            val streamUrl = com.Nightjar.Th3GradeLibraryKMP.network.CloudCatalogManager.getStreamUrl(item)
+                            if (streamUrl.isNotBlank() && streamUrl.startsWith("http")) {
+                                isDownloading = true
+                                val connection = java.net.URL(streamUrl).openConnection() as java.net.HttpURLConnection
+                                connection.connectTimeout = 15000
+                                connection.readTimeout = 30000
+                                connection.setRequestProperty("User-Agent", "Mozilla/5.0")
+                                connection.connect()
+
+                                if (connection.responseCode in 200..299) {
+                                    val totalBytes = connection.contentLengthLong.takeIf { it > 0 } ?: (item.id.let { 
+                                        com.Nightjar.Th3GradeLibraryKMP.network.CloudCatalogManager.getMeta(item)?.file_size 
+                                    } ?: -1L)
+
+                                    connection.inputStream.use { input ->
+                                        java.io.FileOutputStream(tempTarget).use { output ->
+                                            val buffer = ByteArray(64 * 1024)
+                                            var bytesCopied = 0L
+                                            var bytesRead: Int
+                                            while (input.read(buffer).also { bytesRead = it } != -1) {
+                                                ensureActive()
+                                                output.write(buffer, 0, bytesRead)
+                                                bytesCopied += bytesRead
+                                                if (totalBytes > 0) {
+                                                    downloadProgress = (bytesCopied.toFloat() / totalBytes.toFloat()).coerceIn(0f, 1f)
+                                                }
+                                            }
+                                        }
+                                    }
+                                    if (tempTarget.exists() && tempTarget.length() > 0L) {
+                                        streamSuccess = true
+                                    }
+                                }
+                            }
+                        } catch (e: Exception) {
+                            if (e is kotlinx.coroutines.CancellationException) throw e
+                            e.printStackTrace()
+                        } finally {
+                            isDownloading = false
+                        }
+                    }
+
+                    // Tier 3: Res.readBytes fallback (if packed)
+                    if (!streamSuccess) {
+                        try {
+                            val bytes = Res.readBytes(item.pdfPath)
+                            tempTarget.writeBytes(bytes)
+                            if (tempTarget.exists() && tempTarget.length() > 0L) {
+                                streamSuccess = true
+                            }
+                        } catch (_: Exception) {}
+                    }
+
+                    if (streamSuccess && tempTarget.exists() && tempTarget.length() > 0L) {
                         tempTarget.renameTo(file)
+                    } else {
+                        throw Exception("تعذر تنزيل الملف، يرجى التأكد من اتصال الإنترنت.")
                     }
                 }
             }
@@ -287,27 +331,8 @@ actual fun PdfViewerScreen(
                     }
                 }
 
-                // 2. Official 2-Minute Grace Timer (120 seconds):
-                // Retains extracted PDF file and page cache in RAM for 2 minutes.
-                // If user re-opens this book within 2 minutes, launch is instantaneous with zero disk re-copy!
-                // If 2 minutes elapse without re-opening, cleanly deletes file and evicts cache.
-                val cleanupJob = CoroutineScope(Dispatchers.IO).launch {
-                    try {
-                        kotlinx.coroutines.delay(120_000L) // 2-Minute official timer
-                        if (activeViewingBookId != bookId) {
-                            if (fileToDelete != null && fileToDelete.exists()) {
-                                fileToDelete.delete()
-                            }
-                            PdfBitmapCache.evictBook(bookId)
-                            pendingCacheCleanups.remove("pdf_$bookId.pdf")
-                        }
-                    } catch (_: kotlinx.coroutines.CancellationException) {
-                        // User reopened the book within 2 minutes! Cleanup aborted safely.
-                    } catch (e: Exception) {
-                        e.printStackTrace()
-                    }
-                }
-                pendingCacheCleanups["pdf_$bookId.pdf"] = cleanupJob
+                // Evict in-memory decoded bitmap cache for this book, but KEEP the downloaded file permanently!
+                PdfBitmapCache.evictBook(bookId)
 
                 activity?.let { act ->
                     val window = act.window
@@ -351,7 +376,7 @@ actual fun PdfViewerScreen(
     val cornerRadius by if (animatedVisibilityScope != null) {
         animatedVisibilityScope.transition.animateDp(
             transitionSpec = { spring(dampingRatio = 0.76f, stiffness = 220f) },
-            targetValueByState = { state: androidx.compose.animation.EnterExitState ->
+            targetValueByState = { state ->
                 when (state) {
                     androidx.compose.animation.EnterExitState.Visible -> 0.dp
                     else -> dynamicTargetCornerRadius
@@ -362,12 +387,9 @@ actual fun PdfViewerScreen(
     } else remember { mutableStateOf(0.dp) }
     val safeCornerRadius = cornerRadius.coerceAtLeast(0.dp)
 
-    val isTargetInViewport = com.Nightjar.Th3GradeLibraryKMP.ui.TransitionTargetTracker.visibleItemIds.contains(item.id)
-    val isDirectTarget = com.Nightjar.Th3GradeLibraryKMP.ui.TransitionTargetTracker.activeTargetId == "card_" + item.id ||
-                         com.Nightjar.Th3GradeLibraryKMP.ui.TransitionTargetTracker.activeTargetId == item.id
     val hasValidTarget = when {
         isFromBookmarksEffective -> (initialPage != null)
-        else -> isTargetInViewport || isDirectTarget || sourcePage in listOf("list", "home", "shortcuts")
+        else -> true
     }
 
     val sharedKey = when {
@@ -382,18 +404,18 @@ actual fun PdfViewerScreen(
                 animatedVisibilityScope = animatedVisibilityScope,
                 enter = androidx.compose.animation.fadeIn(
                     animationSpec = androidx.compose.animation.core.tween(
-                        durationMillis = 200,
-                        easing = androidx.compose.animation.core.FastOutSlowInEasing
+                        durationMillis = 130,
+                        easing = androidx.compose.animation.core.LinearEasing
                     )
                 ),
                 exit = androidx.compose.animation.fadeOut(
                     animationSpec = androidx.compose.animation.core.tween(
-                        durationMillis = 350,
-                        easing = androidx.compose.animation.core.FastOutSlowInEasing
+                        durationMillis = 150,
+                        delayMillis = 75,
+                        easing = androidx.compose.animation.core.LinearEasing
                     )
                 ),
                 renderInOverlayDuringTransition = true,
-                zIndexInOverlay = 0f,
                 clipInOverlayDuringTransition = OverlayClip(androidx.compose.foundation.shape.RoundedCornerShape(safeCornerRadius)),
                 boundsTransform = { _, _ ->
                     spring(dampingRatio = 0.82f, stiffness = 280f)
@@ -402,15 +424,19 @@ actual fun PdfViewerScreen(
             )
         }
     } else if (animatedVisibilityScope != null) {
-        // Clean symmetrical fluid fade and gentle scale without shrinking to screen top edge
+        // Liquid Dynamic Island sink-down exit ONLY when bookmark is deleted or when opening from a shortcut/news
         with(animatedVisibilityScope) {
             Modifier.animateEnterExit(
-                enter = androidx.compose.animation.fadeIn(androidx.compose.animation.core.tween(220)) + androidx.compose.animation.scaleIn(initialScale = 0.96f),
-                exit = androidx.compose.animation.fadeOut(androidx.compose.animation.core.tween(200)) + 
+                enter = androidx.compose.animation.fadeIn(androidx.compose.animation.core.tween(220)) + androidx.compose.animation.scaleIn(initialScale = 0.92f),
+                exit = androidx.compose.animation.fadeOut(androidx.compose.animation.core.tween(220, delayMillis = 60)) + 
                        androidx.compose.animation.scaleOut(
-                           targetScale = 0.96f, 
-                           animationSpec = spring(dampingRatio = 0.82f, stiffness = Spring.StiffnessMediumLow)
-                       ) 
+                           targetScale = 0.28f, 
+                           animationSpec = spring(dampingRatio = 0.78f, stiffness = Spring.StiffnessMediumLow)
+                       ) + 
+                       androidx.compose.animation.slideOutVertically(
+                           targetOffsetY = { it },
+                           animationSpec = spring(dampingRatio = 0.78f, stiffness = Spring.StiffnessMediumLow)
+                       )
             )
         }
     } else Modifier
@@ -418,123 +444,10 @@ actual fun PdfViewerScreen(
     val rootModifier = Modifier
         .fillMaxSize()
         .then(sharedBoundsModifier)
-        .graphicsLayer {
-            if (backGestureProgress > 0f) {
-                val scale = 1f - (backGestureProgress * 0.08f)
-                scaleX = scale
-                scaleY = scale
-            }
-        }
         .clip(androidx.compose.foundation.shape.RoundedCornerShape(safeCornerRadius))
         .background(MaterialTheme.colorScheme.background)
 
     Box(modifier = rootModifier) {
-        // --- Morph Underlay / Overlay during expand & collapse respecting shape fidelity ---
-        // First 10% of expansion: dissolves from card shape into reader content
-        // Last 10% of contraction: reveals card shape right before reaching original position
-        val coverAlpha by if (animatedVisibilityScope != null) {
-            animatedVisibilityScope.transition.animateFloat(
-                transitionSpec = {
-                    if (this.targetState == androidx.compose.animation.EnterExitState.Visible) {
-                        // Opening: first 10% of transition (approx 35ms) dissolves out
-                        tween(durationMillis = 35, easing = LinearEasing)
-                    } else {
-                        // Closing: stays hidden for 85% of collapse, fades in at the last 10-15% (180ms delay, 45ms duration)
-                        tween(durationMillis = 60, delayMillis = 280, easing = FastOutSlowInEasing)
-                    }
-                },
-                targetValueByState = { state: androidx.compose.animation.EnterExitState ->
-                    if (state == androidx.compose.animation.EnterExitState.Visible) 0f else 1f
-                },
-                label = "reader_cover_morph_alpha"
-            )
-        } else remember { mutableStateOf(0f) }
-
-        if (coverAlpha > 0.01f) {
-            Box(
-                modifier = Modifier
-                    .zIndex(10f)
-                    .fillMaxSize()
-                    .graphicsLayer { alpha = coverAlpha }
-                    .background(MaterialTheme.colorScheme.surface)
-            ) {
-                if (isFromBookmarksEffective) {
-                    // Shape Fidelity for Bookmarks: Expand/Collapse as glass capsule row with bookmark page details
-                    Row(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .padding(16.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.Star,
-                            contentDescription = null,
-                            tint = MaterialTheme.colorScheme.primary,
-                            modifier = Modifier.size(24.dp)
-                        )
-                        Spacer(modifier = Modifier.width(12.dp))
-                        Text(
-                            text = if (initialPage != null) "الصفحة رقم ${initialPage + 1}" else item.title,
-                            fontSize = 15.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.onSurface
-                        )
-                    }
-                } else if (!isGridMode) {
-                    // Shape Fidelity for List Mode: Horizontal card layout
-                    Row(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .padding(12.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Box(
-                            modifier = Modifier
-                                .size(width = 64.dp, height = 86.dp)
-                                .clip(RoundedCornerShape(12.dp))
-                                .background(MaterialTheme.colorScheme.surfaceVariant)
-                        ) {
-                            coil3.compose.AsyncImage(
-                                model = coil3.request.ImageRequest.Builder(coil3.compose.LocalPlatformContext.current)
-                                    .data(com.Nightjar.Th3GradeLibraryKMP.generated.resources.Res.getUri("drawable/${item.coverResName}." + if (item.coverResName in listOf("ayajaaa", "english", "englishactivity", "kss1")) "jpg" else "png"))
-                                    .build(),
-                                contentDescription = item.title,
-                                contentScale = ContentScale.Crop,
-                                modifier = Modifier.fillMaxSize()
-                            )
-                        }
-                        Spacer(modifier = Modifier.width(14.dp))
-                        Column(modifier = Modifier.weight(1f)) {
-                            Text(
-                                text = item.title,
-                                fontSize = 16.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = MaterialTheme.colorScheme.onSurface
-                            )
-                            Spacer(modifier = Modifier.height(4.dp))
-                            Text(
-                                text = item.author,
-                                fontSize = 12.sp,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        }
-                    }
-                } else {
-                    // Grid Mode: Full book cover image
-                    coil3.compose.AsyncImage(
-                        model = coil3.request.ImageRequest.Builder(coil3.compose.LocalPlatformContext.current)
-                            .data(com.Nightjar.Th3GradeLibraryKMP.generated.resources.Res.getUri("drawable/${item.coverResName}." + if (item.coverResName in listOf("ayajaaa", "english", "englishactivity", "kss1")) "jpg" else "png"))
-                            .memoryCachePolicy(coil3.request.CachePolicy.ENABLED)
-                            .diskCachePolicy(coil3.request.CachePolicy.ENABLED)
-                            .build(),
-                        contentDescription = item.title,
-                        contentScale = ContentScale.Crop,
-                        modifier = Modifier.fillMaxSize()
-                    )
-                }
-            }
-        }
-
         if (loadingError != null) {
             Column(
                 modifier = Modifier
@@ -556,10 +469,42 @@ actual fun PdfViewerScreen(
                 modifier = Modifier.fillMaxSize(),
                 contentAlignment = Alignment.Center
             ) {
-                com.Nightjar.Th3GradeLibraryKMP.ui.ExpressiveLoadingIndicator(
-                    modifier = Modifier.size(48.dp),
-                    color = MaterialTheme.colorScheme.primary
-                )
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.Center,
+                    modifier = Modifier.padding(24.dp)
+                ) {
+                    com.Nightjar.Th3GradeLibraryKMP.ui.ExpressiveLoadingIndicator(
+                        modifier = Modifier.size(56.dp),
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                    Spacer(modifier = Modifier.height(20.dp))
+                    if (isDownloading) {
+                        val percent = (downloadProgress * 100).toInt()
+                        Text(
+                            text = if (percent > 0) "جاري التحميل من سحابة الكتب: $percent%" else "جاري بدء التحميل السحابي السريع...",
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.onBackground
+                        )
+                        Spacer(modifier = Modifier.height(12.dp))
+                        LinearProgressIndicator(
+                            progress = { downloadProgress },
+                            modifier = Modifier
+                                .width(220.dp)
+                                .height(6.dp)
+                                .clip(RoundedCornerShape(3.dp)),
+                            color = MaterialTheme.colorScheme.primary,
+                            trackColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.2f)
+                        )
+                    } else {
+                        Text(
+                            text = "جاري تهيئة وعرض الصفحات...",
+                            style = MaterialTheme.typography.bodyLarge,
+                            color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.8f)
+                        )
+                    }
+                }
             }
         } else {
             val pageCount = pdfRenderer!!.pageCount
@@ -722,13 +667,11 @@ actual fun PdfViewerScreen(
                             }
                         }
 
-                    // Completely Floating Top control bar - delayed until hero morph settles
-                    val isTransitionSettled = animatedVisibilityScope?.transition?.currentState == androidx.compose.animation.EnterExitState.Visible
+                    // Completely Floating Top control bar
                     AnimatedVisibility(
-                        visible = !isZoomed && isTransitionSettled != false,
-                        enter = fadeIn(animationSpec = tween(200, delayMillis = 120)) +
-                                slideInVertically(animationSpec = tween(200, delayMillis = 120)) { -it / 3 },
-                        exit = fadeOut(animationSpec = tween(120)),
+                        visible = !isZoomed,
+                        enter = fadeIn() + slideInVertically { -it },
+                        exit = fadeOut() + slideOutVertically { -it },
                         modifier = Modifier.align(Alignment.TopCenter)
                     ) {
                         Row(
@@ -814,8 +757,8 @@ actual fun PdfViewerScreen(
                     // Floating Page Indicator capsule at bottom center
                     AnimatedVisibility(
                         visible = !isZoomed,
-                        enter = fadeIn(animationSpec = tween(220)),
-                        exit = fadeOut(animationSpec = tween(180)),
+                        enter = fadeIn() + slideInVertically { it },
+                        exit = fadeOut() + slideOutVertically { it },
                         modifier = Modifier.align(Alignment.BottomCenter)
                     ) {
                         Card(
@@ -1039,7 +982,6 @@ actual fun PdfViewerScreen(
                 }
             }
         }
-
     }
 }
 
