@@ -13,7 +13,7 @@ import androidx.compose.animation.core.*
 import androidx.compose.material3.adaptive.currentWindowAdaptiveInfo
 import androidx.window.core.layout.WindowWidthSizeClass
 import androidx.window.core.layout.WindowHeightSizeClass
-import com.Nightjar.Th3GradeLibraryKMP.theme.screenEntranceCascade
+import com.Nightjar.Th3GradeLibraryKMP.theme.popInOnInitialLoad
 import com.Nightjar.Th3GradeLibraryKMP.theme.adaptiveItemEntrance
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -168,8 +168,11 @@ fun NewsScreen(
         }
     }
 
-    val responsiveInfo = com.Nightjar.Th3GradeLibraryKMP.theme.LocalResponsiveLayoutInfo.current
-    val isMedium = responsiveInfo.isWide
+    val adaptiveInfo = currentWindowAdaptiveInfo()
+    val windowSizeClass = adaptiveInfo.windowSizeClass
+    val widthClass = windowSizeClass.windowWidthSizeClass
+    val heightClass = windowSizeClass.windowHeightSizeClass
+    val isMedium = widthClass != WindowWidthSizeClass.COMPACT
 
     BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
         val pullRefreshState = rememberPullToRefreshState()
@@ -231,21 +234,14 @@ fun NewsScreen(
                     val windowInfo = androidx.compose.ui.platform.LocalWindowInfo.current
                     val density = androidx.compose.ui.platform.LocalDensity.current
                     val screenWidthDp = with(density) { windowInfo.containerSize.width.toDp() }
-                    val dynamicNewsColumns = remember(responsiveInfo) {
-                        if (responsiveInfo.isWide) {
-                            if (responsiveInfo.width >= 1800.dp) GridCells.Fixed(4)
-                            else if (responsiveInfo.width >= 1400.dp) GridCells.Fixed(3)
-                            else GridCells.Fixed(2)
-                        } else {
-                            GridCells.Fixed(1)
+                    val dynamicNewsColumns = remember(widthClass, screenWidthDp) {
+                        when (widthClass) {
+                            WindowWidthSizeClass.COMPACT -> GridCells.Fixed(1)
+                            WindowWidthSizeClass.MEDIUM -> GridCells.Fixed(2)
+                            WindowWidthSizeClass.EXPANDED -> if (screenWidthDp >= 1400.dp) GridCells.Fixed(3) else GridCells.Fixed(2)
+                            else -> GridCells.Fixed(1)
                         }
                     }
-                    val firstVisible = remember { derivedStateOf { lazyGridState.firstVisibleItemIndex } }.value
-                    val isScrolling = remember { derivedStateOf { lazyGridState.isScrollInProgress } }.value
-                    CompositionLocalProvider(
-                        com.Nightjar.Th3GradeLibraryKMP.theme.LocalFirstVisibleItemIndex provides firstVisible,
-                        com.Nightjar.Th3GradeLibraryKMP.theme.LocalIsScrollInProgress provides isScrolling
-                    ) {
                     LazyVerticalGrid(
                         columns = dynamicNewsColumns,
                         state = lazyGridState,
@@ -259,7 +255,7 @@ fun NewsScreen(
                     ) {
                         item(key = "top_spacer", contentType = "spacer", span = { androidx.compose.foundation.lazy.grid.GridItemSpan(maxLineSpan) }) {
                             val statusBarHeight = WindowInsets.statusBars.add(WindowInsets.captionBar).asPaddingValues().calculateTopPadding()
-                            val dynamicTopPadding = when { responsiveInfo.isPhoneLandscape -> statusBarHeight + 44.dp; isMedium -> statusBarHeight + 72.dp; else -> statusBarHeight + 58.dp }
+                            val dynamicTopPadding = if (isMedium) statusBarHeight + 64.dp else statusBarHeight + 76.dp
                             Spacer(modifier = Modifier.height(dynamicTopPadding))
                         }
                         
@@ -311,16 +307,14 @@ fun NewsScreen(
                             }
                         } else {
                             itemsIndexed(newsList, key = { _, it -> it.id }, contentType = { _, _ -> "news_item" }) { index, newsItem ->
-                                val isReturning = com.Nightjar.Th3GradeLibraryKMP.theme.LocalIsReturningFromPdf.current
                                 NewsCardSwipeable(
                                     modifier = Modifier
-                                        .fillMaxWidth()
-                                        .adaptiveItemEntrance(index, newsItem.id)
                                         .animateItem(
-                                            fadeInSpec = null,
-                                            fadeOutSpec = tween(200),
-                                            placementSpec = if (isReturning) null else spring(stiffness = Spring.StiffnessMediumLow)
-                                        ),
+                                            fadeInSpec = tween(500),
+                                            placementSpec = spring(stiffness = Spring.StiffnessMediumLow),
+                                            fadeOutSpec = tween(200)
+                                        )
+                                        .adaptiveItemEntrance(index, itemId = newsItem.id),
                                     news = newsItem,
                                     isDark = isDark,
                                     isRead = readNewsIds.contains(newsItem.id) || (newsItem.link.isNotEmpty() && readNewsIds.contains(newsItem.link)),
@@ -343,7 +337,6 @@ fun NewsScreen(
                                 )
                             }
                         }
-                    }
                     }
                 }
 
@@ -543,9 +536,18 @@ fun NewsCardSwipeable(
     val sharedTransitionScope = LocalSharedTransitionScope.current
     val animatedVisibilityScope = LocalAnimatedVisibilityScope.current
 
-    val cardModifier = Modifier
+    var cardModifier = Modifier
         .graphicsLayer { translationX = animatedOffset }
         .clip(RoundedCornerShape(24.dp))
+
+    if (sharedTransitionScope != null && animatedVisibilityScope != null) {
+        with(sharedTransitionScope) {
+            cardModifier = cardModifier.sharedBounds(
+                sharedContentState = rememberSharedContentState(key = "news-${news.link}"),
+                animatedVisibilityScope = animatedVisibilityScope, renderInOverlayDuringTransition = false
+            )
+        }
+    }
 
     Box(modifier = modifier.fillMaxWidth()) {
         // Delete background
@@ -610,28 +612,26 @@ fun NewsCard(
     isRead: Boolean,
     modifier: Modifier = Modifier
 ) {
-    val responsiveInfo = com.Nightjar.Th3GradeLibraryKMP.theme.LocalResponsiveLayoutInfo.current
-    val isMicro = responsiveInfo.width < 360.dp
     val cleanDate = news.formattedDate.ifEmpty { formatNewsDate(news.pubDate) }
 
     Column(
         modifier = modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(if (isMicro) 18.dp else 24.dp))
+            .clip(RoundedCornerShape(24.dp))
             .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = if (isDark) 0.65f else 0.85f))
             .border(
                 width = 1.dp,
                 color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = if (isDark) 0.25f else 0.4f),
-                shape = RoundedCornerShape(if (isMicro) 18.dp else 24.dp)
+                shape = RoundedCornerShape(24.dp)
             )
-            .padding(if (isMicro) 6.dp else 8.dp)
+            .padding(8.dp)
     ) {
         // Image container with floating Date/Read badges
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .height(if (isMicro) 120.dp else 155.dp)
-                .clip(RoundedCornerShape(if (isMicro) 14.dp else 18.dp))
+                .height(155.dp)
+                .clip(RoundedCornerShape(18.dp))
                 .background(
                     Brush.linearGradient(
                         listOf(
@@ -747,12 +747,12 @@ fun NewsCard(
         // News title text placed below the image
         Text(
             text = news.title,
-            fontSize = if (isMicro) 12.sp else 13.5.sp,
+            fontSize = 13.5.sp,
             fontWeight = FontWeight.Bold,
             color = MaterialTheme.colorScheme.onSurface,
             maxLines = 2,
             overflow = TextOverflow.Ellipsis,
-            lineHeight = if (isMicro) 17.sp else 19.sp,
+            lineHeight = 19.sp,
             textAlign = androidx.compose.ui.text.style.TextAlign.Justify,
             modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
         )

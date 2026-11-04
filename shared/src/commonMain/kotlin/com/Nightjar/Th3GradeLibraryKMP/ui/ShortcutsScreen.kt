@@ -64,16 +64,22 @@ fun ShortcutsScreen(
         onScrollableStateChanged(canScroll)
     }
 
-    val responsiveInfo = com.Nightjar.Th3GradeLibraryKMP.theme.LocalResponsiveLayoutInfo.current
+    val adaptiveInfo = currentWindowAdaptiveInfo()
+    val windowSizeClass = adaptiveInfo.windowSizeClass
+    val widthClass = windowSizeClass.windowWidthSizeClass
+    val heightClass = windowSizeClass.windowHeightSizeClass
 
     BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
-        val isWide = responsiveInfo.isWide
+        val windowInfo = androidx.compose.ui.platform.LocalWindowInfo.current
+        val density = androidx.compose.ui.platform.LocalDensity.current
+        val screenWidthDp = with(density) { windowInfo.containerSize.width.toDp() }
+        val isWide = widthClass != WindowWidthSizeClass.COMPACT
         Column(
             modifier = Modifier
                 .fillMaxSize()
         ) {
             val statusBarHeight = WindowInsets.statusBars.add(WindowInsets.captionBar).asPaddingValues().calculateTopPadding()
-            val dynamicTopPadding = when { responsiveInfo.isPhoneLandscape -> statusBarHeight + 44.dp; isWide -> statusBarHeight + 72.dp; else -> statusBarHeight + 58.dp }
+            val dynamicTopPadding = if (isWide) statusBarHeight + 64.dp else statusBarHeight + 76.dp
 
             val isNavigatingBack = com.Nightjar.Th3GradeLibraryKMP.theme.LocalIsNavigatingBack.current
             LaunchedEffect(isNavigatingBack) {
@@ -82,23 +88,21 @@ fun ShortcutsScreen(
                 }
             }
 
-            val dynamicShortcutColumns = remember(responsiveInfo) {
-                if (!responsiveInfo.isWide) {
-                    if (responsiveInfo.width < 340.dp) {
-                        GridCells.Fixed(1)
-                    } else {
-                        GridCells.Fixed(2)
+            val dynamicShortcutColumns = remember(widthClass, heightClass, screenWidthDp) {
+                when (widthClass) {
+                    WindowWidthSizeClass.COMPACT -> if (screenWidthDp < 340.dp) GridCells.Fixed(1) else GridCells.Fixed(2)
+                    WindowWidthSizeClass.MEDIUM -> {
+                        if (heightClass == WindowHeightSizeClass.COMPACT) GridCells.Fixed(4) else GridCells.Fixed(3)
                     }
-                } else if (responsiveInfo.height < 480.dp) {
-                    GridCells.Fixed(4)
-                } else if (responsiveInfo.width >= 1800.dp) {
-                    GridCells.Fixed(8)
-                } else if (responsiveInfo.width >= 1440.dp) {
-                    GridCells.Fixed(6)
-                } else if (responsiveInfo.width >= 1080.dp) {
-                    GridCells.Fixed(5)
-                } else {
-                    GridCells.Fixed(4)
+                    WindowWidthSizeClass.EXPANDED -> {
+                        when {
+                            screenWidthDp >= 1800.dp -> GridCells.Fixed(8)
+                            screenWidthDp >= 1440.dp -> GridCells.Fixed(6)
+                            screenWidthDp >= 1080.dp -> GridCells.Fixed(5)
+                            else                     -> GridCells.Fixed(4)
+                        }
+                    }
+                    else -> GridCells.Fixed(2)
                 }
             }
 
@@ -131,9 +135,6 @@ fun ShortcutsScreen(
                     key = { _, item -> item.id }
                 ) { index, item ->
                     ShortcutItemCard(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .screenEntranceCascade(index + 1),
                         item = item,
                         isDark = isDark,
                         index = index + 1,
@@ -161,6 +162,7 @@ fun ShortcutItemCard(
     Column(
         modifier = modifier
             .fillMaxWidth()
+            .adaptiveItemEntrance(index, itemId = item.id)
             .clip(RoundedCornerShape(28.dp))
             .background(if (isDark) Color.White.copy(alpha = 0.05f) else Color.Black.copy(alpha = 0.03f))
             .clickable { onClick() }
