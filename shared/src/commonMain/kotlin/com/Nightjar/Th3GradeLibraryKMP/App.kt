@@ -1558,7 +1558,7 @@ fun AppContent(
 
                     Spacer(modifier = Modifier.height(12.dp))
 
-                    // 2. Separate Squircle Menu Button for Tablet ("القائمة")
+                    // 2. Matching Oval Menu Button for Tablet ("القائمة")
                     val sideMenuTint by animateColorAsState(
                         targetValue = if (isMenuButtonActive) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
                         animationSpec = tween(250)
@@ -1569,10 +1569,10 @@ fun AppContent(
                             .border(
                                 width = 1.dp,
                                 brush = Brush.linearGradient(listOf(Color.White.copy(alpha = 0.25f), Color.White.copy(alpha = 0.05f))),
-                                shape = RoundedCornerShape(24.dp)
+                                shape = RoundedCornerShape(32.dp)
                             )
-                            .liquidGlass(isDark, borderRadius = 24.dp, alpha = 0.90f)
-                            .clip(RoundedCornerShape(24.dp))
+                            .liquidGlass(isDark, borderRadius = 32.dp, alpha = 0.90f)
+                            .clip(RoundedCornerShape(32.dp))
                             .bounceClick {
                                 isDrawerOpen = !isDrawerOpen
                             },
@@ -1583,7 +1583,7 @@ fun AppContent(
                                 modifier = Modifier
                                     .fillMaxSize()
                                     .padding(8.dp)
-                                    .clip(RoundedCornerShape(16.dp))
+                                    .clip(RoundedCornerShape(24.dp))
                                     .background(
                                         Brush.radialGradient(
                                             listOf(

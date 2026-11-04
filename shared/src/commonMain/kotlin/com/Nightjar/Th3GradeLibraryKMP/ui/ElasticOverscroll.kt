@@ -20,7 +20,7 @@ import kotlinx.coroutines.launch
  * Custom built smooth rubber band effect.
  */
 fun Modifier.elasticOverscroll(
-    maxStretchRatio: Float = 0.10f,
+    maxStretchRatio: Float = 0.22f,
     topEnabled: Boolean = true,
     bottomEnabled: Boolean = true
 ): Modifier = composed {
@@ -81,8 +81,8 @@ fun Modifier.elasticOverscroll(
                     overscrollOffset.animateTo(
                         0f,
                         spring(
-                            dampingRatio = 0.80f,
-                            stiffness = 320f
+                            dampingRatio = Spring.DampingRatioLowBouncy,
+                            stiffness = Spring.StiffnessLow
                         )
                     )
                     return available

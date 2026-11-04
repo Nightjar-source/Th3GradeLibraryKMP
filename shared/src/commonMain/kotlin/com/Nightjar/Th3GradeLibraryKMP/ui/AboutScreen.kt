@@ -196,7 +196,7 @@ fun DeveloperCard(modifier: Modifier = Modifier, onOpenUrl: (String) -> Unit) {
                         color = Color(0xFFA5B4FC)
                     )
                     Text(
-                        text = "عبودي",
+                        text = "KarBer",
                         fontSize = 22.sp,
                         fontWeight = FontWeight.Bold,
                         color = Color.White

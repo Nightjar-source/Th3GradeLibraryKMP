@@ -238,8 +238,8 @@ fun LibraryScreen(
                 val gridListFraction by animateFloatAsState(
                     targetValue = if (isGridView) 1f else 0f,
                     animationSpec = spring(
-                        dampingRatio = 0.78f, // Fluid moist curve
-                        stiffness = 320f
+                        dampingRatio = Spring.DampingRatioLowBouncy, // Fluid moist curve
+                        stiffness = Spring.StiffnessLow
                     ),
                     label = "global_grid_list_fraction"
                 )
@@ -269,10 +269,11 @@ fun LibraryScreen(
                     val windowInfo = androidx.compose.ui.platform.LocalWindowInfo.current
                     val density = androidx.compose.ui.platform.LocalDensity.current
                     val screenWidthDp = with(density) { windowInfo.containerSize.width.toDp() }
+                    val reachabilityZone = if (!isWide) 48.dp else 0.dp
                     val dynamicTopPadding = if (isWide) {
                         statusBarHeight + 64.dp
                     } else {
-                        statusBarHeight + 76.dp
+                        statusBarHeight + 76.dp + reachabilityZone
                     }
                     val dynamicGridColumns = remember(widthClass, heightClass, screenWidthDp, isGridView) {
                         if (isGridView) {
@@ -336,6 +337,14 @@ fun LibraryScreen(
                 ) {
                     itemsIndexed(items = filteredList, key = { _, item -> item.id }, contentType = { _, _ -> "library_item" }) { index, item ->
                         ContentCard(
+                            modifier = Modifier.animateItem(
+                                fadeInSpec = tween(durationMillis = 240),
+                                fadeOutSpec = tween(durationMillis = 180),
+                                placementSpec = spring(
+                                    dampingRatio = Spring.DampingRatioLowBouncy,
+                                    stiffness = Spring.StiffnessLow
+                                )
+                            ),
                             item = item,
                             isGridView = isGridView,
                             isDark = isDark,
@@ -549,7 +558,7 @@ fun LazyGridItemScope.ContentCard(
 ) {
     val cardCornerRadius by animateDpAsState(
         targetValue = if (isGridView) 20.dp else 24.dp,
-        animationSpec = spring(dampingRatio = 0.80f, stiffness = 300f),
+        animationSpec = spring(dampingRatio = Spring.DampingRatioLowBouncy, stiffness = Spring.StiffnessLow),
         label = "cardCornerRadius"
     )
     val sharedTransitionScope = LocalSharedTransitionScope.current
@@ -564,20 +573,31 @@ fun LazyGridItemScope.ContentCard(
                 animatedVisibilityScope = animatedVisibilityScope,
                 enter = androidx.compose.animation.fadeIn(
                     animationSpec = androidx.compose.animation.core.tween(
-                        durationMillis = 150,
-                        delayMillis = 75,
+                        durationMillis = 180,
+                        delayMillis = 50,
                         easing = androidx.compose.animation.core.LinearEasing
                     )
                 ),
                 exit = androidx.compose.animation.fadeOut(
                     animationSpec = androidx.compose.animation.core.tween(
-                        durationMillis = 130,
+                        durationMillis = 150,
                         easing = androidx.compose.animation.core.LinearEasing
                     )
                 ),
                 renderInOverlayDuringTransition = true,
                 clipInOverlayDuringTransition = OverlayClip(RoundedCornerShape(cardCornerRadius)),
-                boundsTransform = { _, _ -> spring(dampingRatio = 0.82f, stiffness = 280f) },
+                boundsTransform = { _, _ -> spring(dampingRatio = Spring.DampingRatioLowBouncy, stiffness = Spring.StiffnessLow) },
+                resizeMode = SharedTransitionScope.ResizeMode.RemeasureToBounds
+            )
+        }
+    } else Modifier
+
+    val coverBoundsModifier = if (sharedTransitionScope != null && animatedVisibilityScope != null) {
+        with(sharedTransitionScope) {
+            Modifier.sharedBounds(
+                sharedContentState = rememberSharedContentState(key = "cover_img_${item.id}"),
+                animatedVisibilityScope = animatedVisibilityScope,
+                boundsTransform = { _, _ -> spring(dampingRatio = Spring.DampingRatioLowBouncy, stiffness = Spring.StiffnessLow) },
                 resizeMode = SharedTransitionScope.ResizeMode.RemeasureToBounds
             )
         }
@@ -586,8 +606,8 @@ fun LazyGridItemScope.ContentCard(
     val contentSizeModifier = if (!isReturningFromPdf && !isThisCardTarget) {
         Modifier.animateContentSize(
             animationSpec = spring(
-                dampingRatio = 0.80f,
-                stiffness = 340f
+                dampingRatio = Spring.DampingRatioLowBouncy,
+                stiffness = Spring.StiffnessLow
             )
         )
     } else Modifier
@@ -607,103 +627,59 @@ fun LazyGridItemScope.ContentCard(
             }
             .padding(12.dp)
     ) {
-        if (isGridView) {
-            Column(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalAlignment = Alignment.CenterHorizontally
-            ) {
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .aspectRatio(0.72f)
-                        .clip(RoundedCornerShape(16.dp))
-                        .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
+        AnimatedContent(
+            targetState = isGridView,
+            transitionSpec = {
+                (fadeIn(animationSpec = tween(220, delayMillis = 60)) togetherWith
+                 fadeOut(animationSpec = tween(160)))
+                    .using(SizeTransform(clip = false, sizeAnimationSpec = { _, _ ->
+                        spring(dampingRatio = Spring.DampingRatioLowBouncy, stiffness = Spring.StiffnessLow)
+                    }))
+            },
+            label = "card_grid_list_morph"
+        ) { targetIsGrid ->
+            if (targetIsGrid) {
+                Column(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalAlignment = Alignment.CenterHorizontally
                 ) {
-                    val coverData = remember(item) {
-                        try {
-                            com.Nightjar.Th3GradeLibraryKMP.generated.resources.Res.getUri("drawable/${item.coverResName}." + if (item.coverResName in listOf("ayajaaa", "english", "englishactivity", "kss1")) "jpg" else "png")
-                        } catch (_: Exception) {
-                            null
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .aspectRatio(0.72f)
+                            .then(coverBoundsModifier)
+                            .clip(RoundedCornerShape(16.dp))
+                            .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
+                    ) {
+                        val coverData = remember(item) {
+                            try {
+                                com.Nightjar.Th3GradeLibraryKMP.generated.resources.Res.getUri("drawable/${item.coverResName}." + if (item.coverResName in listOf("ayajaaa", "english", "englishactivity", "kss1")) "jpg" else "png")
+                            } catch (_: Exception) {
+                                null
+                            }
                         }
+
+                        coil3.compose.AsyncImage(
+                            model = coil3.request.ImageRequest.Builder(coil3.compose.LocalPlatformContext.current)
+                                .data(coverData)
+                                .crossfade(!isReturningFromPdf)
+                                .memoryCacheKey("book_cover_${item.id}")
+                                .diskCacheKey("book_cover_${item.id}")
+                                .memoryCachePolicy(coil3.request.CachePolicy.ENABLED)
+                                .diskCachePolicy(coil3.request.CachePolicy.ENABLED)
+                                .build(),
+                            contentDescription = item.title,
+                            contentScale = ContentScale.Crop,
+                            modifier = Modifier.fillMaxSize()
+                        )
                     }
 
-                    coil3.compose.AsyncImage(
-                        model = coil3.request.ImageRequest.Builder(coil3.compose.LocalPlatformContext.current)
-                            .data(coverData)
-                            .crossfade(!isReturningFromPdf)
-                            .memoryCacheKey("book_cover_${item.id}")
-                            .diskCacheKey("book_cover_${item.id}")
-                            .memoryCachePolicy(coil3.request.CachePolicy.ENABLED)
-                            .diskCachePolicy(coil3.request.CachePolicy.ENABLED)
-                            .build(),
-                        contentDescription = item.title,
-                        contentScale = ContentScale.Crop,
-                        modifier = Modifier.fillMaxSize()
-                    )
-                }
+                    Spacer(modifier = Modifier.height(10.dp))
 
-                Spacer(modifier = Modifier.height(10.dp))
-
-                Text(
-                    text = item.title,
-                    fontWeight = FontWeight.Bold,
-                    fontSize = 15.sp,
-                    color = MaterialTheme.colorScheme.onSurface,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
-                )
-
-                Spacer(modifier = Modifier.height(4.dp))
-
-                Text(
-                    text = item.author,
-                    fontSize = 12.sp,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
-                )
-            }
-        } else {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Box(
-                    modifier = Modifier
-                        .size(width = 65.dp, height = 85.dp)
-                        .clip(RoundedCornerShape(12.dp))
-                        .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
-                ) {
-                    val coverData = remember(item) {
-                        try {
-                            com.Nightjar.Th3GradeLibraryKMP.generated.resources.Res.getUri("drawable/${item.coverResName}." + if (item.coverResName in listOf("ayajaaa", "english", "englishactivity", "kss1")) "jpg" else "png")
-                        } catch (_: Exception) {
-                            null
-                        }
-                    }
-
-                    coil3.compose.AsyncImage(
-                        model = coil3.request.ImageRequest.Builder(coil3.compose.LocalPlatformContext.current)
-                            .data(coverData)
-                            .crossfade(!isReturningFromPdf)
-                            .memoryCacheKey("book_cover_${item.id}")
-                            .diskCacheKey("book_cover_${item.id}")
-                            .memoryCachePolicy(coil3.request.CachePolicy.ENABLED)
-                            .diskCachePolicy(coil3.request.CachePolicy.ENABLED)
-                            .build(),
-                        contentDescription = item.title,
-                        contentScale = ContentScale.Crop,
-                        modifier = Modifier.fillMaxSize()
-                    )
-                }
-
-                Spacer(modifier = Modifier.width(16.dp))
-
-                Column(modifier = Modifier.weight(1f)) {
                     Text(
                         text = item.title,
                         fontWeight = FontWeight.Bold,
-                        fontSize = 16.sp,
+                        fontSize = 15.sp,
                         color = MaterialTheme.colorScheme.onSurface,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis
@@ -713,11 +689,69 @@ fun LazyGridItemScope.ContentCard(
 
                     Text(
                         text = item.author,
-                        fontSize = 13.sp,
+                        fontSize = 12.sp,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis
                     )
+                }
+            } else {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .size(width = 65.dp, height = 85.dp)
+                            .then(coverBoundsModifier)
+                            .clip(RoundedCornerShape(12.dp))
+                            .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
+                    ) {
+                        val coverData = remember(item) {
+                            try {
+                                com.Nightjar.Th3GradeLibraryKMP.generated.resources.Res.getUri("drawable/${item.coverResName}." + if (item.coverResName in listOf("ayajaaa", "english", "englishactivity", "kss1")) "jpg" else "png")
+                            } catch (_: Exception) {
+                                null
+                            }
+                        }
+
+                        coil3.compose.AsyncImage(
+                            model = coil3.request.ImageRequest.Builder(coil3.compose.LocalPlatformContext.current)
+                                .data(coverData)
+                                .crossfade(!isReturningFromPdf)
+                                .memoryCacheKey("book_cover_${item.id}")
+                                .diskCacheKey("book_cover_${item.id}")
+                                .memoryCachePolicy(coil3.request.CachePolicy.ENABLED)
+                                .diskCachePolicy(coil3.request.CachePolicy.ENABLED)
+                                .build(),
+                            contentDescription = item.title,
+                            contentScale = ContentScale.Crop,
+                            modifier = Modifier.fillMaxSize()
+                        )
+                    }
+
+                    Spacer(modifier = Modifier.width(16.dp))
+
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            text = item.title,
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 16.sp,
+                            color = MaterialTheme.colorScheme.onSurface,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+
+                        Spacer(modifier = Modifier.height(4.dp))
+
+                        Text(
+                            text = item.author,
+                            fontSize = 13.sp,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                    }
                 }
             }
         }
