@@ -13,6 +13,7 @@ expect object BookDownloadManager {
     fun downloadItem(context: Any, item: BookItem)
     fun pauseDownload(item: BookItem)
     fun cancelDownload(item: BookItem)
+    fun pauseAll()
     fun downloadAll(context: Any, items: List<BookItem>)
     fun cancelAll()
 }

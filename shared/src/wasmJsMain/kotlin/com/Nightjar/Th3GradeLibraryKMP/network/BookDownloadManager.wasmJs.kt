@@ -22,6 +22,7 @@ actual object BookDownloadManager {
     actual fun downloadItem(context: Any, item: BookItem) {}
     actual fun pauseDownload(item: BookItem) {}
     actual fun cancelDownload(item: BookItem) {}
+    actual fun pauseAll() {}
     actual fun downloadAll(context: Any, items: List<BookItem>) {}
     actual fun cancelAll() {}
 }

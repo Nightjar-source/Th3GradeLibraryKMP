@@ -104,6 +104,11 @@
             android:process=":cleanup"
             android:stopWithTask="false" />
 
+        <service
+            android:name=".BookDownloadForegroundService"
+            android:exported="false"
+            android:foregroundServiceType="dataSync" />
+
         <!-- Official Firebase Cloud Messaging Service (FCM v1) Zero-Battery Push -->
         <service
             android:name=".AppFirebaseMessagingService"

@@ -56,8 +56,34 @@ const _DISABLED_ANNOUNCEMENT = {
   pubDate: "Sun, 01 Nov 2026 14:00:00 +0300"
 };
 
-// In-memory tracker for last sent notification GUID
+// In-memory & Edge Cache tracker for last sent notification GUID
 let lastNotifiedGuid = "";
+
+async function getLastNotifiedGuid() {
+  try {
+    const cache = caches.default;
+    const cacheKey = new Request("https://th3books-gateway.karrar1iq.workers.dev/internal/last-notified-guid");
+    const cached = await cache.match(cacheKey);
+    if (cached) {
+      return (await cached.text()).trim();
+    }
+  } catch (e) {}
+  return lastNotifiedGuid;
+}
+
+async function setLastNotifiedGuid(guid) {
+  lastNotifiedGuid = guid;
+  try {
+    const cache = caches.default;
+    const cacheKey = new Request("https://th3books-gateway.karrar1iq.workers.dev/internal/last-notified-guid");
+    const response = new Response(guid, {
+      headers: {
+        "Cache-Control": "public, max-age=2592000" // 30 days retention
+      }
+    });
+    await cache.put(cacheKey, response);
+  } catch (e) {}
+}
 
 addEventListener('fetch', event => {
   event.respondWith(handleRequest(event.request, event));
@@ -252,11 +278,12 @@ async function handleScheduledEvent(force = false) {
     const snippet = descMatch ? descMatch[1].replace(/<[^>]*>/g, "").trim().substring(0, 150) : "";
     const guid = link || title;
 
-    if (!force && lastNotifiedGuid === guid) {
+    const cachedGuid = await getLastNotifiedGuid();
+    if (!force && (lastNotifiedGuid === guid || cachedGuid === guid)) {
       return { status: "unchanged", guid: guid };
     }
 
-    lastNotifiedGuid = guid;
+    await setLastNotifiedGuid(guid);
 
     // Send FCM v1 pure Data-Only push (Zero WakeLock, Zero Battery, Ultra-fast delivery)
     const pushResult = await sendFcmNotification({

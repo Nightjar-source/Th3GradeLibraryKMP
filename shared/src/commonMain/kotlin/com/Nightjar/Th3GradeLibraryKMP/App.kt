@@ -32,6 +32,7 @@ import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
@@ -525,11 +526,12 @@ fun AppContent(
                         ) { targetPage ->
                             val currentTransition = this@AnimatedContent.transition
                             LaunchedEffect(currentTransition.currentState, currentTransition.targetState, targetPage) {
-                                if (currentTransition.currentState == currentTransition.targetState &&
-                                    page != "pdf"
-                                ) {
-                                    com.Nightjar.Th3GradeLibraryKMP.ui.TransitionTargetTracker.isTransitionActive = false
-                                    com.Nightjar.Th3GradeLibraryKMP.ui.TransitionTargetTracker.activeTargetId = null
+                                if (currentTransition.currentState == currentTransition.targetState) {
+                                    if (page != "pdf") {
+                                        com.Nightjar.Th3GradeLibraryKMP.ui.TransitionTargetTracker.isTransitionActive = false
+                                        com.Nightjar.Th3GradeLibraryKMP.ui.TransitionTargetTracker.activeTargetId = null
+                                    }
+                                    isNavigatingBack = false
                                 }
                             }
                             val pageContentPadding = PaddingValues(
@@ -602,12 +604,23 @@ fun AppContent(
                                     "news" -> RenderNewsDestination(
                                         onOpenSettings = { isNewsSettingsOpen = true },
                                         onItemClick = { url, title ->
-                                            val matched = SyncEngine.newsList.value.firstOrNull { it.link == url || it.title == title }
-                                            if (matched != null) {
-                                                activeNotificationItem = matched
-                                                navigateTo("notification_detail")
+                                            val isDevAnnouncement = url.startsWith("dev_") || title.contains("المطور") || title.contains("تنبيه من المطور")
+                                            if (isDevAnnouncement) {
+                                                val matched = SyncEngine.newsList.value.firstOrNull { it.link == url || it.title == title }
+                                                if (matched != null) {
+                                                    activeNotificationItem = matched
+                                                    navigateTo("notification_detail")
+                                                }
                                             } else {
-                                                platformActionHandler.openCustomTab(url, appSettings.primaryColor)
+                                                if (url.isNotBlank() && url.startsWith("http")) {
+                                                    platformActionHandler.openCustomTab(url, appSettings.primaryColor)
+                                                } else {
+                                                    val matched = SyncEngine.newsList.value.firstOrNull { it.link == url || it.title == title }
+                                                    if (matched != null) {
+                                                        activeNotificationItem = matched
+                                                        navigateTo("notification_detail")
+                                                    }
+                                                }
                                             }
                                         },
                                         isDark = isDark,
@@ -1172,6 +1185,118 @@ fun AppContent(
                     }
                 }
 
+        // --- Floating Alert Dynamic Island Capsule for Cloud Downloads (Root Level Overlay) ---
+        val rootActiveNotice by com.Nightjar.Th3GradeLibraryKMP.network.BookDownloadManager.activeNoticeMessage.collectAsState()
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .windowInsetsPadding(WindowInsets.statusBars.add(WindowInsets.captionBar))
+                .padding(top = if (isWide) 52.dp else 58.dp)
+                .zIndex(250f).then(
+                    if (LocalSharedTransitionScope.current != null) {
+                        with(LocalSharedTransitionScope.current!!) {
+                            Modifier.renderInSharedTransitionScopeOverlay(zIndexInOverlay = 60f)
+                        }
+                    } else Modifier
+                ),
+            contentAlignment = Alignment.TopCenter
+        ) {
+            androidx.compose.animation.AnimatedVisibility(
+                visible = rootActiveNotice != null,
+                enter = slideInVertically(
+                    initialOffsetY = { -it / 2 },
+                    animationSpec = spring(dampingRatio = Spring.DampingRatioLowBouncy, stiffness = 380f)
+                ) + expandVertically(expandFrom = Alignment.Top) + fadeIn(tween(220)),
+                exit = slideOutVertically(
+                    targetOffsetY = { -it / 2 },
+                    animationSpec = spring(dampingRatio = Spring.DampingRatioNoBouncy, stiffness = 420f)
+                ) + shrinkVertically(shrinkTowards = Alignment.Top) + fadeOut(tween(180))
+            ) {
+                val noticeText = rootActiveNotice ?: ""
+                val isDownloading = noticeText.contains("%") || noticeText.contains("جاري تنزيل") || noticeText.contains("جاري تحميل")
+                val isCompleted = noticeText.contains("اكتمل") || noticeText.contains("✓")
+                val isPaused = noticeText.contains("إيقاف") || noticeText.contains("مؤقتاً")
+                val isFailed = noticeText.contains("تعذر") || noticeText.contains("فشل") || noticeText.contains("✕")
+
+                Surface(
+                    shape = RoundedCornerShape(26.dp),
+                    color = MaterialTheme.colorScheme.surfaceColorAtElevation(6.dp).copy(alpha = 0.96f),
+                    tonalElevation = 10.dp,
+                    shadowElevation = 12.dp,
+                    modifier = Modifier
+                        .widthIn(min = 180.dp, max = 500.dp)
+                        .padding(horizontal = 16.dp)
+                        .border(
+                            width = 1.dp,
+                            color = when {
+                                isCompleted -> Color(0xFF10B981).copy(alpha = 0.55f)
+                                isPaused -> Color(0xFFF59E0B).copy(alpha = 0.55f)
+                                isFailed -> MaterialTheme.colorScheme.error.copy(alpha = 0.55f)
+                                else -> MaterialTheme.colorScheme.primary.copy(alpha = 0.45f)
+                            },
+                            shape = RoundedCornerShape(26.dp)
+                        )
+                ) {
+                    Row(
+                        modifier = Modifier
+                            .animateContentSize(
+                                animationSpec = spring(
+                                    dampingRatio = Spring.DampingRatioLowBouncy,
+                                    stiffness = Spring.StiffnessMediumLow
+                                )
+                            )
+                            .padding(horizontal = 18.dp, vertical = 10.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.Center
+                    ) {
+                        if (isDownloading) {
+                            CircularProgressIndicator(
+                                modifier = Modifier.size(18.dp),
+                                color = MaterialTheme.colorScheme.primary,
+                                strokeWidth = 2.4.dp
+                            )
+                            Spacer(modifier = Modifier.width(10.dp))
+                        } else if (isCompleted) {
+                            Icon(
+                                imageVector = Icons.Default.CheckCircle,
+                                contentDescription = null,
+                                tint = Color(0xFF10B981),
+                                modifier = Modifier.size(20.dp)
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                        } else if (isPaused) {
+                            Icon(
+                                imageVector = Icons.Default.PauseCircle,
+                                contentDescription = null,
+                                tint = Color(0xFFF59E0B),
+                                modifier = Modifier.size(20.dp)
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                        } else if (isFailed) {
+                            Icon(
+                                imageVector = Icons.Default.Error,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.error,
+                                modifier = Modifier.size(20.dp)
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                        }
+                        Text(
+                            text = noticeText,
+                            style = MaterialTheme.typography.bodyMedium.copy(
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 13.sp,
+                                textAlign = TextAlign.Center
+                            ),
+                            color = MaterialTheme.colorScheme.onSurface,
+                            maxLines = 2,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                    }
+                }
+            }
+        }
+
 
 
         // --- Dynamic Navigation & Banner Heights Calculation ---
@@ -1187,7 +1312,7 @@ fun AppContent(
 
         // --- Bottom Banner Ad (Google AdMob Anchored Adaptive Banner - Positioned ABOVE bottom nav bar) ---
         androidx.compose.animation.AnimatedVisibility(
-            visible = !showOnboarding && page != "pdf" && bottomBannerAd != null,
+            visible = !showOnboarding && bottomBannerAd != null,
             enter = slideInVertically(animationSpec = spring(dampingRatio = 0.8f, stiffness = 300f)) { it } + fadeIn(tween(250)),
             exit = slideOutVertically(animationSpec = spring(dampingRatio = 0.8f, stiffness = 300f)) { it } + fadeOut(tween(200)),
             modifier = Modifier

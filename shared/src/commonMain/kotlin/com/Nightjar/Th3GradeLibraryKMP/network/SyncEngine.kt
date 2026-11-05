@@ -304,7 +304,12 @@ object SyncEngine {
     private fun extractImageFromContent(content: String): String? {
         val regex = Regex("<img[^>]+src\\s*=\\s*['\"]([^'\"]+)['\"][^>]*>")
         val match = regex.find(content)
-        return match?.groups?.get(1)?.value
+        val raw = match?.groups?.get(1)?.value ?: return null
+        return if (raw.contains("blogger.googleusercontent.com") || raw.contains("bp.blogspot.com")) {
+            raw.replace("/s72-c/", "/s1600/").replace("/w72-h72/", "/s1600/")
+        } else {
+            raw
+        }
     }
 
     private fun saveLocalNews(list: List<NewsItem>) {
@@ -395,23 +400,24 @@ object SyncEngine {
             val originalUrl = "https://feeds.feedburner.com/karraraliraqii/gkhbdxas1m0"
 
             suspend fun fetchWithFallbacks(): com.prof18.rssparser.model.RssChannel {
-                // المحاولة الأساسية الأولى: رابط الخلاصة الأصلي المباشر (يوفر حصة كلاود فلار بالكامل)
-                try {
-                    return kotlinx.coroutines.withTimeout(9000L) {
-                        val channel = rssParser.getRssChannel(originalUrl)
-                        if (channel.items.isEmpty()) throw Exception("Empty channel from Feedburner")
-                        channel
+                val targets = listOf(
+                    originalUrl,
+                    cfWorkerUrl,
+                    "https://api.allorigins.win/raw?url=$originalUrl",
+                    "https://corsproxy.io/?url=$originalUrl",
+                    "https://api.codetabs.com/v1/proxy/?quest=$originalUrl"
+                )
+                for (target in targets) {
+                    try {
+                        return kotlinx.coroutines.withTimeout(7000L) {
+                            val channel = rssParser.getRssChannel(target)
+                            if (channel.items.isNotEmpty()) channel else throw Exception("Empty channel")
+                        }
+                    } catch (e: Exception) {
+                        if (e is kotlinx.coroutines.CancellationException && e !is kotlinx.coroutines.TimeoutCancellationException) throw e
                     }
-                } catch (e: Exception) {
-                    if (e is kotlinx.coroutines.CancellationException && e !is kotlinx.coroutines.TimeoutCancellationException) throw e
                 }
-
-                // البديل الاحتياطي السحابي: بوابة كلاود فلار إيدج فائقة السرعة عند تعثر الرابط المباشر
-                return kotlinx.coroutines.withTimeout(8000L) {
-                    val channel = rssParser.getRssChannel(cfWorkerUrl)
-                    if (channel.items.isEmpty()) throw Exception("Empty channel from Cloudflare")
-                    channel
-                }
+                throw Exception("تعذر الاتصال بجميع خوادم الأخبار")
             }
 
             val channel = fetchWithFallbacks()
@@ -531,10 +537,13 @@ object SyncEngine {
 
                     saveLocalNews(filteredList)
                     _lastFetchedCount.value = newUniqueItems.size
-                    if (_appSettings.value.notificationSound && platformActionHandler?.areNotificationsEnabled() == true) {
-                        platformActionHandler?.playNotificationSound()
+                    val isFirstRunOrCleared = topLink.isEmpty() || isCacheCleared || domainChanged
+                    if (!isFirstRunOrCleared && newUniqueItems.isNotEmpty()) {
+                        if (_appSettings.value.notificationSound && platformActionHandler?.areNotificationsEnabled() == true) {
+                            platformActionHandler?.playNotificationSound()
+                        }
+                        platformActionHandler?.showNewsNotification(newUniqueItems.map { it.title }, newUniqueItems.size)
                     }
-                    platformActionHandler?.showNewsNotification(newUniqueItems.map { it.title }, newUniqueItems.size)
                     saveSettings(_appSettings.value.copy(lastSync = now))
                     return@withContext newUniqueItems.size
                 } else {

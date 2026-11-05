@@ -336,6 +336,11 @@ fun LibraryScreen(
                 ) {
                     itemsIndexed(items = filteredList, key = { _, item -> item.id }, contentType = { _, _ -> "library_item" }) { index, item ->
                         ContentCard(
+                            modifier = Modifier.animateItem(
+                                fadeInSpec = tween(320, easing = androidx.compose.animation.core.FastOutSlowInEasing),
+                                placementSpec = spring(dampingRatio = 0.82f, stiffness = 300f),
+                                fadeOutSpec = tween(220)
+                            ),
                             item = item,
                             isGridView = isGridView,
                             isDark = isDark,
@@ -348,123 +353,7 @@ fun LibraryScreen(
         }
     }
 
-        // Floating Alert Dynamic Island Capsule for Cloud Downloads
-        val activeNotice by com.Nightjar.Th3GradeLibraryKMP.network.BookDownloadManager.activeNoticeMessage.collectAsState()
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(top = dynamicTopPadding + 8.dp)
-                .zIndex(300f),
-            contentAlignment = Alignment.TopCenter
-        ) {
-            androidx.compose.animation.AnimatedVisibility(
-                visible = activeNotice != null,
-                enter = slideInVertically(
-                    initialOffsetY = { -it / 2 },
-                    animationSpec = spring(dampingRatio = Spring.DampingRatioLowBouncy, stiffness = 380f)
-                ) + expandVertically(expandFrom = Alignment.Top) + fadeIn(tween(220)),
-                exit = slideOutVertically(
-                    targetOffsetY = { -it / 2 },
-                    animationSpec = spring(dampingRatio = Spring.DampingRatioNoBouncy, stiffness = 420f)
-                ) + shrinkVertically(shrinkTowards = Alignment.Top) + fadeOut(tween(180))
-            ) {
-                val noticeText = activeNotice ?: ""
-                val isDownloading = noticeText.contains("%") || noticeText.contains("جاري تنزيل") || noticeText.contains("جاري تحميل")
-                val isCompleted = noticeText.contains("اكتمل") || noticeText.contains("✓")
-                val isPaused = noticeText.contains("إيقاف") || noticeText.contains("مؤقتاً")
 
-                Surface(
-                    shape = RoundedCornerShape(26.dp),
-                    color = MaterialTheme.colorScheme.surfaceColorAtElevation(6.dp).copy(alpha = 0.96f),
-                    tonalElevation = 10.dp,
-                    shadowElevation = 12.dp,
-                    modifier = Modifier
-                        .widthIn(min = 180.dp, max = 460.dp)
-                        .padding(horizontal = 16.dp)
-                        .border(
-                            width = 1.dp,
-                            color = when {
-                                isCompleted -> Color(0xFF10B981).copy(alpha = 0.55f)
-                                isPaused -> Color(0xFFF59E0B).copy(alpha = 0.55f)
-                                else -> MaterialTheme.colorScheme.primary.copy(alpha = 0.45f)
-                            },
-                            shape = RoundedCornerShape(26.dp)
-                        )
-                ) {
-                    Row(
-                        modifier = Modifier
-                            .animateContentSize(
-                                animationSpec = spring(
-                                    dampingRatio = Spring.DampingRatioLowBouncy,
-                                    stiffness = Spring.StiffnessMediumLow
-                                )
-                            )
-                            .padding(horizontal = 16.dp, vertical = 9.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.Center
-                    ) {
-                        // Leading Status Icon / Mini Progress Ring
-                        if (isCompleted) {
-                            Icon(
-                                imageVector = Icons.Default.CheckCircle,
-                                contentDescription = null,
-                                tint = Color(0xFF10B981),
-                                modifier = Modifier.size(19.dp)
-                            )
-                        } else if (isPaused) {
-                            Icon(
-                                imageVector = Icons.Default.PauseCircle,
-                                contentDescription = null,
-                                tint = Color(0xFFF59E0B),
-                                modifier = Modifier.size(19.dp)
-                            )
-                        } else if (isDownloading) {
-                            CircularProgressIndicator(
-                                strokeWidth = 2.4.dp,
-                                color = MaterialTheme.colorScheme.primary,
-                                modifier = Modifier.size(18.dp)
-                            )
-                        } else {
-                            Icon(
-                                imageVector = Icons.Default.CloudDownload,
-                                contentDescription = null,
-                                tint = MaterialTheme.colorScheme.primary,
-                                modifier = Modifier.size(19.dp)
-                            )
-                        }
-
-                        Spacer(modifier = Modifier.width(10.dp))
-
-                        Text(
-                            text = noticeText,
-                            fontSize = 12.5.sp,
-                            fontWeight = FontWeight.SemiBold,
-                            color = MaterialTheme.colorScheme.onSurface,
-                            maxLines = 2,
-                            overflow = TextOverflow.Ellipsis,
-                            modifier = Modifier.weight(1f, fill = false)
-                        )
-
-                        Spacer(modifier = Modifier.width(8.dp))
-
-                        // Trailing Dismiss / Cancel Action
-                        IconButton(
-                            onClick = {
-                                com.Nightjar.Th3GradeLibraryKMP.network.BookDownloadManager.cancelAll()
-                            },
-                            modifier = Modifier.size(24.dp)
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.Close,
-                                contentDescription = "إلغاء",
-                                tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.75f),
-                                modifier = Modifier.size(15.dp)
-                            )
-                        }
-                    }
-                }
-            }
-        }
     }
 }
 
@@ -1050,17 +939,87 @@ val platformContext = coil3.compose.LocalPlatformContext.current
                             Box(
                                 modifier = Modifier
                                     .fillMaxSize()
-                                    .background(Color.Black.copy(alpha = 0.38f)),
+                                    .background(Color.Black.copy(alpha = 0.42f)),
                                 contentAlignment = Alignment.Center
                             ) {
                                 if (itemState.status == com.Nightjar.Th3GradeLibraryKMP.network.DownloadStatus.DOWNLOADING) {
-                                    CircularProgressIndicator(
-                                        progress = { itemState.progress },
-                                        modifier = Modifier.size(28.dp),
-                                        color = MaterialTheme.colorScheme.primary,
-                                        strokeWidth = 3.dp,
-                                        trackColor = Color.White.copy(alpha = 0.25f)
-                                    )
+                                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                        CircularProgressIndicator(
+                                            progress = { itemState.progress },
+                                            modifier = Modifier.size(26.dp),
+                                            color = MaterialTheme.colorScheme.primary,
+                                            strokeWidth = 3.dp,
+                                            trackColor = Color.White.copy(alpha = 0.25f)
+                                        )
+                                        Spacer(modifier = Modifier.height(3.dp))
+                                        Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                                            Box(
+                                                modifier = Modifier
+                                                    .size(22.dp)
+                                                    .clip(CircleShape)
+                                                    .background(Color.Black.copy(alpha = 0.7f))
+                                                    .clickable { com.Nightjar.Th3GradeLibraryKMP.network.BookDownloadManager.pauseDownload(item) },
+                                                contentAlignment = Alignment.Center
+                                            ) {
+                                                Icon(
+                                                    imageVector = Icons.Default.Pause,
+                                                    contentDescription = "إيقاف مؤقت",
+                                                    tint = Color.White,
+                                                    modifier = Modifier.size(13.dp)
+                                                )
+                                            }
+                                            Box(
+                                                modifier = Modifier
+                                                    .size(22.dp)
+                                                    .clip(CircleShape)
+                                                    .background(Color.Black.copy(alpha = 0.7f))
+                                                    .clickable { com.Nightjar.Th3GradeLibraryKMP.network.BookDownloadManager.cancelDownload(item) },
+                                                contentAlignment = Alignment.Center
+                                            ) {
+                                                Icon(
+                                                    imageVector = Icons.Default.Close,
+                                                    contentDescription = "إلغاء",
+                                                    tint = Color.White,
+                                                    modifier = Modifier.size(13.dp)
+                                                )
+                                            }
+                                        }
+                                    }
+                                } else if (itemState.status == com.Nightjar.Th3GradeLibraryKMP.network.DownloadStatus.PAUSED) {
+                                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                        Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                                            Box(
+                                                modifier = Modifier
+                                                    .size(24.dp)
+                                                    .clip(CircleShape)
+                                                    .background(MaterialTheme.colorScheme.primary)
+                                                    .clickable { com.Nightjar.Th3GradeLibraryKMP.network.BookDownloadManager.downloadItem(platformContext, item) },
+                                                contentAlignment = Alignment.Center
+                                            ) {
+                                                Icon(
+                                                    imageVector = Icons.Default.PlayArrow,
+                                                    contentDescription = "استئناف",
+                                                    tint = Color.White,
+                                                    modifier = Modifier.size(15.dp)
+                                                )
+                                            }
+                                            Box(
+                                                modifier = Modifier
+                                                    .size(24.dp)
+                                                    .clip(CircleShape)
+                                                    .background(Color.Black.copy(alpha = 0.7f))
+                                                    .clickable { com.Nightjar.Th3GradeLibraryKMP.network.BookDownloadManager.cancelDownload(item) },
+                                                contentAlignment = Alignment.Center
+                                            ) {
+                                                Icon(
+                                                    imageVector = Icons.Default.Close,
+                                                    contentDescription = "إلغاء",
+                                                    tint = Color.White,
+                                                    modifier = Modifier.size(15.dp)
+                                                )
+                                            }
+                                        }
+                                    }
                                 } else {
                                     Box(
                                         modifier = Modifier

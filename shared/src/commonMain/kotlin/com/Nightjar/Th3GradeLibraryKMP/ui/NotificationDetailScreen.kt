@@ -13,6 +13,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.CalendarToday
 import androidx.compose.material.icons.filled.OpenInBrowser
@@ -198,59 +199,63 @@ fun NotificationDetailScreen(
             }
         }
 
-        // Floating Top Glass Bar
+        // Floating Top Glass Bar (Strictly unified with App top bar design & M3 Adaptive)
+        val density = androidx.compose.ui.platform.LocalDensity.current
+        val windowInfo = androidx.compose.ui.platform.LocalWindowInfo.current
+        val screenWidthDp = with(density) { windowInfo.containerSize.width.toDp() }
+        val isWide = screenWidthDp >= 600.dp
+        val topBarHeight = if (isWide) 40.dp else 48.dp
+
         Box(
             modifier = Modifier
                 .align(Alignment.TopCenter)
                 .fillMaxWidth()
                 .windowInsetsPadding(WindowInsets.statusBars.add(WindowInsets.captionBar))
                 .windowInsetsPadding(WindowInsets.safeDrawing.only(WindowInsetsSides.Horizontal))
-                .padding(horizontal = 16.dp, vertical = 8.dp),
+                .padding(horizontal = 16.dp, vertical = if (isWide) 4.dp else 6.dp),
             contentAlignment = Alignment.Center
         ) {
             Row(
                 modifier = Modifier
-                    .widthIn(max = 760.dp)
+                    .widthIn(max = 608.dp)
                     .fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
-                // Circle Back Button
+                // Circular Island: Back Button
                 Box(
                     modifier = Modifier
-                        .size(48.dp)
-                        .liquidGlass(isDark, borderRadius = 24.dp, alpha = 0.95f)
+                        .size(topBarHeight)
+                        .liquidGlass(isDark, borderRadius = topBarHeight / 2, alpha = 0.95f)
                         .clip(CircleShape)
                         .clickable(onClick = onBack),
                     contentAlignment = Alignment.Center
                 ) {
                     Icon(
-                        imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                        imageVector = androidx.compose.material.icons.Icons.Default.ChevronRight,
                         contentDescription = "رجوع",
                         tint = MaterialTheme.colorScheme.onSurface,
-                        modifier = Modifier.size(22.dp)
+                        modifier = Modifier.size(24.dp)
                     )
                 }
 
-                // Title Pill
-                Surface(
-                    shape = RoundedCornerShape(24.dp),
-                    color = MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.92f),
-                    border = androidx.compose.foundation.BorderStroke(
-                        width = 1.dp,
-                        color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f)
-                    )
+                // Oval Island: Screen Title
+                Box(
+                    modifier = Modifier
+                        .height(topBarHeight)
+                        .liquidGlass(isDark, borderRadius = topBarHeight / 2, alpha = 0.95f)
+                        .padding(horizontal = 20.dp),
+                    contentAlignment = Alignment.Center
                 ) {
                     Text(
                         text = "تفاصيل الإشعار",
-                        modifier = Modifier.padding(horizontal = 20.dp, vertical = 10.dp),
                         style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
                         color = MaterialTheme.colorScheme.onSurface
                     )
                 }
 
                 // Spacer balance
-                Spacer(modifier = Modifier.size(48.dp))
+                Spacer(modifier = Modifier.size(topBarHeight))
             }
         }
     }

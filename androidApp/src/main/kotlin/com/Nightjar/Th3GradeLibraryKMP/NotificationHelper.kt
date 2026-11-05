@@ -24,8 +24,8 @@ import androidx.core.content.getSystemService
  * - Bundling: Aggregates multiple news items into a single InboxStyle notification.
  */
 object NotificationHelper {
-    const val CHANNEL_SILENT_ID = "news_sync_channel_silent_v2"
-    const val CHANNEL_SOUND_ID = "news_sync_channel_sound_v2"
+    const val CHANNEL_SILENT_ID = "news_sync_channel_silent_v3"
+    const val CHANNEL_SOUND_ID = "news_sync_channel_sound_v3"
     const val CHANNEL_NAME = "أخبار المكتبة"
     const val SUMMARY_NOTIFICATION_ID = 0
 
@@ -181,39 +181,18 @@ object NotificationHelper {
             .setContentIntent(openIntent)
             .setAutoCancel(true)
 
-        // Ultra-compact micro-thumbnail (text line size ~48x48px)
-        var finalThumb = microThumbnail
-        if (finalThumb == null) {
-            try {
-                val cachedJson = com.Nightjar.Th3GradeLibraryKMP.data.AppDataStore.getString("app_news_cache", "")
-                if (cachedJson.isNotEmpty()) {
-                    val list = kotlinx.serialization.json.Json { ignoreUnknownKeys = true }
-                        .decodeFromString<List<com.Nightjar.Th3GradeLibraryKMP.data.NewsItem>>(cachedJson)
-                    val imgUrl = list.firstOrNull { it.imageUrl?.isNotBlank() == true }?.imageUrl
-                    if (!imgUrl.isNullOrBlank()) {
-                        finalThumb = loadMicroThumbnail(imgUrl)
-                    }
-                }
-            } catch (_: Exception) {}
-        }
-        if (finalThumb != null) {
-            builder.setLargeIcon(finalThumb)
+        // Ultra-compact micro-thumbnail (text line size ~48x48px) - Zero Main-Thread Network Delay!
+        if (microThumbnail != null) {
+            builder.setLargeIcon(microThumbnail)
         }
 
         // Sound & Vibration backwards compatibility:
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            // Android 8.0+ uses channel sound configuration
-            if (!withSound) {
-                builder.setSilent(true)
-            }
+        if (withSound && soundUri != null) {
+            builder.setSound(soundUri)
+            builder.setVibrate(longArrayOf(0, 250, 150, 250))
+            builder.setSilent(false)
         } else {
-            // Android 7.0 & 7.1 legacy fallback
-            if (withSound && soundUri != null) {
-                builder.setSound(soundUri)
-                builder.setVibrate(longArrayOf(0, 250, 150, 250))
-            } else {
-                builder.setSilent(true)
-            }
+            builder.setSilent(true)
         }
 
         try {

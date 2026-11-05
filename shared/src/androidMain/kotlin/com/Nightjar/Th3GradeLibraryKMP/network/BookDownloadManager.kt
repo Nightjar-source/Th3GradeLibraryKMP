@@ -1,5 +1,6 @@
 package com.Nightjar.Th3GradeLibraryKMP.network
 
+import android.app.Notification
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.app.PendingIntent
@@ -27,11 +28,13 @@ import java.util.concurrent.ConcurrentHashMap
 
 actual object BookDownloadManager {
     private const val CHANNEL_ID = "book_downloads_channel"
-    private const val NOTIFICATION_ID = 4040
+    const val NOTIFICATION_ID = 4040
 
     const val ACTION_PAUSE = "com.Nightjar.Th3GradeLibraryKMP.DOWNLOAD_PAUSE"
     const val ACTION_RESUME = "com.Nightjar.Th3GradeLibraryKMP.DOWNLOAD_RESUME"
     const val ACTION_CANCEL = "com.Nightjar.Th3GradeLibraryKMP.DOWNLOAD_CANCEL"
+    const val ACTION_PAUSE_ALL = "com.Nightjar.Th3GradeLibraryKMP.DOWNLOAD_PAUSE_ALL"
+    const val ACTION_CANCEL_ALL = "com.Nightjar.Th3GradeLibraryKMP.DOWNLOAD_CANCEL_ALL"
     const val EXTRA_ITEM_ID = "extra_download_item_id"
 
     private val scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
@@ -56,12 +59,22 @@ actual object BookDownloadManager {
 
     private val downloadReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context?, intent: Intent?) {
-            val itemId = intent?.getStringExtra(EXTRA_ITEM_ID) ?: return
-            val item = activeItems[itemId] ?: com.Nightjar.Th3GradeLibraryKMP.data.AllItems.getItemById(itemId) ?: return
-            when (intent.action) {
-                ACTION_PAUSE -> pauseDownload(item)
-                ACTION_RESUME -> context?.let { downloadItem(it, item) }
+            when (intent?.action) {
+                ACTION_PAUSE_ALL -> pauseAll()
+                ACTION_CANCEL_ALL -> cancelAll()
+                ACTION_PAUSE -> {
+                    val itemId = intent.getStringExtra(EXTRA_ITEM_ID) ?: return
+                    val item = activeItems[itemId] ?: com.Nightjar.Th3GradeLibraryKMP.data.AllItems.getItemById(itemId) ?: return
+                    pauseDownload(item)
+                }
+                ACTION_RESUME -> {
+                    val itemId = intent.getStringExtra(EXTRA_ITEM_ID) ?: return
+                    val item = activeItems[itemId] ?: com.Nightjar.Th3GradeLibraryKMP.data.AllItems.getItemById(itemId) ?: return
+                    context?.let { downloadItem(it, item) }
+                }
                 ACTION_CANCEL -> {
+                    val itemId = intent.getStringExtra(EXTRA_ITEM_ID) ?: return
+                    val item = activeItems[itemId] ?: com.Nightjar.Th3GradeLibraryKMP.data.AllItems.getItemById(itemId) ?: return
                     if (_isBatchDownloading.value) {
                         cancelAll()
                     } else {
@@ -79,6 +92,8 @@ actual object BookDownloadManager {
                     addAction(ACTION_PAUSE)
                     addAction(ACTION_RESUME)
                     addAction(ACTION_CANCEL)
+                    addAction(ACTION_PAUSE_ALL)
+                    addAction(ACTION_CANCEL_ALL)
                 }
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
                     context.applicationContext.registerReceiver(downloadReceiver, filter, Context.RECEIVER_NOT_EXPORTED)
@@ -86,6 +101,30 @@ actual object BookDownloadManager {
                     context.applicationContext.registerReceiver(downloadReceiver, filter)
                 }
                 isReceiverRegistered = true
+            } catch (_: Exception) {}
+        }
+    }
+
+    private fun startForegroundServiceIfNeeded(context: Context) {
+        try {
+            val intent = Intent().apply {
+                setClassName(context.packageName, "com.Nightjar.Th3GradeLibraryKMP.BookDownloadForegroundService")
+            }
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                context.startForegroundService(intent)
+            } else {
+                context.startService(intent)
+            }
+        } catch (_: Exception) {}
+    }
+
+    private fun stopForegroundServiceIfDone(context: Context) {
+        if (activeJobs.isEmpty() && !_isBatchDownloading.value) {
+            try {
+                val intent = Intent().apply {
+                    setClassName(context.packageName, "com.Nightjar.Th3GradeLibraryKMP.BookDownloadForegroundService")
+                }
+                context.stopService(intent)
             } catch (_: Exception) {}
         }
     }
@@ -104,7 +143,7 @@ actual object BookDownloadManager {
                 ni.isConnected
             }
         } catch (_: Exception) {
-            true // Fallback to allowing attempt
+            true
         }
     }
 
@@ -113,14 +152,30 @@ actual object BookDownloadManager {
         if (count == 0) {
             if (justFinishedItem != null) {
                 val typeLabel = if (!justFinishedItem.isNote) "الكتاب" else "الملزمة"
-                _activeNoticeMessage.value = "اكتمل تنزيل $typeLabel: ${justFinishedItem.title} بنجاح ✓"
+                val doneMsg = "اكتمل تنزيل $typeLabel: ${justFinishedItem.title} بنجاح ✓"
+                _activeNoticeMessage.value = doneMsg
+                updateNotification(
+                    ctx,
+                    title = "اكتمل تنزيل: ${justFinishedItem.title} بنجاح ✓",
+                    text = "جميع الملفات المحملة جاهزة أوفلاين في جهازك بدون إنترنت",
+                    progress = 100,
+                    itemId = null
+                )
                 scope.launch {
                     delay(3500)
-                    if (activeJobs.isEmpty()) _activeNoticeMessage.value = null
+                    if (activeJobs.isEmpty() && !_isBatchDownloading.value) {
+                        _activeNoticeMessage.value = null
+                    }
                 }
             } else if (!_isBatchDownloading.value) {
-                _activeNoticeMessage.value = null
+                scope.launch {
+                    delay(1500)
+                    if (activeJobs.isEmpty() && !_isBatchDownloading.value) {
+                        _activeNoticeMessage.value = null
+                    }
+                }
             }
+            stopForegroundServiceIfDone(ctx)
             return
         }
 
@@ -142,7 +197,6 @@ actual object BookDownloadManager {
                 itemId = item.id
             )
         } else {
-            // Multi-download in progress (e.g. الأحياء والفيزياء)
             val titlesWithPcts = items.map { it to (((_itemStates.value[it.id]?.progress) ?: 0f) * 100).toInt() }
             val avgProgress = (titlesWithPcts.map { it.second }.average()).toInt()
 
@@ -160,7 +214,8 @@ actual object BookDownloadManager {
                 title = "جاري تنزيل ${items.size} ملفات ($avgProgress%)",
                 text = items.joinToString(" • ") { "${it.title} (${((_itemStates.value[it.id]?.progress ?: 0f) * 100).toInt()}%)" },
                 progress = avgProgress,
-                itemId = null
+                itemId = null,
+                isMultiDownload = true
             )
         }
     }
@@ -198,6 +253,20 @@ actual object BookDownloadManager {
         return PendingIntent.getBroadcast(context, requestCode, intent, flags)
     }
 
+    fun createForegroundNotification(context: Context): Notification {
+        ensureNotificationChannel(context)
+        return NotificationCompat.Builder(context, CHANNEL_ID)
+            .setSmallIcon(android.R.drawable.stat_sys_download)
+            .setContentTitle("جاري تنزيل الملفات...")
+            .setContentText("المكتبة تعمل في الخلفية لإكمال التنزيل أوفلاين")
+            .setContentIntent(createTapPendingIntent(context))
+            .setOngoing(true)
+            .setPriority(NotificationCompat.PRIORITY_LOW)
+            .setCategory(NotificationCompat.CATEGORY_PROGRESS)
+            .setForegroundServiceBehavior(NotificationCompat.FOREGROUND_SERVICE_IMMEDIATE)
+            .build()
+    }
+
     private fun updateNotification(
         context: Context,
         title: String,
@@ -205,7 +274,8 @@ actual object BookDownloadManager {
         progress: Int,
         itemId: String? = null,
         isPaused: Boolean = false,
-        isIndeterminate: Boolean = false
+        isIndeterminate: Boolean = false,
+        isMultiDownload: Boolean = false
     ) {
         try {
             ensureNotificationChannel(context)
@@ -251,14 +321,22 @@ actual object BookDownloadManager {
                     builder.addAction(android.R.drawable.ic_media_play, "استئناف", resumeIntent)
                     builder.addAction(android.R.drawable.ic_menu_close_clear_cancel, "إلغاء", cancelIntent)
                 }
+            } else if (isMultiDownload && isDownloading) {
+                val pauseAllIntent = Intent(ACTION_PAUSE_ALL).apply { setPackage(context.packageName) }
+                val cancelAllIntent = Intent(ACTION_CANCEL_ALL).apply { setPackage(context.packageName) }
+                val flags = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE else PendingIntent.FLAG_UPDATE_CURRENT
+                val pPause = PendingIntent.getBroadcast(context, 205, pauseAllIntent, flags)
+                val pCancel = PendingIntent.getBroadcast(context, 206, cancelAllIntent, flags)
+                builder.addAction(android.R.drawable.ic_media_pause, "إيقاف الكل", pPause)
+                builder.addAction(android.R.drawable.ic_menu_close_clear_cancel, "إلغاء الكل", pCancel)
             }
 
             nm.notify(NOTIFICATION_ID, builder.build())
 
-            // Auto dismiss notification when 100% complete after 3 seconds
+            // Auto dismiss notification when 100% complete after 3.5 seconds
             if (progress >= 100) {
                 scope.launch {
-                    delay(3000)
+                    delay(3500)
                     if (activeJobs.isEmpty()) {
                         nm.cancel(NOTIFICATION_ID)
                     }
@@ -289,6 +367,7 @@ actual object BookDownloadManager {
 
         activeJobs[item.id]?.cancel()
         activeItems[item.id] = item
+        startForegroundServiceIfNeeded(ctx)
 
         val job = scope.launch {
             val storageDir = BookStorageEngine.getStorageDir(ctx)
@@ -303,7 +382,7 @@ actual object BookDownloadManager {
 
                 val candidateUrls = CloudCatalogManager.getStreamCandidateUrls(item)
                 if (candidateUrls.isEmpty()) {
-                    throw Exception("رابط التحميل غير متوفر")
+                    throw Exception("الرابط غير متوفر حالياً")
                 }
 
                 var downloadSuccess = false
@@ -384,12 +463,10 @@ actual object BookDownloadManager {
                                 }
 
                                 if (tempTarget.exists() && tempTarget.length() > 1024L) {
-                                    // Smart clean update: delete old file before atomic rename
                                     if (permanentFile.exists()) {
                                         permanentFile.delete()
                                     }
                                     tempTarget.renameTo(permanentFile)
-                                    updateState(item.id, ItemDownloadState(status = DownloadStatus.COMPLETED, progress = 1f))
                                     updateState(item.id, ItemDownloadState(status = DownloadStatus.COMPLETED, progress = 1f))
                                     downloadSuccess = true
                                     activeJobs.remove(item.id)
@@ -405,7 +482,6 @@ actual object BookDownloadManager {
                             throw ce
                         } catch (e: Exception) {
                             lastErrorMessage = e.message ?: "فشل الخادم"
-                            // Transient pause before next candidate
                             delay(1000)
                         }
                     }
@@ -427,22 +503,35 @@ actual object BookDownloadManager {
                     itemId = item.id,
                     isPaused = true
                 )
+                scope.launch {
+                    delay(3000)
+                    if (activeJobs.isEmpty() && !_isBatchDownloading.value) {
+                        _activeNoticeMessage.value = null
+                    }
+                }
             } catch (e: Exception) {
                 tempTarget.delete()
-                updateState(item.id, ItemDownloadState(status = DownloadStatus.FAILED, error = e.message))
+                val errReason = if (e.message?.contains("غير متوفر") == true) "الرابط غير متوفر حالياً" else "تعذر التنزيل، يرجى التحقق من الاتصال والمحاولة لاحقاً"
+                updateState(item.id, ItemDownloadState(status = DownloadStatus.FAILED, error = errReason))
+                val typeLabel = if (!item.isNote) "الكتاب" else "الملزمة"
+                _activeNoticeMessage.value = "تعذر تنزيل $typeLabel: ${item.title} ($errReason) ✕"
                 updateNotification(
                     ctx,
                     title = "فشل تحميل: ${item.title}",
-                    text = "تعذر التنزيل من السحابة، يرجى التحقق من الاتصال والمحاولة لاحقاً",
+                    text = errReason,
                     progress = -1,
                     itemId = item.id
                 )
+                scope.launch {
+                    delay(3800)
+                    if (activeJobs.isEmpty() && !_isBatchDownloading.value) {
+                        _activeNoticeMessage.value = null
+                    }
+                }
             } finally {
                 activeJobs.remove(item.id)
                 tempFiles.remove(item.id)
-                if (activeJobs.isEmpty() && !_isBatchDownloading.value) {
-                    _activeNoticeMessage.value = null
-                }
+                stopForegroundServiceIfDone(ctx)
             }
         }
         activeJobs[item.id] = job
@@ -451,7 +540,48 @@ actual object BookDownloadManager {
     actual fun pauseDownload(item: BookItem) {
         activeJobs.remove(item.id)?.cancel()
         updateState(item.id, ItemDownloadState(status = DownloadStatus.PAUSED))
-        appContext?.let { updateDynamicProgress(it) }
+        appContext?.let { ctx ->
+            val typeLabel = if (!item.isNote) "الكتاب" else "الملزمة"
+            _activeNoticeMessage.value = "تم إيقاف تنزيل $typeLabel: ${item.title} مؤقتاً"
+            updateNotification(
+                ctx,
+                title = "تم إيقاف تحميل: ${item.title}",
+                text = "تم إيقاف عملية التحميل مؤقتاً",
+                progress = -1,
+                itemId = item.id,
+                isPaused = true
+            )
+            scope.launch {
+                delay(3000)
+                if (activeJobs.isEmpty() && !_isBatchDownloading.value) {
+                    _activeNoticeMessage.value = null
+                }
+            }
+            stopForegroundServiceIfDone(ctx)
+        }
+    }
+
+    actual fun pauseAll() {
+        activeJobs.values.forEach { it.cancel() }
+        activeJobs.clear()
+        _activeNoticeMessage.value = "تم إيقاف جميع التنزيلات مؤقتاً"
+        appContext?.let { ctx ->
+            updateNotification(
+                ctx,
+                title = "تم إيقاف التنزيلات مؤقتاً",
+                text = "تم إيقاف عمليات التنزيل الجارية مؤقتاً",
+                progress = -1,
+                itemId = null,
+                isPaused = true
+            )
+            scope.launch {
+                delay(3000)
+                if (activeJobs.isEmpty() && !_isBatchDownloading.value) {
+                    _activeNoticeMessage.value = null
+                }
+            }
+            stopForegroundServiceIfDone(ctx)
+        }
     }
 
     actual fun cancelDownload(item: BookItem) {
@@ -464,11 +594,18 @@ actual object BookDownloadManager {
             _isBatchDownloading.value = false
         }
         appContext?.let { ctx ->
+            val typeLabel = if (!item.isNote) "الكتاب" else "الملزمة"
+            _activeNoticeMessage.value = "تم إلغاء تنزيل $typeLabel: ${item.title}"
             updateDynamicProgress(ctx)
-            if (activeJobs.isEmpty()) {
-                val nm = ctx.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
-                nm.cancel(NOTIFICATION_ID)
+            scope.launch {
+                delay(2500)
+                if (activeJobs.isEmpty() && !_isBatchDownloading.value) {
+                    _activeNoticeMessage.value = null
+                    val nm = ctx.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+                    nm.cancel(NOTIFICATION_ID)
+                }
             }
+            stopForegroundServiceIfDone(ctx)
         }
     }
 
@@ -486,6 +623,7 @@ actual object BookDownloadManager {
         _isBatchDownloading.value = true
         val specialTitle = "جاري تنزيل كتب وملازم الثالث متوسط الان لتكون اوف لاين بدون انترنت ..انتظر"
         _activeNoticeMessage.value = specialTitle
+        startForegroundServiceIfNeeded(ctx)
 
         scope.launch {
             try {
@@ -517,9 +655,15 @@ actual object BookDownloadManager {
                     text = "جميع كتب وملازم الثالث متوسط أصبحت جاهزة الآن أوفلاين بدون إنترنت!",
                     progress = 100
                 )
+                scope.launch {
+                    delay(4000)
+                    if (activeJobs.isEmpty() && !_isBatchDownloading.value) {
+                        _activeNoticeMessage.value = null
+                    }
+                }
             } finally {
                 _isBatchDownloading.value = false
-                _activeNoticeMessage.value = null
+                stopForegroundServiceIfDone(ctx)
             }
         }
     }
@@ -531,10 +675,15 @@ actual object BookDownloadManager {
         tempFiles.values.forEach { it.delete() }
         tempFiles.clear()
         activeItems.clear()
-        _activeNoticeMessage.value = null
+        _activeNoticeMessage.value = "تم إلغاء جميع التنزيلات"
         appContext?.let { ctx ->
             val nm = ctx.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
             nm.cancel(NOTIFICATION_ID)
+            scope.launch {
+                delay(2000)
+                if (activeJobs.isEmpty()) _activeNoticeMessage.value = null
+            }
+            stopForegroundServiceIfDone(ctx)
         }
     }
 

@@ -423,8 +423,6 @@ fun BookAccordionItem(
                     .padding(top = 8.dp, bottom = 12.dp),
                 verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                val sharedTransitionScope = LocalSharedTransitionScope.current
-
                 // Render all tracked pages sorted
                 val sortedPages = remember(trackedPages.toList()) { trackedPages.sorted() }
                 sortedPages.forEach { pageIndex ->
@@ -432,23 +430,6 @@ fun BookAccordionItem(
                     val rowTargetKey = "bookmark_${item.id}_$pageIndex"
                     val isRowActiveTarget = (TransitionTargetTracker.isTransitionActive || LocalIsReturningFromPdf.current) &&
                             TransitionTargetTracker.activeTargetId == rowTargetKey
-
-                    val rowSharedModifier = if (sharedTransitionScope != null && screenVisibilityScope != null) {
-                        with(sharedTransitionScope) {
-                            Modifier.sharedBounds(
-                                sharedContentState = rememberSharedContentState(key = rowTargetKey),
-                                animatedVisibilityScope = screenVisibilityScope,
-                                enter = fadeIn(animationSpec = tween(durationMillis = 150, delayMillis = 75, easing = LinearEasing)),
-                                exit = fadeOut(animationSpec = tween(durationMillis = 130, easing = LinearEasing)),
-                                renderInOverlayDuringTransition = false,
-                                clipInOverlayDuringTransition = OverlayClip(RoundedCornerShape(14.dp)),
-                                boundsTransform = { _, _ ->
-                                    spring(dampingRatio = 0.82f, stiffness = 280f)
-                                },
-                                resizeMode = SharedTransitionScope.ResizeMode.RemeasureToBounds
-                            )
-                        }
-                    } else Modifier
 
                     val isSavedLocally = isPageSaved(pageIndex)
                     val isVisible = isSavedLocally || isRowActiveTarget
@@ -477,7 +458,6 @@ fun BookAccordionItem(
                         Row(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .then(rowSharedModifier)
                                 .expressiveButtonMorph(
                                     restRadius = 14.dp,
                                     pressedRadius = 8.dp,

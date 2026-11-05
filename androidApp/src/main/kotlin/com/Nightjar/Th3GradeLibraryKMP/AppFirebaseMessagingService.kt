@@ -36,8 +36,8 @@ import kotlinx.serialization.json.Json
 class AppFirebaseMessagingService : FirebaseMessagingService() {
 
     companion object {
-        const val CHANNEL_SOUND_ID = "news_channel_sound"
-        const val CHANNEL_SILENT_ID = "news_channel_silent"
+        const val CHANNEL_SOUND_ID = "news_channel_sound_v3"
+        const val CHANNEL_SILENT_ID = "news_channel_silent_v3"
         const val GROUP_KEY = "news_group"
         const val NOTIFICATION_ID_BASE = 1000
 
@@ -100,8 +100,13 @@ class AppFirebaseMessagingService : FirebaseMessagingService() {
         val isDevTest = title.contains("المطور") || title.contains("تجريبي") || link.startsWith("dev_") || data["is_test"] == "true"
         
         // 1. Silent Local Cache Update (Smart Watermark deduplication)
-        if (!isDevTest) {
+        val isNewItem = if (!isDevTest) {
             saveToCache(title, link, imageUrl, pubDate, content)
+        } else false
+
+        if (!isNewItem && !isDevTest) {
+            // Item already received and in cache: ZERO redundant background alerts!
+            return
         }
 
         // 2. User Sync Schedule Check
@@ -147,8 +152,8 @@ class AppFirebaseMessagingService : FirebaseMessagingService() {
         }
     }
 
-    private fun saveToCache(title: String, link: String, imageUrl: String, pubDate: String, content: String) {
-        try {
+    private fun saveToCache(title: String, link: String, imageUrl: String, pubDate: String, content: String): Boolean {
+        return try {
             val json = Json { ignoreUnknownKeys = true }
             val cachedJson = AppDataStore.getString("app_news_cache", "")
             val existingList: MutableList<NewsItem> = if (cachedJson.isNotEmpty()) {
@@ -161,7 +166,8 @@ class AppFirebaseMessagingService : FirebaseMessagingService() {
             val formattedDate = SyncEngine.formatNewsDate(pubDate)
 
             // Prevent duplicates (Smart Watermark)
-            if (existingList.none { it.id == id || (it.title == title && it.pubDate == pubDate) }) {
+            val exists = existingList.any { it.id == id || (it.title == title && it.pubDate == pubDate) }
+            if (!exists) {
                 val newItem = NewsItem(
                     id = id,
                     title = title,
@@ -174,9 +180,13 @@ class AppFirebaseMessagingService : FirebaseMessagingService() {
                 existingList.add(0, newItem)
                 AppDataStore.putString("app_news_cache", json.encodeToString(existingList.take(60)))
                 SyncEngine.reloadFromPersistence()
+                true
+            } else {
+                false
             }
         } catch (e: Exception) {
             e.printStackTrace()
+            false
         }
     }
 
