@@ -159,27 +159,27 @@ object NotificationHelper {
         val targetChannelId = if (withSound) CHANNEL_SOUND_ID else CHANNEL_SILENT_ID
         val soundUri = if (withSound) getCustomSoundUri(context) else null
 
-        // Unified Single Bundled Notification: lists items from newest to oldest
+        // Unified Notification: Only headline and thumbnail for single news, or bundled list for multiple
         val displayCount = if (count > 0) count else titles.size
         val mainTitle = if (displayCount == 1) titles.first() else "مكتبة الثالث متوسط: تم نشر $displayCount أخبار جديدة"
-        val collapsedSummary = if (displayCount == 1) titles.first() else titles.take(3).joinToString(" • ")
-
-        val inboxStyle = NotificationCompat.InboxStyle()
-            .setBigContentTitle(mainTitle)
-            .setSummaryText("آخر التحديثات الوزارية")
-        titles.take(6).forEach { title ->
-            inboxStyle.addLine("• $title")
-        }
 
         val builder = NotificationCompat.Builder(context, targetChannelId)
             .setSmallIcon(R.drawable.ic_notification)
             .setColor(android.graphics.Color.parseColor("#2563EB"))
             .setContentTitle(mainTitle)
-            .setContentText(collapsedSummary)
-            .setStyle(inboxStyle)
             .setPriority(NotificationCompat.PRIORITY_HIGH)
             .setContentIntent(openIntent)
             .setAutoCancel(true)
+
+        if (displayCount > 1) {
+            val inboxStyle = NotificationCompat.InboxStyle()
+                .setBigContentTitle(mainTitle)
+            titles.take(6).forEach { title ->
+                inboxStyle.addLine("• $title")
+            }
+            builder.setStyle(inboxStyle)
+            builder.setContentText(titles.take(3).joinToString(" • "))
+        }
 
         // Ultra-compact micro-thumbnail (text line size ~48x48px) - Zero Main-Thread Network Delay!
         if (microThumbnail != null) {
@@ -201,5 +201,26 @@ object NotificationHelper {
         } catch (e: SecurityException) {
             e.printStackTrace()
         }
+    }
+}
+
+    fun clearNewsNotifications(context: Context) {
+        try {
+            val manager = context.getSystemService(Context.NOTIFICATION_SERVICE) as? NotificationManager ?: return
+            manager.cancel(SUMMARY_NOTIFICATION_ID)
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                manager.activeNotifications?.forEach { active ->
+                    val chId = active.notification.channelId
+                    val group = active.notification.group
+                    if (active.id == SUMMARY_NOTIFICATION_ID || 
+                        chId == CHANNEL_SOUND_ID || 
+                        chId == CHANNEL_SILENT_ID ||
+                        group == "news_group" ||
+                        active.id >= 5000) {
+                        manager.cancel(active.id)
+                    }
+                }
+            }
+        } catch (_: Exception) {}
     }
 }

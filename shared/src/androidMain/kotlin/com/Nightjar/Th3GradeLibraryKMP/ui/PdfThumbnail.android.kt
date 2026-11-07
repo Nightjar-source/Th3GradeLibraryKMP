@@ -18,7 +18,7 @@ private val thumbnailLruCache = object : LruCache<String, ImageBitmap>(30) {}
 
 @Composable
 actual fun rememberPdfCoverThumbnail(item: BookItem): ImageBitmap? {
-    val context = LocalContext.current
+    val context = LocalContext.current.applicationContext
     var bitmap by remember(item.id) { mutableStateOf<ImageBitmap?>(null) }
 
     LaunchedEffect(item.id) {

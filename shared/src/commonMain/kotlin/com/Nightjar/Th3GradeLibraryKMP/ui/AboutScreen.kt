@@ -63,7 +63,7 @@ fun AboutScreen(
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .widthIn(max = 800.dp)
+                .widthIn(max = 720.dp)
                 .padding(horizontal = 16.dp)
                 .elasticOverscroll()
                 .verticalScroll(scrollState),
@@ -173,16 +173,31 @@ fun DeveloperCard(modifier: Modifier = Modifier, onOpenUrl: (String) -> Unit) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Box(
                     modifier = Modifier
-                        .size(60.dp)
-                        .clip(CircleShape)
-                        .background(Color.White.copy(alpha = 0.1f)),
+                        .size(76.dp)
+                        .clip(RoundedCornerShape(22.dp))
+                        .background(
+                            Brush.radialGradient(
+                                listOf(
+                                    Color.White.copy(alpha = 0.95f),
+                                    Color(0xFFE2E8F0).copy(alpha = 0.85f)
+                                )
+                            )
+                        )
+                        .border(
+                            width = 1.5.dp,
+                            brush = Brush.linearGradient(
+                                listOf(Color(0xFF60A5FA), Color(0xFF3B82F6).copy(alpha = 0.4f))
+                            ),
+                            shape = RoundedCornerShape(22.dp)
+                        )
+                        .padding(6.dp),
                     contentAlignment = Alignment.Center
                 ) {
-                    Icon(
-                        imageVector = Icons.Default.Person,
-                        contentDescription = null,
-                        tint = Color(0xFFA5B4FC),
-                        modifier = Modifier.size(32.dp)
+                    Image(
+                        painter = painterResource(Res.drawable.developer_avatar),
+                        contentDescription = "KarBer",
+                        modifier = Modifier.fillMaxSize(),
+                        contentScale = ContentScale.Fit
                     )
                 }
 
@@ -196,7 +211,7 @@ fun DeveloperCard(modifier: Modifier = Modifier, onOpenUrl: (String) -> Unit) {
                         color = Color(0xFFA5B4FC)
                     )
                     Text(
-                        text = "عبودي",
+                        text = "KarBer",
                         fontSize = 22.sp,
                         fontWeight = FontWeight.Bold,
                         color = Color.White

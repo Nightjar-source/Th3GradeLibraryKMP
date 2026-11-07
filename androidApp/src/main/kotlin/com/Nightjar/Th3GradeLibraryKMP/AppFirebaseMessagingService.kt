@@ -116,6 +116,11 @@ class AppFirebaseMessagingService : FirebaseMessagingService() {
             return
         }
 
+        if (SyncEngine.isUserOnNewsScreen && !isDevTest) {
+            // User is currently actively looking at the News screen: already displayed in front of them, ZERO redundant notifications
+            return
+        }
+
         if (isDevTest) {
             // Explicit developer test trigger: show immediately as a micro-thumbnail notification
             showMicroThumbnailNotification(title, content, link, imageUrl)
@@ -165,9 +170,12 @@ class AppFirebaseMessagingService : FirebaseMessagingService() {
             val id = if (link.isNotEmpty()) link else ("news_" + title.hashCode())
             val formattedDate = SyncEngine.formatNewsDate(pubDate)
 
-            // Prevent duplicates (Smart Watermark)
-            val exists = existingList.any { it.id == id || (it.title == title && it.pubDate == pubDate) }
-            if (!exists) {
+            // Prevent duplicates (Smart Watermark & Boundary verification)
+            val topLink = AppDataStore.getString("Top_Link", "")
+            val topTime = AppDataStore.getString("Top_Time", "")
+            val isDuplicate = (link.isNotEmpty() && link == topLink && (pubDate.isEmpty() || pubDate == topTime)) ||
+                    existingList.any { it.id == id || (it.title == title && it.pubDate == pubDate) || (link.isNotEmpty() && it.link == link) }
+            if (!isDuplicate) {
                 val newItem = NewsItem(
                     id = id,
                     title = title,
@@ -179,6 +187,8 @@ class AppFirebaseMessagingService : FirebaseMessagingService() {
                 )
                 existingList.add(0, newItem)
                 AppDataStore.putString("app_news_cache", json.encodeToString(existingList.take(60)))
+                AppDataStore.putString("Top_Link", link.ifEmpty { id })
+                if (pubDate.isNotEmpty()) AppDataStore.putString("Top_Time", pubDate)
                 SyncEngine.reloadFromPersistence()
                 true
             } else {
@@ -275,18 +285,25 @@ class AppFirebaseMessagingService : FirebaseMessagingService() {
         )
 
         val thumbnailBitmap = loadMicroThumbnail(imageUrl)
-        val cleanTitle = title.replace("أخبار الثالث متوسط:", "").replace("أخبار الثالث متوسط", "").trim().ifBlank { title }
+        val cleanTitle = SyncEngine.cleanHtmlEntities(
+            title.replace("أخبار الثالث متوسط:", "").replace("أخبار الثالث متوسط", "").trim()
+        ).ifBlank { title }
+        val cleanContent = SyncEngine.cleanHtmlEntities(content)
 
+        val isDevNotification = title.contains("المطور") || link.startsWith("dev_") || cleanTitle.contains("تنبيه")
         val notificationBuilder = NotificationCompat.Builder(this, channelId)
             .setSmallIcon(R.drawable.ic_notification)
             .setColor(android.graphics.Color.parseColor("#2563EB"))
             .setContentTitle(cleanTitle)
-            .setContentText(content.ifBlank { cleanTitle })
-            .setStyle(NotificationCompat.BigTextStyle().bigText(content.ifBlank { cleanTitle }))
             .setPriority(if (soundEnabled) NotificationCompat.PRIORITY_HIGH else NotificationCompat.PRIORITY_LOW)
             .setAutoCancel(true)
             .setContentIntent(pendingIntent)
             .setGroup(GROUP_KEY)
+
+        if (isDevNotification && cleanContent.isNotBlank()) {
+            notificationBuilder.setContentText(cleanContent)
+            notificationBuilder.setStyle(NotificationCompat.BigTextStyle().bigText(cleanContent))
+        }
 
         // Micro-thumbnail beside headline (text line size)
         if (thumbnailBitmap != null) {

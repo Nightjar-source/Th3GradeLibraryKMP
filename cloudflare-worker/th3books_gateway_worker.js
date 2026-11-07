@@ -58,28 +58,129 @@ const _DISABLED_ANNOUNCEMENT = {
 
 // In-memory & Edge Cache tracker for last sent notification GUID
 let lastNotifiedGuid = "";
+const CLOUDFLARE_ACCOUNT_ID = "582d8bda218c7b16eff91fa9ffeddeef";
+const CLOUDFLARE_KV_ID = "85e9ce7f9e0d49b7b3b628b20ea6fc3f";
+// Token injected via worker secret binding
+const CLOUDFLARE_API_TOKEN = typeof CF_API_TOKEN !== "undefined" ? CF_API_TOKEN : "";
+
+function cleanHtmlEntities(str) {
+  if (!str) return "";
+  return str
+    .replace(/&quot;/g, '"')
+    .replace(/&apos;/g, "'")
+    .replace(/&#39;/g, "'")
+    .replace(/&amp;/g, '&')
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&nbsp;/g, ' ')
+    .replace(/&#160;/g, ' ')
+    .replace(/&#8220;/g, '"')
+    .replace(/&#8221;/g, '"')
+    .replace(/&#8216;/g, "'")
+    .replace(/&#8217;/g, "'")
+    .replace(/&#8211;/g, '-')
+    .replace(/&#8212;/g, '—')
+    .replace(/<[^>]*>/g, '')
+    .trim();
+}
+
+
+async function getFirestoreLastGuid(token) {
+  try {
+    const url = `https://firestore.googleapis.com/v1/projects/${FIREBASE_PROJECT_ID}/databases/(default)/documents/app_state/news_sync`;
+    const resp = await fetch(url, {
+      headers: { "Authorization": `Bearer ${token}` }
+    });
+    if (resp.ok) {
+      const data = await resp.json();
+      return data.fields?.last_notified_guid?.stringValue || "";
+    }
+  } catch (e) {
+    console.error("Firestore read error:", e);
+  }
+  return "";
+}
+
+async function setFirestoreLastGuid(token, guid) {
+  try {
+    const url = `https://firestore.googleapis.com/v1/projects/${FIREBASE_PROJECT_ID}/databases/(default)/documents/app_state/news_sync?updateMask.fieldPaths=last_notified_guid`;
+    await fetch(url, {
+      method: "PATCH",
+      headers: {
+        "Authorization": `Bearer ${token}`,
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        fields: {
+          last_notified_guid: { stringValue: guid }
+        }
+      })
+    });
+  } catch (e) {
+    console.error("Firestore write error:", e);
+  }
+}
 
 async function getLastNotifiedGuid() {
+  // 1. Native Cloudflare KV Binding if bound
+  try {
+    if (typeof TH3BOOKS_KV !== "undefined") {
+      const val = await TH3BOOKS_KV.get("last_notified_guid");
+      if (val) return val;
+    }
+  } catch (e) {}
+
+  // 2. Cloudflare KV REST API via Token
+  try {
+    const kvUrl = `https://api.cloudflare.com/client/v4/accounts/${CLOUDFLARE_ACCOUNT_ID}/storage/kv/namespaces/${CLOUDFLARE_KV_ID}/values/last_notified_guid`;
+    const resp = await fetch(kvUrl, {
+      headers: { "Authorization": `Bearer ${CLOUDFLARE_API_TOKEN}` }
+    });
+    if (resp.ok) {
+      const val = await resp.text();
+      if (val && !val.includes("error")) return val;
+    }
+  } catch (e) {}
+
+  // 3. Fallback to Cloudflare Edge Cache
   try {
     const cache = caches.default;
     const cacheKey = new Request("https://th3books-gateway.karrar1iq.workers.dev/internal/last-notified-guid");
-    const cached = await cache.match(cacheKey);
-    if (cached) {
-      return (await cached.text()).trim();
+    const response = await cache.match(cacheKey);
+    if (response) {
+      return (await response.text()).trim();
     }
   } catch (e) {}
+
   return lastNotifiedGuid;
 }
 
 async function setLastNotifiedGuid(guid) {
   lastNotifiedGuid = guid;
+
+  // 1. Native Cloudflare KV Binding
+  try {
+    if (typeof TH3BOOKS_KV !== "undefined") {
+      await TH3BOOKS_KV.put("last_notified_guid", guid);
+    }
+  } catch (e) {}
+
+  // 2. Cloudflare KV REST API via Token
+  try {
+    const kvUrl = `https://api.cloudflare.com/client/v4/accounts/${CLOUDFLARE_ACCOUNT_ID}/storage/kv/namespaces/${CLOUDFLARE_KV_ID}/values/last_notified_guid`;
+    await fetch(kvUrl, {
+      method: "PUT",
+      headers: { "Authorization": `Bearer ${CLOUDFLARE_API_TOKEN}` },
+      body: guid
+    });
+  } catch (e) {}
+
+  // 3. Cloudflare Edge Cache
   try {
     const cache = caches.default;
     const cacheKey = new Request("https://th3books-gateway.karrar1iq.workers.dev/internal/last-notified-guid");
     const response = new Response(guid, {
-      headers: {
-        "Cache-Control": "public, max-age=2592000" // 30 days retention
-      }
+      headers: { "Cache-Control": "max-age=2592000" } // 30 days
     });
     await cache.put(cacheKey, response);
   } catch (e) {}
@@ -115,7 +216,7 @@ async function handleRequest(request, event) {
       status: "ok",
       service: "th3books-gateway",
       version: "2.1.4-cloud",
-      developerAnnouncement: ACTIVE_ANNOUNCEMENT.title,
+      developerAnnouncement: ACTIVE_ANNOUNCEMENT?.title || null,
       timestamp: new Date().toISOString()
     }), {
       headers: {
@@ -256,50 +357,67 @@ async function handleRequest(request, event) {
  */
 async function handleScheduledEvent(force = false) {
   try {
-    const resp = await fetch(RSS_FEED_URL);
-    if (!resp.ok) return { error: `Feed fetch status ${resp.status}` };
+    const feedResp = await fetch(RSS_FEED_URL, {
+      headers: { "User-Agent": "Th3Books-Edge-Bot/2.2.4 (Android KMP Cloud)" }
+    });
+    if (!feedResp.ok) return { error: "Failed to fetch RSS feed" };
 
-    const xml = await resp.text();
-    const itemMatch = xml.match(/<item>([\s\S]*?)<\/item>/);
-    if (!itemMatch) return { message: "No items found in feed" };
+    const xml = await feedResp.text();
 
-    const itemContent = itemMatch[1];
-    const titleMatch = itemContent.match(/<title><!\[CDATA\[(.*?)\]\]><\/title>/) || itemContent.match(/<title>(.*?)<\/title>/);
-    const linkMatch = itemContent.match(/<link>(.*?)<\/link>/) || itemContent.match(/<guid[^>]*>(.*?)<\/guid>/);
-    const pubDateMatch = itemContent.match(/<pubDate>(.*?)<\/pubDate>/);
-    const descMatch = itemContent.match(/<description><!\[CDATA\[(.*?)\]\]><\/description>/) || itemContent.match(/<description>(.*?)<\/description>/);
+    const titleMatch = xml.match(/<item>[\s\S]*?<title>(?:<!\[CDATA\[)?([\s\S]*?)(?:\]\]>)?<\/title>/i);
+    const linkMatch = xml.match(/<item>[\s\S]*?<link>(?:<!\[CDATA\[)?([\s\S]*?)(?:\]\]>)?<\/link>/i);
+    const pubDateMatch = xml.match(/<item>[\s\S]*?<pubDate>(?:<!\[CDATA\[)?([\s\S]*?)(?:\]\]>)?<\/pubDate>/i);
+    const descMatch = xml.match(/<item>[\s\S]*?<description>(?:<!\[CDATA\[)?([\s\S]*?)(?:\]\]>)?<\/description>/i);
+    const imgMatch = xml.match(/<item>[\s\S]*?<enclosure[^>]*url="([^"]*)"/i) ||
+                     xml.match(/<item>[\s\S]*?<media:content[^>]*url="([^"]*)"/i) ||
+                     (descMatch && descMatch[1].match(/src="([^"]*)"/i));
 
-    const imgMatch = itemContent.match(/<img[^>]+src=["']([^"']+)["']/i);
-    const imageUrl = imgMatch ? imgMatch[1] : "";
+    if (!titleMatch) return { status: "no_items_found" };
 
-    const title = titleMatch ? titleMatch[1].trim() : "خبر دراسي جديد";
+    const rawTitle = titleMatch[1].replace(/<[^>]*>/g, "").trim();
+    const title = cleanHtmlEntities(rawTitle.replace("أخبار الثالث متوسط:", "").replace("أخبار الثالث متوسط", "").trim());
     const link = linkMatch ? linkMatch[1].trim() : "";
     const pubDate = pubDateMatch ? pubDateMatch[1].trim() : "";
-    const snippet = descMatch ? descMatch[1].replace(/<[^>]*>/g, "").trim().substring(0, 150) : "";
-    const guid = link || title;
+    const imageUrl = imgMatch ? imgMatch[1].trim() : "";
+    const snippet = descMatch ? cleanHtmlEntities(descMatch[1]).substring(0, 150) : "";
 
-    const cachedGuid = await getLastNotifiedGuid();
-    if (!force && (lastNotifiedGuid === guid || cachedGuid === guid)) {
-      return { status: "unchanged", guid: guid };
+    // Parse timestamp to exact epoch seconds for strict temporal boundary verification
+    const parsedTime = Date.parse(pubDate);
+    const epochSec = isNaN(parsedTime) ? Math.floor(Date.now() / 1000) : Math.floor(parsedTime / 1000);
+    const currentTopMarker = `${link}___${epochSec}`;
+
+    // Read stored boundary watermark from Cloudflare KV
+    const storedTopMarker = await getLastNotifiedGuid();
+
+    if (!force && storedTopMarker === currentTopMarker) {
+      return { status: "unchanged", marker: currentTopMarker };
     }
 
-    await setLastNotifiedGuid(guid);
+    // Update boundary watermark in Cloudflare KV
+    await setLastNotifiedGuid(currentTopMarker);
 
-    // Send FCM v1 pure Data-Only push (Zero WakeLock, Zero Battery, Ultra-fast delivery)
+    // Differentiate between Web News (Title + Link + Image) vs In-App Administrative Announcement
+    const hasWebLink = link.startsWith("http://") || link.startsWith("https://");
+    const hasImage = imageUrl.length > 0;
+    const isWebArticle = hasWebLink && hasImage && !link.includes("dev_") && !link.includes("admin_");
+
+    // Send FCM v1 pure Data-Only push
     const pushResult = await sendFcmNotification({
       title: title,
-      body: snippet || "",
+      body: "", // Keep body empty so headline is solely displayed
       imageUrl: imageUrl || "",
       data: {
         title: title,
         link: link,
         pubDate: pubDate,
         content: snippet || "",
-        image_url: imageUrl || ""
+        image_url: imageUrl || "",
+        is_news_article: isWebArticle ? "true" : "false",
+        is_announcement: isWebArticle ? "false" : "true"
       }
     });
 
-    return { status: "notified", title: title, push: pushResult };
+    return { status: "notified", title: title, push: pushResult, marker: currentTopMarker };
   } catch (e) {
     console.error("Scheduled check error:", e);
     return { error: e.message };

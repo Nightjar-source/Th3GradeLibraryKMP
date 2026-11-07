@@ -1,8 +1,12 @@
 package com.Nightjar.Th3GradeLibraryKMP.ui
 
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.ExperimentalSharedTransitionApi
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
+import androidx.compose.animation.core.spring
+import com.Nightjar.Th3GradeLibraryKMP.LocalSharedTransitionScope
+import com.Nightjar.Th3GradeLibraryKMP.LocalAnimatedVisibilityScope
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -33,6 +37,7 @@ import coil3.compose.AsyncImage
 import com.Nightjar.Th3GradeLibraryKMP.data.NewsItem
 import com.Nightjar.Th3GradeLibraryKMP.theme.liquidGlass
 
+@OptIn(ExperimentalSharedTransitionApi::class)
 @Composable
 fun NotificationDetailScreen(
     item: NewsItem,
@@ -42,6 +47,19 @@ fun NotificationDetailScreen(
     onShare: (String) -> Unit
 ) {
     val scrollState = rememberScrollState()
+    val sharedTransitionScope = LocalSharedTransitionScope.current
+    val animatedVisibilityScope = LocalAnimatedVisibilityScope.current
+
+    val sharedCardModifier = if (sharedTransitionScope != null && animatedVisibilityScope != null) {
+        with(sharedTransitionScope) {
+            Modifier.sharedBounds(
+                sharedContentState = rememberSharedContentState(key = "news-${item.link}"),
+                animatedVisibilityScope = animatedVisibilityScope,
+                renderInOverlayDuringTransition = true,
+                boundsTransform = { _, _ -> spring(dampingRatio = 0.82f, stiffness = 280f) }
+            )
+        }
+    } else Modifier
 
     Box(
         modifier = Modifier
@@ -61,8 +79,8 @@ fun NotificationDetailScreen(
 
             Column(
                 modifier = Modifier
-                    .widthIn(max = 760.dp)
                     .fillMaxWidth()
+                    .then(sharedCardModifier)
                     .padding(horizontal = 20.dp),
                 verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {

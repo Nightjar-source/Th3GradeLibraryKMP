@@ -22,8 +22,21 @@ data class NewsItem(
     val contentSnippet: String?,
     val pubDate: String,
     val imageUrl: String?,
-    val formattedDate: String = ""
-)
+    val formattedDate: String = "",
+    val isAnnouncement: Boolean = false,
+    val source: String = "rss"
+) {
+    val isDeveloperAnnouncement: Boolean
+        get() = isAnnouncement ||
+                source.contains("announcement") ||
+                id.startsWith("dev_") ||
+                id.startsWith("admin_") ||
+                link.startsWith("dev_") ||
+                link.startsWith("admin_") ||
+                link.startsWith("app://") ||
+                link.isBlank() ||
+                (!link.startsWith("http://") && !link.startsWith("https://"))
+}
 
 @Serializable
 data class AppSettings(

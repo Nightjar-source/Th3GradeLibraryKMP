@@ -427,15 +427,11 @@ actual fun PdfViewerScreen(
         // Liquid Dynamic Island sink-down exit ONLY when bookmark is deleted or when opening from a shortcut/news
         with(animatedVisibilityScope) {
             Modifier.animateEnterExit(
-                enter = androidx.compose.animation.fadeIn(androidx.compose.animation.core.tween(220)) + androidx.compose.animation.scaleIn(initialScale = 0.92f),
-                exit = androidx.compose.animation.fadeOut(androidx.compose.animation.core.tween(220, delayMillis = 60)) + 
+                enter = androidx.compose.animation.fadeIn(androidx.compose.animation.core.tween(220)) + androidx.compose.animation.scaleIn(initialScale = 0.94f),
+                exit = androidx.compose.animation.fadeOut(androidx.compose.animation.core.tween(180, delayMillis = 40)) + 
                        androidx.compose.animation.scaleOut(
-                           targetScale = 0.28f, 
-                           animationSpec = spring(dampingRatio = 0.78f, stiffness = Spring.StiffnessMediumLow)
-                       ) + 
-                       androidx.compose.animation.slideOutVertically(
-                           targetOffsetY = { it },
-                           animationSpec = spring(dampingRatio = 0.78f, stiffness = Spring.StiffnessMediumLow)
+                           targetScale = 0.92f, 
+                           animationSpec = spring(dampingRatio = 0.85f, stiffness = Spring.StiffnessMediumLow)
                        )
             )
         }

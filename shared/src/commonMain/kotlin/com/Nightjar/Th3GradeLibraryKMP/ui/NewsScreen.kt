@@ -168,11 +168,8 @@ fun NewsScreen(
         }
     }
 
-    val adaptiveInfo = currentWindowAdaptiveInfo()
-    val windowSizeClass = adaptiveInfo.windowSizeClass
-    val widthClass = windowSizeClass.windowWidthSizeClass
-    val heightClass = windowSizeClass.windowHeightSizeClass
-    val isMedium = widthClass != WindowWidthSizeClass.COMPACT
+    val adaptiveConfig = LocalAppAdaptiveConfig.current
+    val isMedium = adaptiveConfig.isWide
 
     BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
         val pullRefreshState = rememberPullToRefreshState()
@@ -234,13 +231,8 @@ fun NewsScreen(
                     val windowInfo = androidx.compose.ui.platform.LocalWindowInfo.current
                     val density = androidx.compose.ui.platform.LocalDensity.current
                     val screenWidthDp = with(density) { windowInfo.containerSize.width.toDp() }
-                    val dynamicNewsColumns = remember(widthClass, screenWidthDp) {
-                        when (widthClass) {
-                            WindowWidthSizeClass.COMPACT -> GridCells.Fixed(1)
-                            WindowWidthSizeClass.MEDIUM -> GridCells.Fixed(2)
-                            WindowWidthSizeClass.EXPANDED -> if (screenWidthDp >= 1400.dp) GridCells.Fixed(3) else GridCells.Fixed(2)
-                            else -> GridCells.Fixed(1)
-                        }
+                    val dynamicNewsColumns = remember(adaptiveConfig) {
+                        adaptiveConfig.newsGridCells()
                     }
                     LazyVerticalGrid(
                         columns = dynamicNewsColumns,

@@ -361,14 +361,10 @@ fun AppContent(
                 
                 if (targetIdx >= 0) {
                     val state = if (target.isNote) libraryNotesLazyGridState else libraryBooksLazyGridState
-                    scope.launch {
-                        try {
-                            state.scrollToItem(targetIdx)
-                        } catch (_: Exception) {}
-                    }
+                    state.requestScrollToItem(targetIdx)
                 }
                 
-                // Open directly into PDF reader with shared element transition
+                // Open directly into PDF reader with unified shared element transition (matching 22222)
                 com.Nightjar.Th3GradeLibraryKMP.ui.TransitionTargetTracker.activeTargetId = "card_${target.id}"
                 com.Nightjar.Th3GradeLibraryKMP.ui.TransitionTargetTracker.isTransitionActive = true
                 viewModel.pdfSourcePage = "list"
@@ -390,8 +386,17 @@ fun AppContent(
         }
     }
 
-    // Auto-fetch on start when the app opens and splash screen finishes
+    // Track active page in SyncEngine and clear background news notifications as soon as user opens News
+    LaunchedEffect(page) {
+        SyncEngine.isUserOnNewsScreen = (page == "news")
+        if (page == "news") {
+            platformActionHandler.clearNewsNotifications()
+        }
+    }
+
+    // Auto-fetch on start when the app opens and splash screen finishes (with delay to protect RenderThread & 120 FPS)
     LaunchedEffect(Unit) {
+        kotlinx.coroutines.delay(2500)
         scope.launch(kotlinx.coroutines.Dispatchers.Default) {
             SyncEngine.fetchAndSync(forced = true)
         }
@@ -416,15 +421,19 @@ fun AppContent(
             BoxWithConstraints(
                 modifier = Modifier.fillMaxSize()
             ) {
-        val screenWidthDp = with(androidx.compose.ui.platform.LocalDensity.current) { androidx.compose.ui.platform.LocalWindowInfo.current.containerSize.width.toDp() }
-        val isWide = screenWidthDp >= 600.dp
+        val adaptiveConfig = rememberAppAdaptiveConfig()
+        val screenWidthDp = adaptiveConfig.screenWidthDp
+        val isWide = adaptiveConfig.isWide
         
         val currentNavBar = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
         val currentStatusBar = WindowInsets.statusBars.add(WindowInsets.captionBar).asPaddingValues().calculateTopPadding()
         
         val listBottomPadding = (if (isWide) 24.dp else 110.dp) + currentNavBar + (if (bottomBannerAd != null) 56.dp else 0.dp)
 
-        CompositionLocalProvider(LocalStableStatusBarHeight provides currentStatusBar) {
+        CompositionLocalProvider(
+            LocalStableStatusBarHeight provides currentStatusBar,
+            LocalAppAdaptiveConfig provides adaptiveConfig
+        ) {
         Box(
             modifier = Modifier
                 .fillMaxSize()
@@ -483,6 +492,8 @@ fun AppContent(
                             transitionSpec = {
                                 val isToPdf = targetState == "pdf"
                                 val isFromPdf = initialState == "pdf"
+                                val isToNotificationDetail = targetState == "notification_detail"
+                                val isFromNotificationDetail = initialState == "notification_detail"
 
                                 if (isToPdf) {
                                     (fadeIn(animationSpec = tween(durationMillis = 130, easing = androidx.compose.animation.core.LinearEasing))).togetherWith(
@@ -496,6 +507,30 @@ fun AppContent(
                                     ).apply {
                                         targetContentZIndex = -1f
                                     }
+                                } else if (isToNotificationDetail) {
+                                    val slideSpec = androidx.compose.animation.core.tween<androidx.compose.ui.unit.IntOffset>(
+                                        durationMillis = 350,
+                                        easing = androidx.compose.animation.core.CubicBezierEasing(0.16f, 1f, 0.3f, 1f)
+                                    )
+                                    val fadeSpec = androidx.compose.animation.core.tween<Float>(
+                                        durationMillis = 260,
+                                        easing = androidx.compose.animation.core.FastOutSlowInEasing
+                                    )
+                                    (slideInHorizontally(initialOffsetX = { fullWidth -> fullWidth }, animationSpec = slideSpec) + fadeIn(animationSpec = fadeSpec)).togetherWith(
+                                        slideOutHorizontally(targetOffsetX = { fullWidth -> -fullWidth / 4 }, animationSpec = slideSpec) + fadeOut(animationSpec = fadeSpec)
+                                    ).apply { targetContentZIndex = 40f }
+                                } else if (isFromNotificationDetail) {
+                                    val slideSpec = androidx.compose.animation.core.tween<androidx.compose.ui.unit.IntOffset>(
+                                        durationMillis = 350,
+                                        easing = androidx.compose.animation.core.CubicBezierEasing(0.16f, 1f, 0.3f, 1f)
+                                    )
+                                    val fadeSpec = androidx.compose.animation.core.tween<Float>(
+                                        durationMillis = 260,
+                                        easing = androidx.compose.animation.core.FastOutSlowInEasing
+                                    )
+                                    (slideInHorizontally(initialOffsetX = { fullWidth -> -fullWidth / 4 }, animationSpec = slideSpec) + fadeIn(animationSpec = fadeSpec)).togetherWith(
+                                        slideOutHorizontally(targetOffsetX = { fullWidth -> fullWidth }, animationSpec = slideSpec) + fadeOut(animationSpec = fadeSpec)
+                                    ).apply { targetContentZIndex = -1f }
                                 } else {
                                     val pageOrder = listOf("home", "list", "news", "bookmarks", "shortcuts", "about")
                                     val initialIndex = pageOrder.indexOf(initialState).takeIf { it >= 0 } ?: 0
@@ -545,14 +580,14 @@ fun AppContent(
                                     .padding(pageContentPadding),
                                 contentAlignment = Alignment.TopCenter
                             ) {
-                                val seenKeysForScreen = remember(targetPage, screenNavCounter) {
-                                    screenEntranceSeenMap.getOrPut("${targetPage}_$screenNavCounter") { androidx.compose.runtime.mutableStateMapOf() }
+                                val seenKeysForScreen = remember(targetPage) {
+                                    screenEntranceSeenMap.getOrPut(targetPage) { androidx.compose.runtime.mutableStateMapOf() }
                                 }
                                 CompositionLocalProvider(
                                     LocalAnimatedVisibilityScope provides this@AnimatedContent,
                                     com.Nightjar.Th3GradeLibraryKMP.theme.LocalIsNavigatingBack provides isNavigatingBack,
                                     com.Nightjar.Th3GradeLibraryKMP.theme.LocalSeenEntranceItems provides seenKeysForScreen,
-                                    com.Nightjar.Th3GradeLibraryKMP.theme.LocalScreenEntranceKey provides "${targetPage}_$screenNavCounter",
+                                    com.Nightjar.Th3GradeLibraryKMP.theme.LocalScreenEntranceKey provides targetPage,
                                     com.Nightjar.Th3GradeLibraryKMP.theme.LocalIsReturningFromPdf provides isReturningFromPdf
                                 ) { saveableStateHolder.SaveableStateProvider(targetPage) {
                                 when (targetPage) {
@@ -604,23 +639,24 @@ fun AppContent(
                                     "news" -> RenderNewsDestination(
                                         onOpenSettings = { isNewsSettingsOpen = true },
                                         onItemClick = { url, title ->
-                                            val isDevAnnouncement = url.startsWith("dev_") || title.contains("المطور") || title.contains("تنبيه من المطور")
-                                            if (isDevAnnouncement) {
-                                                val matched = SyncEngine.newsList.value.firstOrNull { it.link == url || it.title == title }
-                                                if (matched != null) {
-                                                    activeNotificationItem = matched
-                                                    navigateTo("notification_detail")
-                                                }
-                                            } else {
-                                                if (url.isNotBlank() && url.startsWith("http")) {
-                                                    platformActionHandler.openCustomTab(url, appSettings.primaryColor)
-                                                } else {
-                                                    val matched = SyncEngine.newsList.value.firstOrNull { it.link == url || it.title == title }
-                                                    if (matched != null) {
-                                                        activeNotificationItem = matched
-                                                        navigateTo("notification_detail")
-                                                    }
-                                                }
+                                            val matched = SyncEngine.newsList.value.firstOrNull { it.link == url || it.title == title }
+                                            val isAnnouncement = matched?.isDeveloperAnnouncement == true ||
+                                                    url.isBlank() ||
+                                                    url.startsWith("dev_") ||
+                                                    url.startsWith("admin_") ||
+                                                    url.startsWith("app://") ||
+                                                    (!url.startsWith("http://") && !url.startsWith("https://"))
+
+                                            if (isAnnouncement && matched != null) {
+                                                // In-app administrative notice / rich card
+                                                activeNotificationItem = matched
+                                                navigateTo("notification_detail")
+                                            } else if (url.isNotBlank() && (url.startsWith("http://") || url.startsWith("https://"))) {
+                                                // External published web article (works on any future domain or blog engine)
+                                                platformActionHandler.openCustomTab(url, appSettings.primaryColor)
+                                            } else if (matched != null) {
+                                                activeNotificationItem = matched
+                                                navigateTo("notification_detail")
                                             }
                                         },
                                         isDark = isDark,
@@ -1301,7 +1337,7 @@ fun AppContent(
 
         // --- Dynamic Navigation & Banner Heights Calculation ---
         val mainTabs = listOf("home", "list", "news", "bookmarks", "shortcuts", "about")
-        val hasBottomNavBar = !showOnboarding && page in mainTabs && !isWide
+        val hasBottomNavBar = !showOnboarding && page in mainTabs && adaptiveConfig.navigationType == AppNavigationType.BottomNavigationBar
         val targetBannerBottomPadding = if (hasBottomNavBar && isBottomBarVisible) 78.dp else 0.dp
         val rawAnimatedBannerBottomPadding by animateDpAsState(
             targetValue = targetBannerBottomPadding,
@@ -1319,6 +1355,7 @@ fun AppContent(
                 .align(Alignment.BottomCenter)
                 .fillMaxWidth()
                 .windowInsetsPadding(WindowInsets.navigationBars.only(WindowInsetsSides.Bottom))
+                .padding(end = if (adaptiveConfig.isWide) adaptiveConfig.sideRailPaddingEnd else 0.dp)
                 .padding(bottom = animatedBannerBottomPadding)
                 .zIndex(180f)
         ) {
@@ -1542,7 +1579,7 @@ fun AppContent(
         
         // --- Tablet/Wide Floating Side Navigation Capsule ---
         androidx.compose.animation.AnimatedVisibility(
-            visible = !showOnboarding && page in mainTabs && isWide,
+            visible = !showOnboarding && page in mainTabs && adaptiveConfig.navigationType != AppNavigationType.BottomNavigationBar,
             enter = slideInHorizontally(animationSpec = spring(dampingRatio = 0.76f, stiffness = 280f)) { -it } + fadeIn(tween(260)),
             exit = slideOutHorizontally(animationSpec = spring(dampingRatio = 0.76f, stiffness = 280f)) { -it } + fadeOut(tween(220)),
             modifier = Modifier.align(Alignment.CenterEnd).fillMaxHeight().zIndex(200f).then(

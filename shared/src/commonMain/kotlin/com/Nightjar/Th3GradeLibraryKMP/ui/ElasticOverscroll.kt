@@ -81,17 +81,18 @@ fun Modifier.elasticOverscroll(
 
             override suspend fun onPreFling(available: Velocity): Velocity {
                 val current = overscrollOffset.value
-                // Samsung One UI Reachability: if pulled past 35% towards the quarter position, settle there
-                if (current > effectiveMaxReachPx * 0.35f && available.y >= -100f) {
+                // Samsung One UI Reachability: pull down smoothly to reach top items with one hand
+                // Settles gracefully with zero bouncy rebound (DampingRatioNoBouncy)
+                if (current > effectiveMaxReachPx * 0.45f && available.y >= -100f) {
                     overscrollOffset.animateTo(
                         effectiveMaxReachPx,
-                        spring(dampingRatio = 0.85f, stiffness = Spring.StiffnessMediumLow)
+                        spring(dampingRatio = Spring.DampingRatioNoBouncy, stiffness = 220f)
                     )
                     return available
                 } else if (current > 0f) {
                     overscrollOffset.animateTo(
                         0f,
-                        spring(dampingRatio = 0.85f, stiffness = Spring.StiffnessMediumLow)
+                        spring(dampingRatio = Spring.DampingRatioNoBouncy, stiffness = 240f)
                     )
                     return available
                 }

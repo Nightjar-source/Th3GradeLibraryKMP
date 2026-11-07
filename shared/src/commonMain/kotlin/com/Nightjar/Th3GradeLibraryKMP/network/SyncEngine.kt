@@ -21,6 +21,7 @@ object SyncEngine {
     private val client = HttpClient()
 
     var platformActionHandler: PlatformActionHandler? = null
+    var isUserOnNewsScreen: Boolean = false
 
     private val _notificationsEnabled = MutableStateFlow(true)
     val notificationsEnabled = _notificationsEnabled.asStateFlow()
@@ -338,6 +339,27 @@ object SyncEngine {
         _lastFetchedCount.value = -1
     }
 
+    fun cleanHtmlEntities(raw: String): String {
+        if (raw.isBlank()) return ""
+        return raw
+            .replace("&quot;", "\"")
+            .replace("&apos;", "'")
+            .replace("&#39;", "'")
+            .replace("&amp;", "&")
+            .replace("&lt;", "<")
+            .replace("&gt;", ">")
+            .replace("&nbsp;", " ")
+            .replace("&#160;", " ")
+            .replace("&#8220;", "\"")
+            .replace("&#8221;", "\"")
+            .replace("&#8216;", "'")
+            .replace("&#8217;", "'")
+            .replace("&#8211;", "-")
+            .replace("&#8212;", "—")
+            .replace(Regex("<[^>]*>"), "")
+            .trim()
+    }
+
     fun formatNewsDate(pubDate: String): String = try {
         val dParts = pubDate.split(" ")
         if (dParts.size >= 5) {
@@ -401,8 +423,8 @@ object SyncEngine {
 
             suspend fun fetchWithFallbacks(): com.prof18.rssparser.model.RssChannel {
                 val targets = listOf(
-                    originalUrl,
                     cfWorkerUrl,
+                    originalUrl,
                     "https://api.allorigins.win/raw?url=$originalUrl",
                     "https://corsproxy.io/?url=$originalUrl",
                     "https://api.codetabs.com/v1/proxy/?quest=$originalUrl"
@@ -424,11 +446,13 @@ object SyncEngine {
 
             val fetchedItems = channel.items.map { item ->
                 val pubDate = item.pubDate ?: ""
+                val cleanTitle = cleanHtmlEntities(item.title ?: "")
+                val cleanSnippet = cleanHtmlEntities(item.description ?: "")
                 NewsItem(
                     id = item.guid ?: item.link ?: "",
-                    title = item.title ?: "",
+                    title = cleanTitle,
                     link = item.link ?: "",
-                    contentSnippet = item.description ?: "",
+                    contentSnippet = cleanSnippet,
                     pubDate = pubDate,
                     imageUrl = item.image ?: extractImageFromContent(item.content ?: item.description ?: ""),
                     formattedDate = formatNewsDate(pubDate)
@@ -539,10 +563,13 @@ object SyncEngine {
                     _lastFetchedCount.value = newUniqueItems.size
                     val isFirstRunOrCleared = topLink.isEmpty() || isCacheCleared || domainChanged
                     if (!isFirstRunOrCleared && newUniqueItems.isNotEmpty()) {
-                        if (_appSettings.value.notificationSound && platformActionHandler?.areNotificationsEnabled() == true) {
-                            platformActionHandler?.playNotificationSound()
+                        // Launch system notification ONLY if user is not currently viewing the News screen
+                        if (!isUserOnNewsScreen) {
+                            if (_appSettings.value.notificationSound && platformActionHandler?.areNotificationsEnabled() == true) {
+                                platformActionHandler?.playNotificationSound()
+                            }
+                            platformActionHandler?.showNewsNotification(newUniqueItems.map { it.title }, newUniqueItems.size)
                         }
-                        platformActionHandler?.showNewsNotification(newUniqueItems.map { it.title }, newUniqueItems.size)
                     }
                     saveSettings(_appSettings.value.copy(lastSync = now))
                     return@withContext newUniqueItems.size

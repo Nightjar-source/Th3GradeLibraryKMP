@@ -150,14 +150,8 @@ fun BookmarksScreen(
                     }
                 }
 
-                val adaptiveInfo = currentWindowAdaptiveInfo()
-                val windowSizeClass = adaptiveInfo.windowSizeClass
-                val widthClass = windowSizeClass.windowWidthSizeClass
-                val heightClass = windowSizeClass.windowHeightSizeClass
-                val windowInfo = LocalWindowInfo.current
-                val density = LocalDensity.current
-                val screenWidthDp = with(density) { windowInfo.containerSize.width.toDp() }
-                val isMedium = widthClass != WindowWidthSizeClass.COMPACT
+                val adaptiveConfig = LocalAppAdaptiveConfig.current
+                val isMedium = adaptiveConfig.isWide
                 val screenVisibilityScope = LocalAnimatedVisibilityScope.current
                 val expandedSet by SyncEngine.expandedBookmarks.collectAsState()
 
@@ -170,19 +164,8 @@ fun BookmarksScreen(
                     }
                 }
 
-                val dynamicBookmarkColumns = remember(widthClass, heightClass, screenWidthDp) {
-                    when (widthClass) {
-                        WindowWidthSizeClass.COMPACT -> GridCells.Fixed(1)
-                        WindowWidthSizeClass.MEDIUM -> GridCells.Fixed(2)
-                        WindowWidthSizeClass.EXPANDED -> {
-                            when {
-                                screenWidthDp >= 1440.dp -> GridCells.Fixed(4) // Ultra-wide / 4K / Desktop
-                                screenWidthDp >= 1080.dp -> GridCells.Fixed(3) // Samsung Galaxy Tab 12 Pro / Googlebook
-                                else                     -> GridCells.Fixed(2) // Tablets / Foldables
-                            }
-                        }
-                        else -> GridCells.Fixed(1)
-                    }
+                val dynamicBookmarkColumns = remember(adaptiveConfig) {
+                    adaptiveConfig.bookmarksGridCells()
                 }
 
                 LazyVerticalGrid(
@@ -202,7 +185,11 @@ fun BookmarksScreen(
                         if (book != null) {
                             val pages = groupedPages[bookId] ?: emptyList()
                                 BookAccordionItem(
-                                modifier = Modifier.animateItem(placementSpec = spring(dampingRatio = 0.82f, stiffness = 280f)),
+                                modifier = Modifier.animateItem(
+                                    fadeInSpec = tween(220),
+                                    fadeOutSpec = tween(180),
+                                    placementSpec = spring(dampingRatio = 0.82f, stiffness = Spring.StiffnessMediumLow)
+                                ),
                                 item = book,
                                 pages = pages,
                                 isPageSaved = { pageIdx -> savedPages.contains("${book.id}:$pageIdx") },
@@ -240,6 +227,11 @@ fun BookAccordionItem(
             if (p !in trackedPages) trackedPages.add(p)
         }
     }
+
+    val isReturningFromPdf = LocalIsReturningFromPdf.current
+    val isCardActiveTarget = (TransitionTargetTracker.isTransitionActive || isReturningFromPdf) &&
+            (TransitionTargetTracker.activeTargetId?.startsWith("bookmark_${item.id}_") == true)
+    val isExpandedEffective = isExpanded || isCardActiveTarget
 
     Column(
         modifier = modifier
@@ -358,7 +350,7 @@ fun BookAccordionItem(
             }
 
             val arrowRotation by animateFloatAsState(
-                targetValue = if (isExpanded) 180f else 0f,
+                targetValue = if (isExpandedEffective) 180f else 0f,
                 animationSpec = tween(
                     durationMillis = 220,
                     easing = androidx.compose.animation.core.FastOutSlowInEasing
@@ -367,7 +359,7 @@ fun BookAccordionItem(
             )
             Icon(
                 imageVector = Icons.Default.ExpandMore,
-                contentDescription = if (isExpanded) "إغلاق" else "توسيع",
+                contentDescription = if (isExpandedEffective) "إغلاق" else "توسيع",
                 tint = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier
                     .padding(start = 8.dp)
@@ -379,7 +371,7 @@ fun BookAccordionItem(
 
         // Instant synchronized divider line directly under Header (t=0, smoothly blends with expand)
         val dividerAlpha by animateFloatAsState(
-            targetValue = if (isExpanded) 1f else 0f,
+            targetValue = if (isExpandedEffective) 1f else 0f,
             animationSpec = tween(durationMillis = 150, easing = androidx.compose.animation.core.FastOutSlowInEasing),
             label = "divider_alpha"
         )
@@ -397,9 +389,12 @@ fun BookAccordionItem(
             )
         }
 
+        val sharedTransitionScope = LocalSharedTransitionScope.current
+        val effectiveVisibilityScope = screenVisibilityScope ?: LocalAnimatedVisibilityScope.current
+
         // Expanded Bookmark Rows with Ultra-Moist Fluid Organic Spring (سائل رطب كالحرير)
         AnimatedVisibility(
-            visible = isExpanded,
+            visible = isExpandedEffective,
             enter = expandVertically(
                 animationSpec = spring(
                     dampingRatio = 0.82f,
@@ -444,6 +439,32 @@ fun BookAccordionItem(
                         }
                     }
 
+                    val rowSharedBoundsModifier = if (sharedTransitionScope != null && effectiveVisibilityScope != null) {
+                        with(sharedTransitionScope) {
+                            Modifier.sharedBounds(
+                                sharedContentState = rememberSharedContentState(key = rowTargetKey),
+                                animatedVisibilityScope = effectiveVisibilityScope,
+                                enter = androidx.compose.animation.fadeIn(
+                                    animationSpec = tween(
+                                        durationMillis = 150,
+                                        delayMillis = 75,
+                                        easing = LinearEasing
+                                    )
+                                ),
+                                exit = androidx.compose.animation.fadeOut(
+                                    animationSpec = tween(
+                                        durationMillis = 130,
+                                        easing = LinearEasing
+                                    )
+                                ),
+                                renderInOverlayDuringTransition = true,
+                                clipInOverlayDuringTransition = OverlayClip(RoundedCornerShape(14.dp)),
+                                boundsTransform = { _, _ -> spring(dampingRatio = 0.82f, stiffness = 280f) },
+                                resizeMode = SharedTransitionScope.ResizeMode.RemeasureToBounds
+                            )
+                        }
+                    } else Modifier
+
                     AnimatedVisibility(
                         visible = isVisible,
                         enter = expandVertically(
@@ -458,6 +479,7 @@ fun BookAccordionItem(
                         Row(
                             modifier = Modifier
                                 .fillMaxWidth()
+                                .then(rowSharedBoundsModifier)
                                 .expressiveButtonMorph(
                                     restRadius = 14.dp,
                                     pressedRadius = 8.dp,

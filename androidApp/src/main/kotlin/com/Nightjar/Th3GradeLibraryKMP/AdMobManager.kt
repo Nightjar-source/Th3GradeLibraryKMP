@@ -46,9 +46,10 @@ object AdMobManager {
     }
 
     fun preloadInterstitial(context: Context) {
+        val appContext = context.applicationContext
         val adRequest = AdRequest.Builder().build()
         InterstitialAd.load(
-            context,
+            appContext,
             TEST_INTERSTITIAL_ID,
             adRequest,
             object : InterstitialAdLoadCallback() {
@@ -68,14 +69,16 @@ object AdMobManager {
         if (openCounter % CAPPING_FREQUENCY == 0 && interstitialAd != null) {
             interstitialAd?.fullScreenContentCallback = object : FullScreenContentCallback() {
                 override fun onAdDismissedFullScreenContent() {
+                    interstitialAd?.fullScreenContentCallback = null
                     interstitialAd = null
-                    preloadInterstitial(activity)
+                    preloadInterstitial(activity.applicationContext)
                     onAdDismissed()
                 }
 
                 override fun onAdFailedToShowFullScreenContent(adError: AdError) {
+                    interstitialAd?.fullScreenContentCallback = null
                     interstitialAd = null
-                    preloadInterstitial(activity)
+                    preloadInterstitial(activity.applicationContext)
                     onAdDismissed()
                 }
             }
@@ -92,7 +95,7 @@ fun AdaptiveBannerAd(
 ) {
     var isAdLoaded by remember { mutableStateOf(false) }
 
-    androidx.compose.foundation.layout.Box(
+    androidx.compose.foundation.layout.BoxWithConstraints(
         modifier = modifier
             .fillMaxWidth()
             .then(
@@ -102,21 +105,31 @@ fun AdaptiveBannerAd(
             .animateContentSize(spring(dampingRatio = androidx.compose.animation.core.Spring.DampingRatioNoBouncy, stiffness = 300f)),
         contentAlignment = androidx.compose.ui.Alignment.Center
     ) {
+        val availableWidthDp = maxWidth.value.toInt()
+        // AdMob Adaptive Banner specifications (Standard Material 3 / Google AdMob Responsive Guidelines):
+        // 1. In large screens / tablets (availableWidth >= 600dp), cap banner width to standard 468dp / 728dp centered,
+        //    preventing awkward giant stretched banners spanning full 1200dp desktop/tablet screens.
+        // 2. In split-screen / pop-up windows (< 320dp, down to 280dp), ensure width matches container width
+        //    rather than physical device display metrics.
+        val targetAdWidth = when {
+            availableWidthDp <= 0 -> 320
+            availableWidthDp >= 840 -> 728.coerceAtMost(availableWidthDp)
+            availableWidthDp >= 600 -> 468.coerceAtMost(availableWidthDp)
+            else -> availableWidthDp.coerceAtLeast(280)
+        }
+
         AndroidView(
             modifier = Modifier
-                .fillMaxWidth()
+                .widthIn(max = targetAdWidth.dp)
                 .wrapContentHeight(),
             factory = { ctx ->
                 AdView(ctx).apply {
-                    val displayMetrics = ctx.resources.displayMetrics
-                    val adWidthPixels = displayMetrics.widthPixels.toFloat()
-                    val density = displayMetrics.density
-                    val adWidth = (adWidthPixels / density).toInt().coerceAtLeast(320)
-                    setAdSize(AdSize.getCurrentOrientationAnchoredAdaptiveBannerAdSize(ctx, adWidth))
+                    val adSize = AdSize.getCurrentOrientationAnchoredAdaptiveBannerAdSize(ctx, targetAdWidth)
+                    setAdSize(adSize)
                     adUnitId = AdMobManager.TEST_BANNER_ID
                     adListener = object : AdListener() {
                         override fun onAdLoaded() {
-                            android.util.Log.d("AdMob", "Adaptive banner loaded successfully!")
+                            android.util.Log.d("AdMob", "Adaptive banner loaded successfully with width: $targetAdWidth dp")
                             isAdLoaded = true
                         }
 
@@ -127,6 +140,11 @@ fun AdaptiveBannerAd(
                     }
                     loadAd(AdRequest.Builder().build())
                 }
+            },
+            onRelease = { adView ->
+                try {
+                    adView.destroy()
+                } catch (_: Exception) {}
             }
         )
     }

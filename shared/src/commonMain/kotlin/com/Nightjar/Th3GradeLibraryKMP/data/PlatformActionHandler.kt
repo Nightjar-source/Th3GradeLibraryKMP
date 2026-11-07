@@ -30,4 +30,5 @@ interface PlatformActionHandler {
     fun shareText(text: String) {}
     fun subscribeToNewsTopic() {}
     fun unsubscribeFromNewsTopic() {}
+    fun clearNewsNotifications() {}
 }
