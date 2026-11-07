@@ -765,11 +765,12 @@ class MainActivity : ComponentActivity() {
     override fun onStop() {
         super.onStop()
         // Zero Background Heap RAM & Battery Conservation (February 2027 Standards):
-        // Evict transient rendered PDF page bitmaps to drop heap usage near zero,
-        // while preserving the active PDF file on disk so resuming from background is instant (0ms)
-        // with zero CPU load and zero device heating.
         try {
             com.Nightjar.Th3GradeLibraryKMP.ui.PdfBitmapCache.cache.evictAll()
+            if (isFinishing) {
+                com.Nightjar.Th3GradeLibraryKMP.ui.clearPdfCache(cacheDir)
+                AppCleanupService.cleanAllTemporaryPdfFiles(applicationContext)
+            }
         } catch (e: Exception) {
             e.printStackTrace()
         }
@@ -811,6 +812,16 @@ class MainActivity : ComponentActivity() {
 
     override fun onDestroy() {
         super.onDestroy()
+        try {
+            currentSpeechRecognizer?.destroy()
+            currentSpeechRecognizer = null
+            onSpeechResultCallback = null
+            onSpeechEndCallback = null
+            pendingSpeechOnResult = null
+            pendingSpeechOnEnd = null
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
         // Delete all temporary PDF cache files upon exiting the app to ensure zero storage footprint
         try {
             com.Nightjar.Th3GradeLibraryKMP.ui.clearPdfCache(cacheDir)

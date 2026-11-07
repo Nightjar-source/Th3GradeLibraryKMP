@@ -169,9 +169,7 @@ fun AppSettingsModal(
                         .padding(top = 16.dp, start = 20.dp, end = 20.dp) // Compact padding
                 ) {
                     Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .windowInsetsPadding(WindowInsets.statusBars.add(WindowInsets.captionBar)), // Prevent overlap with status bar and caption bar
+                        modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
@@ -482,8 +480,7 @@ fun NewsSettingsModal(
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(horizontal = 20.dp)
-                            .windowInsetsPadding(WindowInsets.statusBars.add(WindowInsets.captionBar)), // Prevent overlap with status bar and caption bar
+                            .padding(horizontal = 20.dp),
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically
                     ) {

@@ -235,12 +235,10 @@ fun NewsScreen(
                     val density = androidx.compose.ui.platform.LocalDensity.current
                     val screenWidthDp = with(density) { windowInfo.containerSize.width.toDp() }
                     val dynamicNewsColumns = remember(widthClass, screenWidthDp) {
-                        when (widthClass) {
-                            WindowWidthSizeClass.COMPACT -> GridCells.Fixed(1)
-                            WindowWidthSizeClass.MEDIUM -> GridCells.Fixed(2)
-                            WindowWidthSizeClass.EXPANDED -> if (screenWidthDp >= 1400.dp) GridCells.Fixed(3) else GridCells.Fixed(2)
-                            else -> GridCells.Fixed(1)
-                        }
+                        val targetNewsWidth = 380.dp
+                        val availableWidth = (screenWidthDp - (if (isMedium) 120.dp else 32.dp)).coerceAtLeast(280.dp)
+                        val computedCols = (availableWidth / targetNewsWidth).toInt().coerceIn(1, 3)
+                        GridCells.Fixed(computedCols)
                     }
                     LazyVerticalGrid(
                         columns = dynamicNewsColumns,
@@ -255,7 +253,7 @@ fun NewsScreen(
                     ) {
                         item(key = "top_spacer", contentType = "spacer", span = { androidx.compose.foundation.lazy.grid.GridItemSpan(maxLineSpan) }) {
                             val statusBarHeight = WindowInsets.statusBars.add(WindowInsets.captionBar).asPaddingValues().calculateTopPadding()
-                            val dynamicTopPadding = if (isMedium) statusBarHeight + 64.dp else statusBarHeight + 76.dp
+                            val dynamicTopPadding = if (heightClass == WindowHeightSizeClass.COMPACT) statusBarHeight + 58.dp else if (isMedium) statusBarHeight + 66.dp else statusBarHeight + 76.dp
                             Spacer(modifier = Modifier.height(dynamicTopPadding))
                         }
                         

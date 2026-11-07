@@ -11,6 +11,9 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Book
 import androidx.compose.material.icons.filled.Message
 import androidx.compose.material.icons.filled.Person
+import androidx.compose.material3.adaptive.currentWindowAdaptiveInfo
+import androidx.window.core.layout.WindowWidthSizeClass
+import androidx.window.core.layout.WindowHeightSizeClass
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.animation.core.*
@@ -32,6 +35,8 @@ import com.Nightjar.Th3GradeLibraryKMP.theme.screenEntranceCascade
 import org.jetbrains.compose.resources.painterResource
 import com.Nightjar.Th3GradeLibraryKMP.generated.resources.Res
 import com.Nightjar.Th3GradeLibraryKMP.generated.resources.app_icon
+import com.Nightjar.Th3GradeLibraryKMP.generated.resources.karber_avatar
+import androidx.compose.ui.layout.ContentScale
 
 @Composable
 fun AboutScreen(
@@ -50,15 +55,17 @@ fun AboutScreen(
         onScrollableStateChanged(canScroll)
     }
 
-    BoxWithConstraints(
+    val adaptiveInfo = currentWindowAdaptiveInfo()
+    val isWide = adaptiveInfo.windowSizeClass.windowWidthSizeClass != WindowWidthSizeClass.COMPACT
+    val heightClass = adaptiveInfo.windowSizeClass.windowHeightSizeClass
+
+    Box(
         modifier = Modifier.fillMaxSize(),
         contentAlignment = Alignment.TopCenter
     ) {
-        val screenWidthDp = with(androidx.compose.ui.platform.LocalDensity.current) { androidx.compose.ui.platform.LocalWindowInfo.current.containerSize.width.toDp() }
-        val isWide = screenWidthDp >= 600.dp
         
         val statusBarHeight = WindowInsets.statusBars.add(WindowInsets.captionBar).asPaddingValues().calculateTopPadding()
-        val dynamicTopPadding = if (isWide) statusBarHeight + 64.dp else statusBarHeight + 76.dp
+        val dynamicTopPadding = if (heightClass == WindowHeightSizeClass.COMPACT) statusBarHeight + 58.dp else if (isWide) statusBarHeight + 66.dp else statusBarHeight + 76.dp
 
         Column(
             modifier = Modifier
@@ -93,7 +100,7 @@ fun AboutScreen(
 
             // Telegram Official Community Card
             TelegramCommunityCard(
-                modifier = Modifier.fillMaxWidth().screenEntranceCascade(2),
+                modifier = Modifier.widthIn(max = 760.dp).fillMaxWidth().screenEntranceCascade(2),
                 onOpenUrl = onOpenUrl,
                 isDark = isDark
             )
@@ -101,7 +108,7 @@ fun AboutScreen(
             Spacer(modifier = Modifier.height(24.dp))
 
             // Golden Spiritual Card
-            GoldenSpiritualCard(modifier = Modifier.fillMaxWidth().screenEntranceCascade(3), isDark = isDark)
+            GoldenSpiritualCard(modifier = Modifier.widthIn(max = 760.dp).fillMaxWidth().screenEntranceCascade(3), isDark = isDark)
 
             Spacer(modifier = Modifier.height(bottomPadding))
         }
@@ -173,16 +180,16 @@ fun DeveloperCard(modifier: Modifier = Modifier, onOpenUrl: (String) -> Unit) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Box(
                     modifier = Modifier
-                        .size(60.dp)
+                        .size(64.dp)
                         .clip(CircleShape)
                         .background(Color.White.copy(alpha = 0.1f)),
                     contentAlignment = Alignment.Center
                 ) {
-                    Icon(
-                        imageVector = Icons.Default.Person,
-                        contentDescription = null,
-                        tint = Color(0xFFA5B4FC),
-                        modifier = Modifier.size(32.dp)
+                    Image(
+                        painter = painterResource(Res.drawable.karber_avatar),
+                        contentDescription = "KarBer",
+                        contentScale = ContentScale.Crop,
+                        modifier = Modifier.size(64.dp).clip(CircleShape)
                     )
                 }
 

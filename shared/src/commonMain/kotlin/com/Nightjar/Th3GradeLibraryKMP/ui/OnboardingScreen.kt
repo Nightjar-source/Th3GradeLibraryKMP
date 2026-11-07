@@ -11,6 +11,9 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.BatteryAlert
 import androidx.compose.material.icons.filled.NotificationsActive
 import androidx.compose.material.icons.filled.Security
+import androidx.compose.material3.adaptive.currentWindowAdaptiveInfo
+import androidx.window.core.layout.WindowWidthSizeClass
+import androidx.window.core.layout.WindowHeightSizeClass
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -43,17 +46,17 @@ fun OnboardingScreen(
                 .windowInsetsPadding(WindowInsets.safeDrawing.only(WindowInsetsSides.Horizontal)),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            val windowInfo = androidx.compose.ui.platform.LocalWindowInfo.current
-            val density = androidx.compose.ui.platform.LocalDensity.current
-            val screenWidthDp = with(density) { windowInfo.containerSize.width.toDp() }
-            val screenHeightDp = with(density) { windowInfo.containerSize.height.toDp() }
-            val isWide = screenWidthDp >= 600.dp || screenWidthDp > screenHeightDp
+            val adaptiveInfo = currentWindowAdaptiveInfo()
+            val widthClass = adaptiveInfo.windowSizeClass.windowWidthSizeClass
+            val heightClass = adaptiveInfo.windowSizeClass.windowHeightSizeClass
+            val isWide = widthClass != WindowWidthSizeClass.COMPACT
+            val isCompactHeight = heightClass == WindowHeightSizeClass.COMPACT
 
             Column(
                 modifier = Modifier.widthIn(max = 1100.dp),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                Spacer(modifier = Modifier.height(if (isWide && screenHeightDp < 520.dp) 16.dp else 28.dp))
+                Spacer(modifier = Modifier.height(if (isWide && isCompactHeight) 16.dp else 28.dp))
                 
                 // Welcome Card (Dynamic width on tablet/DeX/landscape vs portrait phone)
                 val welcomeCardMaxWidth = if (isWide) 640.dp else 520.dp
@@ -74,20 +77,20 @@ fun OnboardingScreen(
                                     )
                                 )
                             )
-                            .padding(horizontal = 24.dp, vertical = if (isWide && screenHeightDp < 520.dp) 16.dp else 24.dp),
+                            .padding(horizontal = 24.dp, vertical = if (isWide && isCompactHeight) 16.dp else 24.dp),
                         contentAlignment = Alignment.Center
                     ) {
                         Column(horizontalAlignment = Alignment.CenterHorizontally) {
                             Text(
                                 text = "🎓",
-                                fontSize = if (isWide && screenHeightDp < 520.dp) 36.sp else 48.sp,
+                                fontSize = if (isWide && isCompactHeight) 36.sp else 48.sp,
                                 modifier = Modifier.padding(bottom = 12.dp)
                             )
                             Text(
                                 text = "أهلاً بكم في تطبيق مكتبة الثالث متوسط!",
                                 style = MaterialTheme.typography.titleLarge.copy(
                                     fontWeight = FontWeight.Bold,
-                                    fontSize = if (isWide && screenHeightDp < 520.dp) 19.sp else 22.sp
+                                    fontSize = if (isWide && isCompactHeight) 19.sp else 22.sp
                                 ),
                                 textAlign = TextAlign.Justify,
                                 color = MaterialTheme.colorScheme.onPrimaryContainer,
@@ -96,7 +99,7 @@ fun OnboardingScreen(
                             Text(
                                 text = "نوفر لك أحدث الملازم، الكتب المدرسية، الأخبار الرسمية، والمحفوظات لتعمل بدون إنترنت بسلاسة وبأفضل تجربة.",
                                 style = MaterialTheme.typography.bodyLarge.copy(
-                                    fontSize = if (isWide && screenHeightDp < 520.dp) 14.sp else 16.sp
+                                    fontSize = if (isWide && isCompactHeight) 14.sp else 16.sp
                                 ),
                                 textAlign = TextAlign.Justify,
                                 color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.85f)
@@ -112,7 +115,7 @@ fun OnboardingScreen(
                     text = "لضمان عمل التطبيق بشكل ممتاز على هاتفك واستمتع، نحتاج إلى 3 خطوات سريعة:",
                     style = MaterialTheme.typography.titleLarge.copy(
                         fontWeight = FontWeight.Bold,
-                        fontSize = if (isWide && screenHeightDp < 520.dp) 17.sp else 19.sp
+                        fontSize = if (isWide && isCompactHeight) 17.sp else 19.sp
                     ),
                     textAlign = TextAlign.Justify,
                     color = MaterialTheme.colorScheme.onBackground,

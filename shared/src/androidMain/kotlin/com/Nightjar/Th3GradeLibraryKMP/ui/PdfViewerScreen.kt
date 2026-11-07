@@ -111,6 +111,7 @@ actual fun PdfViewerScreen(
 
     var tempFile by remember(item) { mutableStateOf<File?>(null) }
     var pdfRenderer by remember { mutableStateOf<PdfRenderer?>(null) }
+    var isDisposed by remember(item) { mutableStateOf(false) }
     var loadingError by remember(item) { mutableStateOf<String?>(null) }
     var orientation by remember(appSettings.pdfScrollDirection) { mutableStateOf(appSettings.pdfScrollDirection) }
     var isZoomed by remember(item) { mutableStateOf(false) }
@@ -233,7 +234,12 @@ actual fun PdfViewerScreen(
                     pfd?.close()
                     return@LaunchedEffect
                 }
-                pdfRenderer = PdfRenderer(pfd)
+                val renderer = PdfRenderer(pfd)
+                if (isDisposed) {
+                    try { renderer.close() } catch (_: Exception) {}
+                } else {
+                    pdfRenderer = renderer
+                }
             } catch (initEx: Exception) {
                 pfd?.close()
                 throw initEx
@@ -246,6 +252,7 @@ actual fun PdfViewerScreen(
 
     DisposableEffect(item, activity) {
         onDispose {
+            isDisposed = true
             if (activeViewingBookId == item.id) {
                 activeViewingBookId = null
             }
@@ -256,22 +263,24 @@ actual fun PdfViewerScreen(
                 val bookId = item.id
                 
                 // 1. Safe renderer release: Close renderer after reverse sharedBounds shrink animation completes (600ms)
-                CoroutineScope(Dispatchers.IO).launch {
-                    try {
-                        kotlinx.coroutines.delay(600)
-                        pdfMutex.withLock {
-                            try {
-                                rendererToClose?.close()
-                            } catch (e: Exception) {
-                                e.printStackTrace()
+                if (rendererToClose != null) {
+                    CoroutineScope(Dispatchers.IO).launch {
+                        try {
+                            kotlinx.coroutines.delay(600)
+                            pdfMutex.withLock {
+                                try {
+                                    rendererToClose.close()
+                                } catch (e: Exception) {
+                                    e.printStackTrace()
+                                }
                             }
+                        } catch (e: Exception) {
+                            e.printStackTrace()
                         }
-                    } catch (e: Exception) {
-                        e.printStackTrace()
                     }
                 }
 
-                // Evict in-memory decoded bitmap cache for this book, but KEEP the downloaded file permanently!
+                // Evict in-memory decoded bitmap cache for this book, keeping extracted file for instant re-opening
                 PdfBitmapCache.evictBook(bookId)
 
                 activity?.let { act ->
@@ -358,7 +367,7 @@ actual fun PdfViewerScreen(
                 renderInOverlayDuringTransition = true,
                 clipInOverlayDuringTransition = OverlayClip(androidx.compose.foundation.shape.RoundedCornerShape(safeCornerRadius)),
                 boundsTransform = { _, _ ->
-                    spring(dampingRatio = 0.82f, stiffness = 280f)
+                    spring(dampingRatio = Spring.DampingRatioLowBouncy, stiffness = Spring.StiffnessLow)
                 },
                 resizeMode = SharedTransitionScope.ResizeMode.RemeasureToBounds
             )

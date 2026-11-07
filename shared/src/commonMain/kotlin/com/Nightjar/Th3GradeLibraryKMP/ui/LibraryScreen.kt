@@ -116,7 +116,7 @@ fun LibraryScreen(
     ) {
         val isWide = widthClass != WindowWidthSizeClass.COMPACT
         val statusBarHeight = WindowInsets.statusBars.add(WindowInsets.captionBar).asPaddingValues().calculateTopPadding()
-        val dynamicTopPadding = if (isWide) statusBarHeight + 64.dp else statusBarHeight + 76.dp
+        val dynamicTopPadding = if (heightClass == WindowHeightSizeClass.COMPACT) statusBarHeight + 58.dp else if (isWide) statusBarHeight + 66.dp else statusBarHeight + 76.dp
         Column(modifier = Modifier.fillMaxSize()) {
             if (category == null) {
                 // Home/Categories view
@@ -167,6 +167,7 @@ fun LibraryScreen(
                                     brush = Brush.linearGradient(listOf(Color(0xFF2DD4BF), Color(0xFF059669))),
                                     icon = Icons.Default.Description,
                                     index = 0,
+                                    isWide = isWide,
                                     onClick = { onNavigateToCategory("notes") }
                                 )
                             }
@@ -177,6 +178,7 @@ fun LibraryScreen(
                                     brush = Brush.linearGradient(listOf(Color(0xFF6366F1), Color(0xFF1D4ED8))),
                                     icon = Icons.Default.Book,
                                     index = 1,
+                                    isWide = isWide,
                                     onClick = { onNavigateToCategory("books") }
                                 )
                             }
@@ -188,7 +190,8 @@ fun LibraryScreen(
                             brush = Brush.linearGradient(listOf(Color(0xFF2DD4BF), Color(0xFF059669))),
                             icon = Icons.Default.Description,
                             index = 0,
-                            onClick = { onNavigateToCategory("notes") }
+                            isWide = isWide,
+                                    onClick = { onNavigateToCategory("notes") }
                         )
 
                         CategoryMenuCard(
@@ -197,7 +200,8 @@ fun LibraryScreen(
                             brush = Brush.linearGradient(listOf(Color(0xFF6366F1), Color(0xFF1D4ED8))),
                             icon = Icons.Default.Book,
                             index = 1,
-                            onClick = { onNavigateToCategory("books") }
+                            isWide = isWide,
+                                    onClick = { onNavigateToCategory("books") }
                         )
                     }
                     
@@ -227,11 +231,7 @@ fun LibraryScreen(
                     onScrollableStateChanged(canScroll)
                 }
 
-                LaunchedEffect(lazyGridState) {
-                    androidx.compose.runtime.snapshotFlow { lazyGridState.layoutInfo.visibleItemsInfo }.collect { visibleItems ->
-                        TransitionTargetTracker.visibleItemIds = visibleItems.mapNotNull { it.key as? String }.toSet()
-                    }
-                }
+
 
 
 
@@ -269,54 +269,34 @@ fun LibraryScreen(
                     val windowInfo = androidx.compose.ui.platform.LocalWindowInfo.current
                     val density = androidx.compose.ui.platform.LocalDensity.current
                     val screenWidthDp = with(density) { windowInfo.containerSize.width.toDp() }
-                    val reachabilityZone = if (!isWide) 48.dp else 0.dp
-                    val dynamicTopPadding = if (isWide) {
-                        statusBarHeight + 64.dp
-                    } else {
-                        statusBarHeight + 76.dp + reachabilityZone
+                    val isCompactHeight = heightClass == WindowHeightSizeClass.COMPACT
+                    val isCompactTopBar = isWide || isCompactHeight
+                    val reachabilityZone = if (!isWide && !isCompactHeight) 40.dp else 0.dp
+
+                    val baseTopPadding = when {
+                        isCompactHeight -> statusBarHeight + 58.dp
+                        isWide -> statusBarHeight + 66.dp
+                        else -> statusBarHeight + 76.dp + reachabilityZone
                     }
-                    val dynamicGridColumns = remember(widthClass, heightClass, screenWidthDp, isGridView) {
+                    val dynamicTopPadding = baseTopPadding
+
+                    val dynamicGridColumns = remember(widthClass, screenWidthDp, isGridView) {
                         if (isGridView) {
-                            when (widthClass) {
-                                WindowWidthSizeClass.COMPACT -> {
-                                    // Official Material 3 Adaptive (Android Adaptive Guidelines):
-                                    // Ultra-narrow pop-up windows & Fold 1 cover screen (< 340dp) -> 1 column
-                                    // Standard phones & Galaxy Fold 8 cover screen (420dp-428dp) -> 2 columns
-                                    if (screenWidthDp < 340.dp) {
-                                        GridCells.Fixed(1)
-                                    } else {
-                                        GridCells.Fixed(2)
-                                    }
+                            val cols = when {
+                                // 1. Compact Width (< 600dp): Phones in portrait, fold cover, split screen -> strictly 2 columns!
+                                widthClass == WindowWidthSizeClass.COMPACT -> 2
+                                // 2. Medium Width (600dp - 839dp): Phones in landscape, small fold open -> strictly 4 columns!
+                                widthClass == WindowWidthSizeClass.MEDIUM -> 4
+                                // 3. Expanded Width (>= 840dp): Tablets, desktop/DeX -> scale preserving standard card width
+                                else -> {
+                                    val availableWidth = (screenWidthDp - 120.dp).coerceAtLeast(600.dp)
+                                    (availableWidth / 175.dp).toInt().coerceIn(4, 7)
                                 }
-                                WindowWidthSizeClass.MEDIUM -> {
-                                    // Official Material 3 Medium (600dp - 840dp):
-                                    // Compact height indicates mobile phone in landscape orientation -> 4 columns!
-                                    // Medium/Expanded height indicates tablet in portrait -> 3 columns!
-                                    if (heightClass == WindowHeightSizeClass.COMPACT) {
-                                        GridCells.Fixed(4)
-                                    } else {
-                                        GridCells.Fixed(3)
-                                    }
-                                }
-                                WindowWidthSizeClass.EXPANDED -> {
-                                    // Official Material 3 Expanded (>= 840dp):
-                                    // Large screens, Samsung Galaxy Tab 12 Pro, Googlebook OS laptops, DeX
-                                    when {
-                                        screenWidthDp >= 1800.dp -> GridCells.Fixed(8) // Ultra-wide 4K / Dual monitor / Samsung DeX
-                                        screenWidthDp >= 1440.dp -> GridCells.Fixed(6) // Googlebook 15-16" / High-end desktop
-                                        screenWidthDp >= 1080.dp -> GridCells.Fixed(5) // Samsung Galaxy Tab 12 Pro / Googlebook 13-14"
-                                        else                     -> GridCells.Fixed(4) // Standard Tablet landscape (840dp - 1080dp)
-                                    }
-                                }
-                                else -> GridCells.Fixed(2)
                             }
+                            GridCells.Fixed(cols)
                         } else {
-                            when (widthClass) {
-                                WindowWidthSizeClass.COMPACT -> GridCells.Fixed(1)
-                                WindowWidthSizeClass.MEDIUM -> GridCells.Fixed(2)
-                                WindowWidthSizeClass.EXPANDED -> if (screenWidthDp >= 1400.dp) GridCells.Fixed(3) else GridCells.Fixed(2)
-                                else -> GridCells.Fixed(1)
-                            }
+                            val cols = if (widthClass == WindowWidthSizeClass.EXPANDED) 2 else 1
+                            GridCells.Fixed(cols)
                         }
                     }
 
@@ -368,10 +348,9 @@ fun CategoryMenuCard(
     icon: androidx.compose.ui.graphics.vector.ImageVector,
     index: Int = 0,
     modifier: Modifier = Modifier,
+    isWide: Boolean = false,
     onClick: () -> Unit
 ) {
-    val screenWidthDp = with(androidx.compose.ui.platform.LocalDensity.current) { androidx.compose.ui.platform.LocalWindowInfo.current.containerSize.width.toDp() }
-    val isWide = screenWidthDp >= 600.dp
     val isLowEnd = LocalIsLowEndDevice.current
     val isReturningFromPdf = LocalIsReturningFromPdf.current
     val screenKey = LocalScreenEntranceKey.current

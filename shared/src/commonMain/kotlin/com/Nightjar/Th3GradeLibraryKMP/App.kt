@@ -12,6 +12,9 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
+import androidx.compose.material3.adaptive.currentWindowAdaptiveInfo
+import androidx.window.core.layout.WindowWidthSizeClass
+import androidx.window.core.layout.WindowHeightSizeClass
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -291,7 +294,6 @@ fun AppContent(
     var searchQuery by viewModel::searchQuery
 
     var showOnboarding by remember { mutableStateOf(!appSettings.isOnboardingCompleted) }
-    var activeNotificationItem by remember { mutableStateOf<com.Nightjar.Th3GradeLibraryKMP.data.NewsItem?>(null) }
 
     // Modal states hoisted in AppViewModel
     var isDrawerOpen by viewModel::isDrawerOpen
@@ -412,22 +414,27 @@ fun AppContent(
 
     SharedTransitionLayout {
         CompositionLocalProvider(LocalSharedTransitionScope provides this@SharedTransitionLayout) {
-            BoxWithConstraints(
+            val adaptiveInfo = currentWindowAdaptiveInfo()
+            val windowSizeClass = adaptiveInfo.windowSizeClass
+            val widthClass = windowSizeClass.windowWidthSizeClass
+            val heightClass = windowSizeClass.windowHeightSizeClass
+            val isWide = widthClass != WindowWidthSizeClass.COMPACT
+            val windowInfo = androidx.compose.ui.platform.LocalWindowInfo.current
+            val density = androidx.compose.ui.platform.LocalDensity.current
+            val screenWidthDp = with(density) { windowInfo.containerSize.width.toDp() }
+        
+            val currentNavBar = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
+            val currentStatusBar = WindowInsets.statusBars.add(WindowInsets.captionBar).asPaddingValues().calculateTopPadding()
+        
+            val listBottomPadding = (if (isWide) 24.dp else 110.dp) + currentNavBar + (if (bottomBannerAd != null) 56.dp else 0.dp)
+
+            Box(
                 modifier = Modifier.fillMaxSize()
             ) {
-        val screenWidthDp = with(androidx.compose.ui.platform.LocalDensity.current) { androidx.compose.ui.platform.LocalWindowInfo.current.containerSize.width.toDp() }
-        val isWide = screenWidthDp >= 600.dp
-        
-        val currentNavBar = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
-        val currentStatusBar = WindowInsets.statusBars.add(WindowInsets.captionBar).asPaddingValues().calculateTopPadding()
-        
-        val listBottomPadding = (if (isWide) 24.dp else 110.dp) + currentNavBar + (if (bottomBannerAd != null) 56.dp else 0.dp)
-
-        CompositionLocalProvider(LocalStableStatusBarHeight provides currentStatusBar) {
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-        ) {
+                CompositionLocalProvider(LocalStableStatusBarHeight provides currentStatusBar) {
+                Box(
+                    modifier = Modifier.fillMaxSize()
+                ) {
                 // Background Orbs (Premium Liquid M3 Aesthetics) - Layer 0
                 if (platformActionHandler?.isLowEndDevice() != true) {
                     Box(modifier = Modifier.fillMaxSize().zIndex(0f)) {
@@ -601,14 +608,8 @@ fun AppContent(
                                     )
                                     "news" -> RenderNewsDestination(
                                         onOpenSettings = { isNewsSettingsOpen = true },
-                                        onItemClick = { url, title ->
-                                            val matched = SyncEngine.newsList.value.firstOrNull { it.link == url || it.title == title }
-                                            if (matched != null) {
-                                                activeNotificationItem = matched
-                                                navigateTo("notification_detail")
-                                            } else {
-                                                platformActionHandler.openCustomTab(url, appSettings.primaryColor)
-                                            }
+                                        onItemClick = { url, _ ->
+                                            platformActionHandler.openCustomTab(url, appSettings.primaryColor)
                                         },
                                         isDark = isDark,
                                         bottomPadding = listBottomPadding,
@@ -646,20 +647,6 @@ fun AppContent(
                                         onScrollableStateChanged = { canCurrentPageScroll = it },
                                         scrollState = aboutScrollState
                                     )
-                                    "notification_detail" -> {
-                                        val notif = activeNotificationItem
-                                        if (notif != null) {
-                                            com.Nightjar.Th3GradeLibraryKMP.ui.NotificationDetailScreen(
-                                                item = notif,
-                                                isDark = isDark,
-                                                onBack = { handleTopBarBack() },
-                                                onOpenLink = { url: String -> platformActionHandler.openCustomTab(url, appSettings.primaryColor) },
-                                                onShare = { shareText: String -> platformActionHandler.shareText(shareText) }
-                                            )
-                                        } else {
-                                            navigateTo("home")
-                                        }
-                                    }
                                     "pdf" -> {
                                         val currentItem = selectedItem
                                         if (currentItem != null) {
@@ -696,7 +683,7 @@ fun AppContent(
 
                 // --- Floating App Bar (Always visible except PDF, WebView, and Onboarding) ---
                 androidx.compose.animation.AnimatedVisibility(
-                    visible = !showOnboarding && page != "pdf" && page != "web" && page != "notification_detail",
+                    visible = !showOnboarding && page != "pdf" && page != "web",
                     enter = slideInVertically(animationSpec = spring(dampingRatio = 0.76f, stiffness = 280f)) { -it } + fadeIn(tween(260)),
                     exit = slideOutVertically(animationSpec = spring(dampingRatio = 0.76f, stiffness = 280f)) { -it } + fadeOut(tween(220)),
                     modifier = Modifier.align(Alignment.TopCenter).fillMaxWidth().zIndex(200f).then(
@@ -707,8 +694,9 @@ fun AppContent(
                         } else Modifier
                     )
                 ) {
-                    val topBarHeight = if (isWide) 40.dp else 48.dp // Strictly < 56dp portrait, < 46dp landscape // Strictly < 56dp portrait, 42dp landscape
-                    val topBarPaddingV = if (isWide) 4.dp else 6.dp
+                    val isCompactTopBar = isWide || heightClass == WindowHeightSizeClass.COMPACT
+                    val topBarHeight = if (isCompactTopBar) 40.dp else 48.dp
+                    val topBarPaddingV = if (isCompactTopBar) 4.dp else 6.dp
                     Box(
                         modifier = Modifier
                             .windowInsetsPadding(WindowInsets.statusBars.add(WindowInsets.captionBar))
@@ -949,9 +937,11 @@ fun AppContent(
                         } else Modifier
                     )
                 ) {
-                    val searchBarHeight = if (isWide) 48.dp else 56.dp
-                    val topPadding = if (isWide) 64.dp else 80.dp
-                    val searchFontSize = if (isWide) 14.sp else 15.sp
+                    val isCompactTopBar = isWide || heightClass == WindowHeightSizeClass.COMPACT
+                    val searchBarHeight = if (isCompactTopBar) 44.dp else 52.dp
+                    val topBarTotalHeight = if (isCompactTopBar) 48.dp else 60.dp
+                    val searchTopPadding = topBarTotalHeight + 6.dp
+                    val searchFontSize = if (isCompactTopBar) 14.sp else 15.sp
                     var isListening by remember { mutableStateOf(false) }
 
                     var isClearingAnimation by remember { mutableStateOf(false) }
@@ -979,10 +969,10 @@ fun AppContent(
                     Box(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .statusBarsPadding()
+                            .windowInsetsPadding(WindowInsets.statusBars.add(WindowInsets.captionBar))
                             .windowInsetsPadding(WindowInsets.safeDrawing.only(WindowInsetsSides.Horizontal))
                             .padding(
-                                top = topPadding,
+                                top = searchTopPadding,
                                 start = 16.dp,
                                 end = if (isWide) 96.dp else 16.dp
                             ),
@@ -2030,7 +2020,7 @@ fun AppContent(
 }
             }
         }
-        }
+    }
 @Composable
 fun RailNavItem(
     icon: androidx.compose.ui.graphics.vector.ImageVector,

@@ -33,11 +33,6 @@ object TransitionTargetTracker {
     var isTransitionActive by mutableStateOf(false)
 
     /**
-     * Set of currently visible item IDs in the library grid to smartly detect warm starts.
-     */
-    var visibleItemIds by mutableStateOf<Set<String>>(emptySet())
-
-    /**
      * Updates the reported real-time bounds of a target item.
      */
     fun updateTargetBounds(id: String, bounds: Rect) {

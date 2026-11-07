@@ -4,6 +4,9 @@ package com.Nightjar.Th3GradeLibraryKMP.ui
 import com.Nightjar.Th3GradeLibraryKMP.LocalSharedTransitionScope
 import com.Nightjar.Th3GradeLibraryKMP.LocalAnimatedVisibilityScope
 import androidx.compose.animation.ExperimentalSharedTransitionApi
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.core.spring
+import androidx.compose.animation.core.Spring
 import com.Nightjar.Th3GradeLibraryKMP.theme.popInOnInitialLoad
 import com.Nightjar.Th3GradeLibraryKMP.theme.screenEntranceCascade
 import com.Nightjar.Th3GradeLibraryKMP.theme.adaptiveItemEntrance
@@ -79,7 +82,7 @@ fun ShortcutsScreen(
                 .fillMaxSize()
         ) {
             val statusBarHeight = WindowInsets.statusBars.add(WindowInsets.captionBar).asPaddingValues().calculateTopPadding()
-            val dynamicTopPadding = if (isWide) statusBarHeight + 64.dp else statusBarHeight + 76.dp
+            val dynamicTopPadding = if (heightClass == WindowHeightSizeClass.COMPACT) statusBarHeight + 58.dp else if (isWide) statusBarHeight + 66.dp else statusBarHeight + 76.dp
 
             val isNavigatingBack = com.Nightjar.Th3GradeLibraryKMP.theme.LocalIsNavigatingBack.current
             LaunchedEffect(isNavigatingBack) {
@@ -88,22 +91,15 @@ fun ShortcutsScreen(
                 }
             }
 
+            val isCompactHeight = heightClass == WindowHeightSizeClass.COMPACT
             val dynamicShortcutColumns = remember(widthClass, heightClass, screenWidthDp) {
-                when (widthClass) {
-                    WindowWidthSizeClass.COMPACT -> if (screenWidthDp < 340.dp) GridCells.Fixed(1) else GridCells.Fixed(2)
-                    WindowWidthSizeClass.MEDIUM -> {
-                        if (heightClass == WindowHeightSizeClass.COMPACT) GridCells.Fixed(4) else GridCells.Fixed(3)
-                    }
-                    WindowWidthSizeClass.EXPANDED -> {
-                        when {
-                            screenWidthDp >= 1800.dp -> GridCells.Fixed(8)
-                            screenWidthDp >= 1440.dp -> GridCells.Fixed(6)
-                            screenWidthDp >= 1080.dp -> GridCells.Fixed(5)
-                            else                     -> GridCells.Fixed(4)
-                        }
-                    }
-                    else -> GridCells.Fixed(2)
-                }
+                val targetShortcutWidth = if (isCompactHeight) 130.dp else 150.dp
+                val availableWidth = (screenWidthDp - (if (isWide) 120.dp else 32.dp)).coerceAtLeast(260.dp)
+                val computedCols = (availableWidth / targetShortcutWidth).toInt().coerceIn(
+                    minimumValue = if (isCompactHeight) 4 else 2,
+                    maximumValue = 8
+                )
+                GridCells.Fixed(computedCols)
             }
 
             LazyVerticalGrid(
@@ -135,6 +131,14 @@ fun ShortcutsScreen(
                     key = { _, item -> item.id }
                 ) { index, item ->
                     ShortcutItemCard(
+                        modifier = Modifier.animateItem(
+                            fadeInSpec = tween(durationMillis = 240),
+                            fadeOutSpec = tween(durationMillis = 180),
+                            placementSpec = spring(
+                                dampingRatio = Spring.DampingRatioLowBouncy,
+                                stiffness = Spring.StiffnessLow
+                            )
+                        ),
                         item = item,
                         isDark = isDark,
                         index = index + 1,

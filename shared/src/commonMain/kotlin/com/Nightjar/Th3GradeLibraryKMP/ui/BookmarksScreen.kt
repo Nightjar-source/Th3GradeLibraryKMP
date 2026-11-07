@@ -8,6 +8,7 @@ import androidx.window.core.layout.WindowHeightSizeClass
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
+import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -162,7 +163,7 @@ fun BookmarksScreen(
                 val expandedSet by SyncEngine.expandedBookmarks.collectAsState()
 
                 val statusBarHeight = WindowInsets.statusBars.add(WindowInsets.captionBar).asPaddingValues().calculateTopPadding()
-                val dynamicTopPadding = if (isMedium) statusBarHeight + 64.dp else statusBarHeight + 76.dp
+                val dynamicTopPadding = if (heightClass == WindowHeightSizeClass.COMPACT) statusBarHeight + 58.dp else if (isMedium) statusBarHeight + 66.dp else statusBarHeight + 76.dp
 
                 val sortedBookIds = remember(groupedPages, savedItems) {
                     groupedPages.keys.sortedBy { bookId ->
@@ -171,18 +172,10 @@ fun BookmarksScreen(
                 }
 
                 val dynamicBookmarkColumns = remember(widthClass, heightClass, screenWidthDp) {
-                    when (widthClass) {
-                        WindowWidthSizeClass.COMPACT -> GridCells.Fixed(1)
-                        WindowWidthSizeClass.MEDIUM -> GridCells.Fixed(2)
-                        WindowWidthSizeClass.EXPANDED -> {
-                            when {
-                                screenWidthDp >= 1440.dp -> GridCells.Fixed(4) // Ultra-wide / 4K / Desktop
-                                screenWidthDp >= 1080.dp -> GridCells.Fixed(3) // Samsung Galaxy Tab 12 Pro / Googlebook
-                                else                     -> GridCells.Fixed(2) // Tablets / Foldables
-                            }
-                        }
-                        else -> GridCells.Fixed(1)
-                    }
+                    val targetBookmarkWidth = 360.dp
+                    val availableWidth = (screenWidthDp - (if (isMedium) 120.dp else 32.dp)).coerceAtLeast(280.dp)
+                    val computedCols = (availableWidth / targetBookmarkWidth).toInt().coerceIn(1, 4)
+                    GridCells.Fixed(computedCols)
                 }
 
                 LazyVerticalGrid(
@@ -201,8 +194,12 @@ fun BookmarksScreen(
                         val book = remember(bookId, savedItems) { savedItems.find { it.id == bookId } }
                         if (book != null) {
                             val pages = groupedPages[bookId] ?: emptyList()
-                                BookAccordionItem(
-                                modifier = Modifier.animateItem(placementSpec = spring(dampingRatio = 0.82f, stiffness = 280f)),
+                            BookAccordionItem(
+                                modifier = Modifier.animateItem(
+                                    fadeInSpec = tween(220),
+                                    fadeOutSpec = tween(180),
+                                    placementSpec = spring(dampingRatio = Spring.DampingRatioNoBouncy, stiffness = Spring.StiffnessMediumLow)
+                                ),
                                 item = book,
                                 pages = pages,
                                 isPageSaved = { pageIdx -> savedPages.contains("${book.id}:$pageIdx") },
@@ -210,7 +207,8 @@ fun BookmarksScreen(
                                 isExpanded = expandedSet.contains(book.id),
                                 onToggleExpand = { SyncEngine.toggleExpandedBookmark(book.id) },
                                 onNavigateToPdf = { pageIdx -> onNavigateToPdf(book, pageIdx) },
-                                screenVisibilityScope = screenVisibilityScope
+                                screenVisibilityScope = screenVisibilityScope,
+                                isWide = isMedium
                             )
                         }
                     }
@@ -231,7 +229,8 @@ fun BookAccordionItem(
     onToggleExpand: () -> Unit,
     onNavigateToPdf: (Int) -> Unit,
     screenVisibilityScope: AnimatedVisibilityScope?,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    isWide: Boolean = false
 ) {
     // Dynamic page tracking: maintains pages being animated out so shrinkVertically runs smoothly
     val trackedPages = remember { mutableStateListOf<Int>() }
@@ -244,12 +243,16 @@ fun BookAccordionItem(
     Column(
         modifier = modifier
             .fillMaxWidth()
+            .animateContentSize(
+                animationSpec = spring(
+                    dampingRatio = Spring.DampingRatioLowBouncy,
+                    stiffness = Spring.StiffnessLow
+                )
+            )
             .liquidGlass(isDark, borderRadius = 20.dp, alpha = 0.96f)
             .clip(RoundedCornerShape(20.dp))
     ) {
         // Accordion Header
-        val responsiveInfo = androidx.compose.material3.adaptive.currentWindowAdaptiveInfo()
-        val isWide = responsiveInfo.windowSizeClass.windowWidthSizeClass != androidx.window.core.layout.WindowWidthSizeClass.COMPACT
         Row(
             modifier = Modifier
                 .fillMaxWidth()
@@ -379,25 +382,12 @@ fun BookAccordionItem(
         // Expanded Bookmark Rows with Ultra-Moist Fluid Organic Spring (سائل رطب كالحرير)
         AnimatedVisibility(
             visible = isExpanded,
-            enter = expandVertically(
-                animationSpec = spring(
-                    dampingRatio = 0.82f,
-                    stiffness = 280f
-                ),
-                expandFrom = Alignment.Top
-            ) + fadeIn(tween(200, easing = androidx.compose.animation.core.FastOutSlowInEasing)),
-            exit = shrinkVertically(
-                animationSpec = spring(
-                    dampingRatio = 0.82f,
-                    stiffness = 280f
-                ),
-                shrinkTowards = Alignment.Top
-            ) + fadeOut(tween(180, easing = androidx.compose.animation.core.FastOutSlowInEasing))
+            enter = fadeIn(tween(180, easing = androidx.compose.animation.core.FastOutSlowInEasing)),
+            exit = fadeOut(tween(140, easing = androidx.compose.animation.core.FastOutSlowInEasing))
         ) {
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .clipToBounds()
                     .padding(horizontal = 16.dp)
                     .padding(top = 8.dp, bottom = 12.dp),
                 verticalArrangement = Arrangement.spacedBy(8.dp)
@@ -417,12 +407,12 @@ fun BookAccordionItem(
                             Modifier.sharedBounds(
                                 sharedContentState = rememberSharedContentState(key = rowTargetKey),
                                 animatedVisibilityScope = screenVisibilityScope,
-                                enter = fadeIn(animationSpec = tween(durationMillis = 150, delayMillis = 75, easing = LinearEasing)),
-                                exit = fadeOut(animationSpec = tween(durationMillis = 130, easing = LinearEasing)),
-                                renderInOverlayDuringTransition = false,
+                                enter = fadeIn(animationSpec = tween(durationMillis = 180, delayMillis = 50, easing = LinearEasing)),
+                                exit = fadeOut(animationSpec = tween(durationMillis = 150, easing = LinearEasing)),
+                                renderInOverlayDuringTransition = true,
                                 clipInOverlayDuringTransition = OverlayClip(RoundedCornerShape(14.dp)),
                                 boundsTransform = { _, _ ->
-                                    spring(dampingRatio = 0.82f, stiffness = 280f)
+                                    spring(dampingRatio = Spring.DampingRatioLowBouncy, stiffness = Spring.StiffnessLow)
                                 },
                                 resizeMode = SharedTransitionScope.ResizeMode.RemeasureToBounds
                             )
@@ -445,11 +435,11 @@ fun BookAccordionItem(
                     AnimatedVisibility(
                         visible = isVisible,
                         enter = expandVertically(
-                            animationSpec = spring(dampingRatio = 0.82f, stiffness = 280f),
+                            animationSpec = spring(dampingRatio = Spring.DampingRatioLowBouncy, stiffness = Spring.StiffnessLow),
                             expandFrom = Alignment.Top
                         ) + fadeIn(tween(180)),
                         exit = shrinkVertically(
-                            animationSpec = spring(dampingRatio = 0.82f, stiffness = 280f),
+                            animationSpec = spring(dampingRatio = Spring.DampingRatioLowBouncy, stiffness = Spring.StiffnessLow),
                             shrinkTowards = Alignment.Top
                         ) + fadeOut(tween(140))
                     ) {

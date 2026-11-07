@@ -20,7 +20,7 @@ import kotlinx.coroutines.launch
  * Custom built smooth rubber band effect.
  */
 fun Modifier.elasticOverscroll(
-    maxStretchRatio: Float = 0.22f,
+    maxStretchRatio: Float = 0.32f,
     topEnabled: Boolean = true,
     bottomEnabled: Boolean = true
 ): Modifier = composed {
@@ -37,15 +37,18 @@ fun Modifier.elasticOverscroll(
                 val current = overscrollOffset.value
                 if (current != 0f && source == NestedScrollSource.UserInput) {
                     val delta = available.y
-                    if ((current > 0 && delta < 0) || (current < 0 && delta > 0)) {
-                        val newOffset = current + delta
-                        return if ((current > 0 && newOffset <= 0) || (current < 0 && newOffset >= 0)) {
-                            scope.launch { overscrollOffset.snapTo(0f) }
-                            Offset(0f, current)
-                        } else {
-                            scope.launch { overscrollOffset.snapTo(newOffset) }
-                            Offset(0f, delta)
-                        }
+                    // If pulled down into Reachability zone (current > 0) and user scrolls up (delta < 0),
+                    // smoothly scroll the reachability zone back up to 0 first.
+                    if (current > 0 && delta < 0) {
+                        val newOffset = (current + delta).coerceAtLeast(0f)
+                        scope.launch { overscrollOffset.snapTo(newOffset) }
+                        return Offset(0f, delta)
+                    }
+                    // If stretched upward at bottom edge (current < 0) and user scrolls down (delta > 0)
+                    if (current < 0 && delta > 0) {
+                        val newOffset = (current + delta).coerceAtMost(0f)
+                        scope.launch { overscrollOffset.snapTo(newOffset) }
+                        return Offset(0f, delta)
                     }
                 }
                 return Offset.Zero
@@ -57,27 +60,38 @@ fun Modifier.elasticOverscroll(
                 source: NestedScrollSource
             ): Offset {
                 if (source == NestedScrollSource.UserInput && available.y != 0f) {
-                    val isPullingDown = available.y > 0 // Top edge overscroll
-                    val isPullingUp = available.y < 0   // Bottom edge overscroll
+                    val isPullingDown = available.y > 0 // Top edge pull (One UI Reachability)
+                    val isPullingUp = available.y < 0   // Bottom edge overscroll stretch
                     
-                    if ((isPullingDown && !topEnabled && overscrollOffset.value <= 0f) || 
-                        (isPullingUp && !bottomEnabled && overscrollOffset.value >= 0f)) {
+                    if ((isPullingDown && !topEnabled) || (isPullingUp && !bottomEnabled)) {
                         return Offset.Zero
                     }
                     
-                    val maxOffset = if (componentHeight > 0) componentHeight * maxStretchRatio else 140f
+                    val maxReachability = 220f // Brings top content comfortably to mid-screen
+                    val maxOffset = if (componentHeight > 0) (componentHeight * maxStretchRatio).coerceIn(200f, 320f) else 240f
                     val current = overscrollOffset.value
-                    val progress = (kotlin.math.abs(current) / maxOffset).coerceIn(0f, 1f)
-                    val resistance = 0.35f * (1f - progress * progress)
-                    val targetOffset = (current + available.y * resistance).coerceIn(-maxOffset, maxOffset)
-                    scope.launch { overscrollOffset.snapTo(targetOffset) }
-                    return Offset(0f, available.y)
+
+                    if (isPullingDown) {
+                        // Smoothly pull down towards mid-screen and stay there without spring rebound
+                        val newTarget = (current + available.y * 0.65f).coerceIn(0f, maxOffset)
+                        scope.launch { overscrollOffset.snapTo(newTarget) }
+                        return Offset(0f, available.y)
+                    } else {
+                        // Bottom edge rubber-band stretch
+                        val progress = (kotlin.math.abs(current) / maxOffset).coerceIn(0f, 1f)
+                        val resistance = 0.55f * (1f - progress * 0.75f)
+                        val targetOffset = (current + available.y * resistance).coerceIn(-maxOffset, 0f)
+                        scope.launch { overscrollOffset.snapTo(targetOffset) }
+                        return Offset(0f, available.y)
+                    }
                 }
                 return Offset.Zero
             }
 
             override suspend fun onPreFling(available: Velocity): Velocity {
-                if (overscrollOffset.value != 0f) {
+                val current = overscrollOffset.value
+                // Bottom edge stretch rebounds back to 0.
+                if (current < 0f) {
                     overscrollOffset.animateTo(
                         0f,
                         spring(
@@ -87,6 +101,19 @@ fun Modifier.elasticOverscroll(
                     )
                     return available
                 }
+                // If pulled beyond max reachability at the top, gently settle at maxReachability without jumping back to 0
+                val maxReachability = 220f
+                if (current > maxReachability) {
+                    overscrollOffset.animateTo(
+                        maxReachability,
+                        spring(
+                            dampingRatio = Spring.DampingRatioLowBouncy,
+                            stiffness = Spring.StiffnessLow
+                        )
+                    )
+                    return available
+                }
+                // One UI Reachability: remains pulled down at user's release position (ينزل ولا يرتد لأعلى)
                 return Velocity.Zero
             }
         }
@@ -99,7 +126,7 @@ fun Modifier.elasticOverscroll(
     this
         .onSizeChanged { componentHeight = it.height.toFloat() }
         .nestedScroll(nestedScrollConnection)
-        .offset {
-            androidx.compose.ui.unit.IntOffset(0, overscrollOffset.value.roundToInt())
+        .graphicsLayer {
+            translationY = overscrollOffset.value
         }
 }
