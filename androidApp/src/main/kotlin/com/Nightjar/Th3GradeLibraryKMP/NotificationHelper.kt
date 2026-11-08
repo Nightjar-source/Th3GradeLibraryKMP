@@ -202,7 +202,6 @@ object NotificationHelper {
             e.printStackTrace()
         }
     }
-}
 
     fun clearNewsNotifications(context: Context) {
         try {
