@@ -587,6 +587,12 @@ class MainActivity : ComponentActivity() {
                 }
             }
 
+            override fun showInterstitialAd(onDismissed: () -> Unit) {
+                runOnUiThread {
+                    AdMobManager.showInterstitialIfAllowed(this@MainActivity, onDismissed)
+                }
+            }
+
             override fun updateSystemBars(isLightStatusBars: Boolean, isLightNavigationBars: Boolean) {
                 runOnUiThread {
                     try {

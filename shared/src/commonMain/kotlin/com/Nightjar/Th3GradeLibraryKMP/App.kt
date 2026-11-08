@@ -615,7 +615,9 @@ fun AppContent(
                                             navigateTo("list")
                                         },
                                         onNavigateToPdf = {
-                                            viewModel.selectItem(it, SyncEngine.lastReadPages.value[it.id])
+                                            platformActionHandler.showInterstitialAd {
+                                                viewModel.selectItem(it, SyncEngine.lastReadPages.value[it.id])
+                                            }
                                         },
                                         isDark = isDark,
                                         onToggleViewMode = { SyncEngine.saveGridView(!isGridView) },
@@ -638,7 +640,9 @@ fun AppContent(
                                             navigateTo("list")
                                         },
                                         onNavigateToPdf = {
-                                            viewModel.selectItem(it, SyncEngine.lastReadPages.value[it.id])
+                                            platformActionHandler.showInterstitialAd {
+                                                viewModel.selectItem(it, SyncEngine.lastReadPages.value[it.id])
+                                            }
                                         },
                                         isDark = isDark,
                                         onToggleViewMode = { SyncEngine.saveGridView(!isGridView) },
@@ -687,7 +691,9 @@ fun AppContent(
                                         activeTargetId = activeTargetId,
                                         isDark = isDark,
                                         onNavigateToPdf = { item, pageIdx ->
-                                            viewModel.selectItem(item, pageIdx, fromBookmarks = true)
+                                            platformActionHandler.showInterstitialAd {
+                                                viewModel.selectItem(item, pageIdx, fromBookmarks = true)
+                                            }
                                         },
                                         bottomPadding = listBottomPadding,
                                         onScrollableStateChanged = { canCurrentPageScroll = it },

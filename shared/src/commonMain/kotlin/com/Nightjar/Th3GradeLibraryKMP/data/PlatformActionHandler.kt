@@ -31,4 +31,5 @@ interface PlatformActionHandler {
     fun subscribeToNewsTopic() {}
     fun unsubscribeFromNewsTopic() {}
     fun clearNewsNotifications() {}
+    fun showInterstitialAd(onDismissed: () -> Unit) { onDismissed() }
 }
