@@ -100,8 +100,9 @@ class AppFirebaseMessagingService : FirebaseMessagingService() {
         val isDevTest = title.contains("المطور") || title.contains("تجريبي") || link.startsWith("dev_") || data["is_test"] == "true"
         
         // 1. Silent Local Cache Update (Smart Watermark deduplication)
+        val isExplicitAnnouncement = data["is_announcement"] == "true" || data["type"] == "announcement" || data["type"] == "admin"
         val isNewItem = if (!isDevTest) {
-            saveToCache(title, link, imageUrl, pubDate, content)
+            saveToCache(title, link, imageUrl, pubDate, content, isExplicitAnnouncement)
         } else false
 
         if (!isNewItem && !isDevTest) {
@@ -157,7 +158,7 @@ class AppFirebaseMessagingService : FirebaseMessagingService() {
         }
     }
 
-    private fun saveToCache(title: String, link: String, imageUrl: String, pubDate: String, content: String): Boolean {
+    private fun saveToCache(title: String, link: String, imageUrl: String, pubDate: String, content: String, isAnnouncement: Boolean = false): Boolean {
         return try {
             val json = Json { ignoreUnknownKeys = true }
             val cachedJson = AppDataStore.getString("app_news_cache", "")
@@ -183,7 +184,8 @@ class AppFirebaseMessagingService : FirebaseMessagingService() {
                     contentSnippet = content,
                     pubDate = pubDate,
                     imageUrl = imageUrl.ifEmpty { null },
-                    formattedDate = formattedDate
+                    formattedDate = formattedDate,
+                    isAnnouncement = isAnnouncement || (content.length > 120 && !link.contains("feedburner.com"))
                 )
                 existingList.add(0, newItem)
                 AppDataStore.putString("app_news_cache", json.encodeToString(existingList.take(60)))

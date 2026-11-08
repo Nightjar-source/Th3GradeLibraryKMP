@@ -27,15 +27,23 @@ data class NewsItem(
     val source: String = "rss"
 ) {
     val isDeveloperAnnouncement: Boolean
-        get() = isAnnouncement ||
-                source.contains("announcement") ||
-                id.startsWith("dev_") ||
-                id.startsWith("admin_") ||
-                link.startsWith("dev_") ||
-                link.startsWith("admin_") ||
-                link.startsWith("app://") ||
-                link.isBlank() ||
-                (!link.startsWith("http://") && !link.startsWith("https://"))
+        get() {
+            if (isAnnouncement) return true
+            if (source.contains("announcement") || source.contains("admin")) return true
+            if (id.startsWith("dev_") || id.startsWith("admin_") || link.startsWith("dev_") || link.startsWith("admin_") || link.startsWith("app://")) return true
+            if (link.isBlank() || (!link.startsWith("http://") && !link.startsWith("https://"))) return true
+            
+            // Smart discrimination: An administrative/in-app announcement has substantial body text, paragraphs, or bullet points,
+            // whereas standard RSS web news is merely a headline + link + thumbnail image.
+            val snippet = (contentSnippet ?: "").trim()
+            val isRichBody = snippet.length > 120 || snippet.contains("\n") || snippet.contains("-") || snippet.contains("•")
+            val isOfficialNewsDomain = link.contains("feedburner.com") || link.contains("blogspot.com") || link.contains("blogger.com") || link.contains("aliraqii")
+            
+            // If it has detailed paragraphs/text and is NOT a standard external article, open in NotificationDetailScreen
+            if (isRichBody && !isOfficialNewsDomain) return true
+            
+            return false
+        }
 }
 
 @Serializable
