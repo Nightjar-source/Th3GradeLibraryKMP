@@ -200,6 +200,49 @@ object CloudCatalogManager {
         return url
     }
 
+    fun getAllCatalogItems(): List<BookItem> {
+        val staticItems = com.Nightjar.Th3GradeLibraryKMP.data.AllItems.books + com.Nightjar.Th3GradeLibraryKMP.data.AllItems.notes
+        val dynamicItems = _dynamicBooks.value + _dynamicNotes.value
+        val current = _manifest.value
+        val mapItems = mutableListOf<BookItem>()
+
+        current.books.forEach { (id, meta) ->
+            if (staticItems.none { it.id == id } && dynamicItems.none { it.id == id }) {
+                mapItems.add(
+                    BookItem(
+                        id = id,
+                        title = meta.title.ifBlank { id },
+                        coverResName = "",
+                        pdfPath = "files/books/$id.pdf",
+                        isNote = false,
+                        author = "وزارة التربية العراقية",
+                        colorStart = "#1E293B",
+                        colorEnd = "#0F172A"
+                    )
+                )
+            }
+        }
+
+        current.notes.forEach { (id, meta) ->
+            if (staticItems.none { it.id == id } && dynamicItems.none { it.id == id }) {
+                mapItems.add(
+                    BookItem(
+                        id = id,
+                        title = meta.title.ifBlank { id },
+                        coverResName = "",
+                        pdfPath = "files/notes/$id.pdf",
+                        isNote = true,
+                        author = "ملازم الثالث متوسط",
+                        colorStart = "#1E293B",
+                        colorEnd = "#0F172A"
+                    )
+                )
+            }
+        }
+
+        return (staticItems + dynamicItems + mapItems).distinctBy { it.id }
+    }
+
     fun getStreamCandidateUrls(item: BookItem): List<String> {
         val meta = getMeta(item)
         val candidates = mutableListOf<String>()

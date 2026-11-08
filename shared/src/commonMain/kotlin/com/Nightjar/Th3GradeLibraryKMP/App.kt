@@ -536,26 +536,41 @@ fun AppContent(
                                     val initialIndex = pageOrder.indexOf(initialState).takeIf { it >= 0 } ?: 0
                                     val targetIndex = pageOrder.indexOf(targetState).takeIf { it >= 0 } ?: 0
 
-                                    val fluidEasing = androidx.compose.animation.core.CubicBezierEasing(0.16f, 1f, 0.3f, 1f)
+                                    val fluidEasing = androidx.compose.animation.core.CubicBezierEasing(0.18f, 1f, 0.22f, 1f)
                                     val slideSpec = androidx.compose.animation.core.tween<androidx.compose.ui.unit.IntOffset>(
-                                        durationMillis = 350,
+                                        durationMillis = 360,
                                         easing = fluidEasing
                                     )
                                     val fadeSpec = androidx.compose.animation.core.tween<Float>(
-                                        durationMillis = 260,
+                                        durationMillis = 280,
                                         easing = androidx.compose.animation.core.FastOutSlowInEasing
                                     )
                                     val direction = if (isNavigatingBack || targetIndex < initialIndex) 1 else -1 // RTL: Forward is -1 (from left), Backward is 1 (from right)
 
-                                    (slideInHorizontally(
-                                        initialOffsetX = { fullWidth -> fullWidth * direction },
-                                        animationSpec = slideSpec
-                                    ) + fadeIn(animationSpec = fadeSpec)).togetherWith(
-                                        slideOutHorizontally(
-                                            targetOffsetX = { fullWidth -> -fullWidth * direction },
+                                    // iOS/Android 15 Predictive-style layered parallax card slide (Incoming top card slides 100%, outgoing background card slides parallax 28% with gentle dimming)
+                                    if (direction == -1) {
+                                        // Forward navigation: Target slides in from left (100%), source recedes slightly to right (-28%)
+                                        (slideInHorizontally(
+                                            initialOffsetX = { fullWidth -> -fullWidth },
                                             animationSpec = slideSpec
-                                        ) + fadeOut(animationSpec = fadeSpec)
-                                    )
+                                        ) + fadeIn(animationSpec = fadeSpec)).togetherWith(
+                                            slideOutHorizontally(
+                                                targetOffsetX = { fullWidth -> (fullWidth * 0.28f).toInt() },
+                                                animationSpec = slideSpec
+                                            ) + fadeOut(animationSpec = fadeSpec)
+                                        ).apply { targetContentZIndex = 20f }
+                                    } else {
+                                        // Backward navigation (Pop): Source reveals from behind (-28% -> 0), current top slides away to left
+                                        (slideInHorizontally(
+                                            initialOffsetX = { fullWidth -> (fullWidth * 0.28f).toInt() },
+                                            animationSpec = slideSpec
+                                        ) + fadeIn(animationSpec = fadeSpec)).togetherWith(
+                                            slideOutHorizontally(
+                                                targetOffsetX = { fullWidth -> -fullWidth },
+                                                animationSpec = slideSpec
+                                            ) + fadeOut(animationSpec = fadeSpec)
+                                        ).apply { targetContentZIndex = -1f }
+                                    }
                                 }
                             }
                         ) { targetPage ->
@@ -1238,7 +1253,7 @@ fun AppContent(
             contentAlignment = Alignment.TopCenter
         ) {
             androidx.compose.animation.AnimatedVisibility(
-                visible = rootActiveNotice != null,
+                visible = rootActiveNotice != null && page != "pdf" && (page == "home" || page == "list"),
                 enter = slideInVertically(
                     initialOffsetY = { -it / 2 },
                     animationSpec = spring(dampingRatio = Spring.DampingRatioLowBouncy, stiffness = 380f)
@@ -1338,7 +1353,11 @@ fun AppContent(
         // --- Dynamic Navigation & Banner Heights Calculation ---
         val mainTabs = listOf("home", "list", "news", "bookmarks", "shortcuts", "about")
         val hasBottomNavBar = !showOnboarding && page in mainTabs && adaptiveConfig.navigationType == AppNavigationType.BottomNavigationBar
-        val targetBannerBottomPadding = if (hasBottomNavBar && isBottomBarVisible) 78.dp else 0.dp
+        val targetBannerBottomPadding = when {
+            page == "pdf" -> 64.dp // Lift above PDF bottom floating page capsule (52dp + margins)
+            hasBottomNavBar && isBottomBarVisible -> 78.dp
+            else -> 0.dp
+        }
         val rawAnimatedBannerBottomPadding by animateDpAsState(
             targetValue = targetBannerBottomPadding,
             animationSpec = spring(dampingRatio = androidx.compose.animation.core.Spring.DampingRatioNoBouncy, stiffness = 300f),

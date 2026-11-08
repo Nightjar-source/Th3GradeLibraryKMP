@@ -189,7 +189,7 @@ fun BookmarksScreen(
                                 modifier = Modifier.animateItem(
                                     fadeInSpec = tween(220),
                                     fadeOutSpec = tween(180),
-                                    placementSpec = spring(dampingRatio = 0.82f, stiffness = Spring.StiffnessMediumLow)
+                                    placementSpec = spring(dampingRatio = 0.92f, stiffness = 320f)
                                 ),
                                 item = book,
                                 pages = pages,

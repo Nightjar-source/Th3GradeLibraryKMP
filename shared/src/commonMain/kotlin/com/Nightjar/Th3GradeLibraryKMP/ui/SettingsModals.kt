@@ -474,7 +474,7 @@ fun AppSettingsModal(
                     Button(
                         onClick = {
                             if (!isBatchDownloading) {
-                                val all = com.Nightjar.Th3GradeLibraryKMP.data.AllItems.books + com.Nightjar.Th3GradeLibraryKMP.data.AllItems.notes
+                                val all = com.Nightjar.Th3GradeLibraryKMP.network.CloudCatalogManager.getAllCatalogItems()
                                 com.Nightjar.Th3GradeLibraryKMP.network.BookDownloadManager.downloadAll(platformContext, all)
                                 com.Nightjar.Th3GradeLibraryKMP.ui.ToastManager.showToast("بدأ تنزيل المناهج بالكامل للعمل أوفلاين...")
                             } else {
