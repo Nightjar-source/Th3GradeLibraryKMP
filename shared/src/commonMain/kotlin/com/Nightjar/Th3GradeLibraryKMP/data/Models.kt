@@ -30,7 +30,9 @@ data class NewsItem(
         get() {
             if (isAnnouncement) return true
             if (source.contains("announcement") || source.contains("admin")) return true
-            if (id.startsWith("dev_") || id.startsWith("admin_") || link.startsWith("dev_") || link.startsWith("admin_") || link.startsWith("app://")) return true
+            if (id.startsWith("dev_") || id.startsWith("admin_") || id.contains("kar") ||
+                link.startsWith("dev_") || link.startsWith("admin_") || link.contains("kar") || link.startsWith("app://")) return true
+            if (title.contains("\u062a\u0646\u0628\u064a\u0647") || title.contains("\u0625\u062f\u0627\u0631\u064a") || title.contains("\u0627\u062f\u0627\u0631\u064a") || title.contains("kar", ignoreCase = true)) return true
             if (link.isBlank() || (!link.startsWith("http://") && !link.startsWith("https://"))) return true
             
             // Smart discrimination: An administrative/in-app announcement has substantial body text, paragraphs, or bullet points,
