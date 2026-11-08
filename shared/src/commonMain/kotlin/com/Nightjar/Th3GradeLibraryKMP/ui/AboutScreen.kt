@@ -180,16 +180,16 @@ fun DeveloperCard(modifier: Modifier = Modifier, onOpenUrl: (String) -> Unit) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Box(
                     modifier = Modifier
-                        .size(64.dp)
-                        .clip(CircleShape)
-                        .background(Color.White.copy(alpha = 0.1f)),
+                        .size(68.dp)
+                        .clip(RoundedCornerShape(20.dp))
+                        .background(Color.White.copy(alpha = 0.08f)),
                     contentAlignment = Alignment.Center
                 ) {
                     Image(
                         painter = painterResource(Res.drawable.karber_avatar),
                         contentDescription = "KarBer",
-                        contentScale = ContentScale.Crop,
-                        modifier = Modifier.size(64.dp).clip(CircleShape)
+                        contentScale = ContentScale.Fit,
+                        modifier = Modifier.size(56.dp)
                     )
                 }
 

@@ -21,8 +21,8 @@ android {
         applicationId = "com.Nightjar.Th3GradeLibraryKMP"
         minSdk = libs.versions.android.minSdk.get().toInt()
         targetSdk = libs.versions.android.targetSdk.get().toInt()
-        versionCode = 12087
-        versionName = "1.2.87"
+        versionCode = 12088
+        versionName = "1.2.88"
     }
     
     val keystoreProperties = Properties()
@@ -37,6 +37,8 @@ android {
             storePassword = keystoreProperties.getProperty("KEYSTORE_PASSWORD") ?: System.getenv("KEYSTORE_PASSWORD") ?: "19941994"
             keyAlias = "Nightjar"
             keyPassword = keystoreProperties.getProperty("KEY_PASSWORD") ?: System.getenv("KEY_PASSWORD") ?: "19941994"
+            enableV1Signing = true
+            enableV2Signing = true
         }
     }
 

@@ -457,7 +457,12 @@ actual fun PdfViewerScreen(
 
                     LaunchedEffect(pagerState.currentPage) {
                         if (pageCount > 0) {
-                            com.Nightjar.Th3GradeLibraryKMP.network.SyncEngine.saveLastReadPage(item.id, pagerState.currentPage)
+                            val cur = pagerState.currentPage
+                            com.Nightjar.Th3GradeLibraryKMP.network.SyncEngine.saveLastReadPage(item.id, cur)
+                            try {
+                                com.Nightjar.Th3GradeLibraryKMP.data.AppDataStore.putString("nav_saved_book_id", item.id)
+                                com.Nightjar.Th3GradeLibraryKMP.data.AppDataStore.putInt("nav_saved_pdf_page", cur)
+                            } catch (_: Exception) {}
                         }
                     }
 

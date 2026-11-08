@@ -50,7 +50,7 @@ class AppViewModel : ViewModel() {
     init {
         viewModelScope.launch {
             com.Nightjar.Th3GradeLibraryKMP.network.SyncEngine.isDataLoaded.collect { loaded ->
-                if (loaded && isProcessDeathState && page == "home" && selectedItem == null) {
+                if (loaded && page == "home" && selectedItem == null) {
                     restoreState()
                 }
             }
@@ -94,11 +94,8 @@ class AppViewModel : ViewModel() {
         hasInitializedLaunchState = true
         isProcessDeathState = isProcessDeath
 
-        if (isProcessDeath) {
-            restoreState()
-        } else {
-            clearTransientNavState()
-        }
+        // Seamlessly restore active reading session if user left app in recents with a book open
+        restoreState()
 
         if (initialBookId != null) {
             val target = AllItems.books.firstOrNull { it.id == initialBookId }
@@ -154,10 +151,14 @@ class AppViewModel : ViewModel() {
             if (savedBookId.isNotEmpty()) {
                 val item = AllItems.getItemById(savedBookId)
                 if (item != null) {
+                    val lastSaved = com.Nightjar.Th3GradeLibraryKMP.network.SyncEngine.lastReadPages.value[item.id] ?: 0
+                    val targetPage = if (savedPdfPage >= 0) savedPdfPage else lastSaved
                     selectedItem = item
-                    if (savedPdfPage > 0) {
-                        pdfInitialPage = savedPdfPage
-                    }
+                    pdfInitialPage = targetPage
+                    pdfSourcePage = "list"
+                    pageHistory.value = listOf("home", "list", "pdf")
+                    page = "pdf"
+                    return
                 }
             }
 
@@ -296,6 +297,10 @@ class AppViewModel : ViewModel() {
                 isFromBookmarks = false
                 pdfSourcePage = "home"
                 com.Nightjar.Th3GradeLibraryKMP.ui.TransitionTargetTracker.reset()
+                try {
+                    settings.remove("nav_saved_book_id")
+                    settings.remove("nav_saved_pdf_page")
+                } catch (_: Exception) {}
                 persistState()
             }
             isNavigatingBack = false
