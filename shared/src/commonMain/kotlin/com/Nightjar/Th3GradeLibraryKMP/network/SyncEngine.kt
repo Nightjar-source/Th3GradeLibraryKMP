@@ -477,7 +477,7 @@ object SyncEngine {
 
                 if (topLink.isEmpty() || domainChanged || isCacheCleared) {
                     // First run or domain changed: take latest 15 only
-                    val validItems = fetchedItems.take(60)
+                    val validItems = fetchedItems.take(15)
                     newUniqueItems.addAll(validItems)
                     
                     if (validItems.isNotEmpty()) {
