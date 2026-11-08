@@ -699,11 +699,12 @@ fun AppContent(
                     val topBarPaddingV = if (isCompactTopBar) 4.dp else 6.dp
                     Box(
                         modifier = Modifier
+                            .fillMaxWidth()
                             .windowInsetsPadding(WindowInsets.statusBars.add(WindowInsets.captionBar))
                             .windowInsetsPadding(WindowInsets.safeDrawing.only(WindowInsetsSides.Horizontal))
                             .padding(
-                                start = 16.dp,
-                                end = if (isWide) 96.dp else 16.dp,
+                                start = if (isWide) 24.dp else 16.dp,
+                                end = if (isWide) 100.dp else 16.dp,
                                 top = topBarPaddingV,
                                 bottom = topBarPaddingV
                             ),
@@ -711,7 +712,6 @@ fun AppContent(
                     ) {
                         Row(
                             modifier = Modifier
-                                .widthIn(max = 608.dp)
                                 .fillMaxWidth(),
                             horizontalArrangement = Arrangement.SpaceBetween,
                             verticalAlignment = Alignment.CenterVertically
@@ -973,14 +973,14 @@ fun AppContent(
                             .windowInsetsPadding(WindowInsets.safeDrawing.only(WindowInsetsSides.Horizontal))
                             .padding(
                                 top = searchTopPadding,
-                                start = 16.dp,
-                                end = if (isWide) 96.dp else 16.dp
+                                start = if (isWide) 24.dp else 16.dp,
+                                end = if (isWide) 100.dp else 16.dp
                             ),
                         contentAlignment = Alignment.TopCenter
                     ) {
                         Row(
                             modifier = Modifier
-                                .widthIn(max = 608.dp)
+                                .widthIn(max = if (isWide) 720.dp else 608.dp)
                                 .fillMaxWidth()
                                 .defaultMinSize(minHeight = searchBarHeight)
                                 .wrapContentHeight()
@@ -1215,7 +1215,7 @@ fun AppContent(
                     .fillMaxWidth()
                     .windowInsetsPadding(WindowInsets.safeDrawing.only(WindowInsetsSides.Horizontal + WindowInsetsSides.Bottom))
                     .graphicsLayer { translationY = bottomBarOffsetHeightPx }
-                    .padding(bottom = 12.dp, start = if (screenWidthDp < 320.dp) 6.dp else 16.dp, end = if (screenWidthDp < 320.dp) 6.dp else 16.dp),
+                    .padding(bottom = 18.dp, start = if (screenWidthDp < 320.dp) 6.dp else 16.dp, end = if (screenWidthDp < 320.dp) 6.dp else 16.dp),
                 contentAlignment = Alignment.Center
             ) {
                 val mainNavItems = listOf(
@@ -1240,7 +1240,7 @@ fun AppContent(
                     modifier = Modifier
                         .widthIn(max = 480.dp)
                         .fillMaxWidth()
-                        .height(if (isWide) 42.dp else 52.dp), // Strictly < 56dp portrait, 44dp landscape
+                        .height(if (isWide) 46.dp else 56.dp),
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.Center
                 ) {
@@ -1248,7 +1248,7 @@ fun AppContent(
                     BoxWithConstraints(
                         modifier = Modifier
                             .weight(1f)
-                            .height(if (isWide) 42.dp else 52.dp)
+                            .height(if (isWide) 46.dp else 56.dp)
                             .border(
                                 width = 1.dp,
                                 brush = Brush.linearGradient(listOf(Color.White.copy(alpha = 0.25f), Color.White.copy(alpha = 0.05f))),
@@ -1353,13 +1353,13 @@ fun AppContent(
                     Box(
                         modifier = Modifier
                             .width(56.dp)
-                            .height(if (isWide) 42.dp else 52.dp)
+                            .height(if (isWide) 46.dp else 56.dp)
                             .border(
                                 width = 1.dp,
                                 brush = Brush.linearGradient(listOf(Color.White.copy(alpha = 0.25f), Color.White.copy(alpha = 0.05f))),
                                 shape = CircleShape
                             )
-                            .liquidGlass(isDark, borderRadius = 26.dp, alpha = 0.90f)
+                            .liquidGlass(isDark, borderRadius = 28.dp, alpha = 0.90f)
                             .clip(CircleShape)
                             .bounceClick {
                                 isDrawerOpen = !isDrawerOpen

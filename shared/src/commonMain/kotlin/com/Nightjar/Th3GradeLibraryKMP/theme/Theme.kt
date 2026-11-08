@@ -193,16 +193,16 @@ fun Modifier.screenEntranceStagger(index: Int = 0, itemId: String? = null): Modi
 
     val animProgress = androidx.compose.runtime.remember(screenKey, itemKey) { androidx.compose.animation.core.Animatable(0f) }
     val density = androidx.compose.ui.platform.LocalDensity.current
-    val offsetYPx = androidx.compose.runtime.remember(density) { with(density) { 14.dp.toPx() } }
+    val offsetYPx = androidx.compose.runtime.remember(density) { with(density) { 18.dp.toPx() } }
 
     androidx.compose.runtime.LaunchedEffect(screenKey, itemKey) {
-        val staggerDelay = ((index % 8).coerceIn(0, 7) * 24L)
+        val staggerDelay = ((index % 8).coerceIn(0, 7) * 20L)
         if (staggerDelay > 0) kotlinx.coroutines.delay(staggerDelay)
         animProgress.animateTo(
             targetValue = 1f,
             animationSpec = androidx.compose.animation.core.spring(
-                dampingRatio = 0.76f, // Ultra-moist fluid organic spring (كالجبنة)
-                stiffness = 320f
+                dampingRatio = 0.72f, // Ultra-fluid organic iOS lock-screen bloom
+                stiffness = 280f
             )
         )
         seenMap?.put(itemKey, true)
@@ -210,10 +210,10 @@ fun Modifier.screenEntranceStagger(index: Int = 0, itemId: String? = null): Modi
 
     val p = animProgress.value
     this.graphicsLayer {
-        this.alpha = 0.30f + 0.70f * p // Base alpha 0.30f eliminates harsh dark/white flashes!
+        this.alpha = 0.20f + 0.80f * p
         this.translationY = (1f - p) * offsetYPx
-        this.scaleX = 0.985f + 0.015f * p
-        this.scaleY = 0.985f + 0.015f * p
+        this.scaleX = 0.94f + 0.06f * p
+        this.scaleY = 0.94f + 0.06f * p
         this.clip = false
     }
 }
