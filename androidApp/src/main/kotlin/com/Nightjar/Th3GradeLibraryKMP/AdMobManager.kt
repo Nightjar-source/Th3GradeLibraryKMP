@@ -24,6 +24,13 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.viewinterop.AndroidView
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Brush
 import com.google.android.gms.ads.*
 import com.google.android.gms.ads.interstitial.InterstitialAd
 import com.google.android.gms.ads.interstitial.InterstitialAdLoadCallback
@@ -119,11 +126,37 @@ fun AdaptiveBannerAd(
             else -> availableWidthDp.coerceAtLeast(280)
         }
 
-        AndroidView(
+        Box(
             modifier = Modifier
-                .widthIn(max = targetAdWidth.dp)
-                .wrapContentHeight(),
-            factory = { ctx ->
+                .widthIn(max = (targetAdWidth + 12).dp)
+                .wrapContentHeight()
+                .clip(RoundedCornerShape(32.dp))
+                .background(
+                    Brush.verticalGradient(
+                        colors = listOf(
+                            Color.Black.copy(alpha = 0.28f),
+                            Color.Black.copy(alpha = 0.42f)
+                        )
+                    )
+                )
+                .border(
+                    width = 1.dp,
+                    brush = Brush.linearGradient(
+                        colors = listOf(
+                            Color.White.copy(alpha = 0.22f),
+                            Color.White.copy(alpha = 0.06f)
+                        )
+                    ),
+                    shape = RoundedCornerShape(32.dp)
+                )
+                .padding(horizontal = 6.dp, vertical = 3.dp),
+            contentAlignment = Alignment.Center
+        ) {
+            AndroidView(
+                modifier = Modifier
+                    .widthIn(max = targetAdWidth.dp)
+                    .wrapContentHeight(),
+                factory = { ctx ->
                 AdView(ctx).apply {
                     val adSize = AdSize.getCurrentOrientationAnchoredAdaptiveBannerAdSize(ctx, targetAdWidth)
                     setAdSize(adSize)
@@ -148,5 +181,6 @@ fun AdaptiveBannerAd(
                 } catch (_: Exception) {}
             }
         )
+        }
     }
 }

@@ -473,11 +473,11 @@ object SyncEngine {
                 val domainChanged = topLink.isNotEmpty() && firstItemLink.isNotEmpty() && 
                         extractDomain(topLink) != extractDomain(firstItemLink)
 
-                val isCacheCleared = _newsList.value.isEmpty() && topLink.isNotEmpty()
+                val isCacheCleared = false
 
                 if (topLink.isEmpty() || domainChanged || isCacheCleared) {
                     // First run or domain changed: take latest 15 only
-                    val validItems = fetchedItems.take(15)
+                    val validItems = fetchedItems.take(60)
                     newUniqueItems.addAll(validItems)
                     
                     if (validItems.isNotEmpty()) {
@@ -488,13 +488,23 @@ object SyncEngine {
                     }
                 } else {
                     val collectedItems = mutableListOf<NewsItem>()
+                    var matchedBoundary = false
                     for (item in fetchedItems) {
                         // Found exact Top boundary -> Everything below is old
-                        if (item.link == topLink && item.pubDate == topTime) break 
+                        if (item.link == topLink && item.pubDate == topTime) {
+                            matchedBoundary = true
+                            break
+                        }
                         // Top broken, found Bottom boundary -> Everything below is definitely old
-                        if (item.link == bottomLink && item.pubDate == bottomTime) break
+                        if (item.link == bottomLink && item.pubDate == bottomTime) {
+                            matchedBoundary = true
+                            break
+                        }
 
                         collectedItems.add(item)
+                    }
+                    if (!matchedBoundary && collectedItems.isEmpty()) {
+                        collectedItems.addAll(fetchedItems)
                     }
 
                     // Filter to find TRULY new or updated items
