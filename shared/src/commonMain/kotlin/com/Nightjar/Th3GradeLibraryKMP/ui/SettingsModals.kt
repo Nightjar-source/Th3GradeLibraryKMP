@@ -171,8 +171,7 @@ fun AppSettingsModal(
                 ) {
                     Row(
                         modifier = Modifier
-                            .fillMaxWidth()
-                            
+                            .fillMaxWidth(),
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
@@ -566,8 +565,7 @@ fun NewsSettingsModal(
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(horizontal = 20.dp)
-                            
+                            .padding(horizontal = 20.dp),
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically
                     ) {

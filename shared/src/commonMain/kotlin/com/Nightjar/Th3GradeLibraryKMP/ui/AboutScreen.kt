@@ -2,6 +2,8 @@ package com.Nightjar.Th3GradeLibraryKMP.ui
 
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
@@ -32,6 +34,7 @@ import com.Nightjar.Th3GradeLibraryKMP.theme.screenEntranceCascade
 import org.jetbrains.compose.resources.painterResource
 import com.Nightjar.Th3GradeLibraryKMP.generated.resources.Res
 import com.Nightjar.Th3GradeLibraryKMP.generated.resources.app_icon
+import com.Nightjar.Th3GradeLibraryKMP.generated.resources.developer_avatar
 
 @Composable
 fun AboutScreen(
