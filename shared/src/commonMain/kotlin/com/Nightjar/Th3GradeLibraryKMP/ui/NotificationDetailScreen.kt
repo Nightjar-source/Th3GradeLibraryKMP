@@ -22,6 +22,7 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.CalendarToday
 import androidx.compose.material.icons.filled.OpenInBrowser
 import androidx.compose.material.icons.filled.Share
+import androidx.compose.material.icons.filled.Link
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -173,45 +174,102 @@ fun NotificationDetailScreen(
                     thickness = 1.dp
                 )
 
-                // Body Content
-                SelectionContainer {
-                    Text(
-                        text = item.contentSnippet ?: "",
-                        style = MaterialTheme.typography.bodyLarge.copy(
-                            fontSize = 16.sp,
-                            lineHeight = 26.sp,
-                            textAlign = TextAlign.Start
-                        ),
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
+                // Body Content (Formatted into styled paragraphs)
+                val rawContent = item.contentSnippet ?: ""
+                val embeddedUrls = remember(rawContent) { extractUrlsFromText(rawContent) }
+                val allActionUrls = remember(item.link, embeddedUrls) {
+                    val list = mutableListOf<String>()
+                    if (item.link.isNotBlank() && (item.link.startsWith("http://") || item.link.startsWith("https://"))) {
+                        list.add(item.link)
+                    }
+                    embeddedUrls.forEach { url ->
+                        if (!list.contains(url)) list.add(url)
+                    }
+                    list
                 }
 
-                Spacer(modifier = Modifier.height(8.dp))
+                val paragraphs = remember(rawContent) {
+                    rawContent.split("\n").map { it.trim() }.filter { it.isNotEmpty() }
+                }
 
-                // Action Link Button
-                if (item.link.isNotBlank() && item.link.startsWith("http")) {
-                    Button(
-                        onClick = { onOpenLink(item.link) },
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(54.dp),
-                        shape = RoundedCornerShape(16.dp),
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = MaterialTheme.colorScheme.primary,
-                            contentColor = MaterialTheme.colorScheme.onPrimary
-                        )
+                if (paragraphs.isNotEmpty()) {
+                    SelectionContainer {
+                        Column(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalArrangement = Arrangement.spacedBy(10.dp)
+                        ) {
+                            paragraphs.forEach { paragraph ->
+                                val isBullet = paragraph.startsWith("-") || paragraph.startsWith("•") || paragraph.startsWith("*")
+                                val cleanPara = if (isBullet) paragraph.substring(1).trim() else paragraph
+                                Surface(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    shape = RoundedCornerShape(14.dp),
+                                    color = if (isBullet) MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f) else Color.Transparent
+                                ) {
+                                    Row(
+                                        modifier = Modifier.padding(if (isBullet) 10.dp else 2.dp),
+                                        verticalAlignment = Alignment.Top,
+                                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                    ) {
+                                        if (isBullet) {
+                                            Box(
+                                                modifier = Modifier
+                                                    .padding(top = 8.dp)
+                                                    .size(6.dp)
+                                                    .background(MaterialTheme.colorScheme.primary, CircleShape)
+                                            )
+                                        }
+                                        Text(
+                                            text = cleanPara,
+                                            style = MaterialTheme.typography.bodyLarge.copy(
+                                                fontSize = 16.sp,
+                                                lineHeight = 26.sp,
+                                                textAlign = TextAlign.Start
+                                            ),
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                                        )
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(12.dp))
+
+                // Action Link Buttons (Distinct, beautifully styled buttons for every URL)
+                if (allActionUrls.isNotEmpty()) {
+                    Column(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalArrangement = Arrangement.spacedBy(10.dp)
                     ) {
-                        Icon(
-                            imageVector = Icons.Default.OpenInBrowser,
-                            contentDescription = null,
-                            modifier = Modifier.size(20.dp)
-                        )
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text(
-                            text = "فتح الرابط المرفق",
-                            fontSize = 16.sp,
-                            fontWeight = FontWeight.Bold
-                        )
+                        allActionUrls.forEachIndexed { idx, url ->
+                            val buttonTitle = if (allActionUrls.size == 1) "فتح الرابط المرفق" else "فتح الرابط المرفق #${idx + 1}"
+                            Button(
+                                onClick = { onOpenLink(url) },
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .height(54.dp),
+                                shape = RoundedCornerShape(16.dp),
+                                colors = ButtonDefaults.buttonColors(
+                                    containerColor = if (idx == 0) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.secondaryContainer,
+                                    contentColor = if (idx == 0) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSecondaryContainer
+                                ),
+                                elevation = ButtonDefaults.buttonElevation(defaultElevation = 2.dp, pressedElevation = 6.dp)
+                            ) {
+                                Icon(
+                                    imageVector = if (idx == 0) Icons.Default.OpenInBrowser else Icons.Default.Link,
+                                    contentDescription = null,
+                                    modifier = Modifier.size(20.dp)
+                                )
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text(
+                                    text = buttonTitle,
+                                    fontSize = 16.sp,
+                                    fontWeight = FontWeight.Bold
+                                )
+                            }
+                        }
                     }
                 }
             }
@@ -277,4 +335,9 @@ fun NotificationDetailScreen(
             }
         }
     }
+}
+
+private fun extractUrlsFromText(text: String): List<String> {
+    val regex = Regex("""(https?://[^\s\n\]\[\)\(]+)""")
+    return regex.findAll(text).map { it.value.trimEnd('.', ',', ';') }.distinct().toList()
 }

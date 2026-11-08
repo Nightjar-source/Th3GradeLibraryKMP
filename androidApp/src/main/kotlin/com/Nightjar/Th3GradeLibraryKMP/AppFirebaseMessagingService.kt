@@ -44,6 +44,8 @@ class AppFirebaseMessagingService : FirebaseMessagingService() {
         fun subscribeToNewsTopic() {
             try {
                 FirebaseMessaging.getInstance().subscribeToTopic("news")
+                FirebaseMessaging.getInstance().subscribeToTopic("kar")
+                FirebaseMessaging.getInstance().subscribeToTopic("announcements")
             } catch (e: Exception) {
                 e.printStackTrace()
             }
@@ -52,6 +54,8 @@ class AppFirebaseMessagingService : FirebaseMessagingService() {
         fun unsubscribeFromNewsTopic() {
             try {
                 FirebaseMessaging.getInstance().unsubscribeFromTopic("news")
+                FirebaseMessaging.getInstance().unsubscribeFromTopic("kar")
+                FirebaseMessaging.getInstance().unsubscribeFromTopic("announcements")
             } catch (e: Exception) {
                 e.printStackTrace()
             }
@@ -100,9 +104,17 @@ class AppFirebaseMessagingService : FirebaseMessagingService() {
         val isDevTest = title.contains("المطور") || title.contains("تجريبي") || link.startsWith("dev_") || data["is_test"] == "true"
         
         // 1. Silent Local Cache Update (Smart Watermark deduplication)
-        val isExplicitAnnouncement = data["is_announcement"] == "true" || data["type"] == "announcement" || data["type"] == "admin"
+        val fromTopic = remoteMessage.from ?: ""
+        val isKarTopic = fromTopic.endsWith("/kar") || fromTopic.endsWith("/announcements")
+        val hasKarFlag = data["is_announcement"] == "true" || 
+                         data["type"] == "announcement" || 
+                         data["type"] == "admin" || 
+                         data["type"] == "kar" || 
+                         data["channel"] == "kar" ||
+                         data.containsKey("kar") ||
+                         isKarTopic
         val isNewItem = if (!isDevTest) {
-            saveToCache(title, link, imageUrl, pubDate, content, isExplicitAnnouncement)
+            saveToCache(title, link, imageUrl, pubDate, content, hasKarFlag)
         } else false
 
         if (!isNewItem && !isDevTest) {
