@@ -65,30 +65,9 @@ data class AppAdaptiveConfig(
      */
     fun libraryGridCells(isGridView: Boolean): GridCells {
         return if (isGridView) {
-            when {
-                screenWidthDp >= 1800.dp -> GridCells.Fixed(8)
-                screenWidthDp >= 1500.dp -> GridCells.Fixed(7)
-                isExtraLarge -> GridCells.Fixed(6)
-                isLarge -> GridCells.Fixed(5)
-                isExpanded -> {
-                    if (heightClass == WindowHeightSizeClass.COMPACT) {
-                        GridCells.Fixed(5) // Wide landscape phone / split screen
-                    } else {
-                        GridCells.Fixed(4)
-                    }
-                }
-                isMedium -> {
-                    if (heightClass == WindowHeightSizeClass.COMPACT) {
-                        GridCells.Fixed(4) // Landscape phone / compact height
-                    } else {
-                        GridCells.Fixed(3) // Portrait tablet / unfolded inner display / Foldable Flex posture
-                    }
-                }
-                else -> {
-                    // Portrait phone & Foldable outer cover display: ALWAYS 2 columns (clean and balanced, never 1 column)
-                    GridCells.Fixed(2)
-                }
-            }
+            // Adaptive Grid with Minimum Adaptive Cell Width to prevent shrink/distortion on landscape & split-screen
+            // Never shrink below comfortable touch target (155.dp min width matching standard phone portrait)
+            GridCells.Adaptive(minSize = 155.dp)
         } else {
             when {
                 screenWidthDp >= 1600.dp -> GridCells.Fixed(4)

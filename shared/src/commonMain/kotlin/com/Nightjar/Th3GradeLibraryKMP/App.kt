@@ -787,7 +787,6 @@ fun AppContent(
                     ) {
                         Row(
                             modifier = Modifier
-                                .widthIn(max = 608.dp)
                                 .fillMaxWidth(),
                             horizontalArrangement = Arrangement.SpaceBetween,
                             verticalAlignment = Alignment.CenterVertically
@@ -1013,8 +1012,9 @@ fun AppContent(
                         } else Modifier
                     )
                 ) {
-                    val searchBarHeight = if (isWide) 48.dp else 56.dp
-                    val topPadding = if (isWide) 64.dp else 80.dp
+                    val searchBarHeight = if (isWide) 44.dp else 52.dp
+                    val statusBarHeight = WindowInsets.statusBars.add(WindowInsets.captionBar).asPaddingValues().calculateTopPadding()
+                    val calculatedTopPadding = statusBarHeight + (if (isWide) 48.dp else 58.dp)
                     val searchFontSize = if (isWide) 14.sp else 15.sp
                     var isListening by remember { mutableStateOf(false) }
 
@@ -1043,10 +1043,9 @@ fun AppContent(
                     Box(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .statusBarsPadding()
                             .windowInsetsPadding(WindowInsets.safeDrawing.only(WindowInsetsSides.Horizontal))
                             .padding(
-                                top = topPadding,
+                                top = calculatedTopPadding,
                                 start = 16.dp,
                                 end = if (isWide) 96.dp else 16.dp
                             ),
@@ -1365,7 +1364,7 @@ fun AppContent(
         )
         val animatedBannerBottomPadding = rawAnimatedBannerBottomPadding.coerceAtLeast(0.dp)
 
-        // --- Bottom Banner Ad (Google AdMob Anchored Adaptive Banner - Positioned ABOVE bottom nav bar) ---
+        // --- Bottom Banner Ad (Google AdMob Anchored Adaptive Banner - Positioned ABOVE bottom nav bar and content overlay) ---
         androidx.compose.animation.AnimatedVisibility(
             visible = !showOnboarding && bottomBannerAd != null,
             enter = slideInVertically(animationSpec = spring(dampingRatio = 0.8f, stiffness = 300f)) { it } + fadeIn(tween(250)),
@@ -1376,7 +1375,13 @@ fun AppContent(
                 .windowInsetsPadding(WindowInsets.navigationBars.only(WindowInsetsSides.Bottom))
                 .padding(end = if (adaptiveConfig.isWide) adaptiveConfig.sideRailPaddingEnd else 0.dp)
                 .padding(bottom = animatedBannerBottomPadding)
-                .zIndex(180f)
+                .zIndex(550f).then(
+                    if (LocalSharedTransitionScope.current != null) {
+                        with(LocalSharedTransitionScope.current!!) {
+                            Modifier.renderInSharedTransitionScopeOverlay(zIndexInOverlay = 120f)
+                        }
+                    } else Modifier
+                )
         ) {
             Box(
                 modifier = Modifier
@@ -1406,7 +1411,7 @@ fun AppContent(
                     .fillMaxWidth()
                     .windowInsetsPadding(WindowInsets.safeDrawing.only(WindowInsetsSides.Horizontal + WindowInsetsSides.Bottom))
                     .graphicsLayer { translationY = bottomBarOffsetHeightPx }
-                    .padding(bottom = 12.dp, start = if (screenWidthDp < 320.dp) 6.dp else 16.dp, end = if (screenWidthDp < 320.dp) 6.dp else 16.dp),
+                    .padding(bottom = 20.dp, start = if (screenWidthDp < 320.dp) 6.dp else 16.dp, end = if (screenWidthDp < 320.dp) 6.dp else 16.dp),
                 contentAlignment = Alignment.Center
             ) {
                 val mainNavItems = listOf(
@@ -1431,7 +1436,7 @@ fun AppContent(
                     modifier = Modifier
                         .widthIn(max = 480.dp)
                         .fillMaxWidth()
-                        .height(if (isWide) 42.dp else 52.dp), // Strictly < 56dp portrait, 44dp landscape
+                        .height(if (isWide) 46.dp else 56.dp), // Strictly < 56dp portrait, 44dp landscape
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.Center
                 ) {
@@ -1439,13 +1444,13 @@ fun AppContent(
                     BoxWithConstraints(
                         modifier = Modifier
                             .weight(1f)
-                            .height(if (isWide) 42.dp else 52.dp)
+                            .height(if (isWide) 46.dp else 56.dp)
                             .border(
                                 width = 1.dp,
                                 brush = Brush.linearGradient(listOf(Color.White.copy(alpha = 0.25f), Color.White.copy(alpha = 0.05f))),
                                 shape = RoundedCornerShape(50)
                             )
-                            .liquidGlass(isDark, borderRadius = 26.dp, alpha = 0.90f)
+                            .liquidGlass(isDark, borderRadius = 28.dp, alpha = 0.92f)
                             .padding(horizontal = 6.dp)
                     ) {
                         val contentWidth = maxWidth
@@ -1544,13 +1549,13 @@ fun AppContent(
                     Box(
                         modifier = Modifier
                             .width(56.dp)
-                            .height(if (isWide) 42.dp else 52.dp)
+                            .height(if (isWide) 46.dp else 56.dp)
                             .border(
                                 width = 1.dp,
                                 brush = Brush.linearGradient(listOf(Color.White.copy(alpha = 0.25f), Color.White.copy(alpha = 0.05f))),
                                 shape = CircleShape
                             )
-                            .liquidGlass(isDark, borderRadius = 26.dp, alpha = 0.90f)
+                            .liquidGlass(isDark, borderRadius = 28.dp, alpha = 0.92f)
                             .clip(CircleShape)
                             .bounceClick {
                                 isDrawerOpen = !isDrawerOpen
