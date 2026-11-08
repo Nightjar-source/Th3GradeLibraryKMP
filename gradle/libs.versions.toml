@@ -2,7 +2,7 @@
 agp = "9.1.0"
 android-compileSdk = "37"
 android-minSdk = "24"
-android-targetSdk = "35"
+android-targetSdk = "37"
 androidx-activityCompose = "1.8.2"
 compose = "1.12.2"
 kotlin = "2.4.20"
