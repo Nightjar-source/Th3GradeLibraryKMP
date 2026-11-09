@@ -1370,9 +1370,17 @@ fun AppContent(
         )
         val animatedBannerBottomPadding = rawAnimatedBannerBottomPadding.coerceAtLeast(0.dp)
 
-        // --- Bottom Banner Ad (Google AdMob Anchored Adaptive Banner - Positioned ABOVE bottom nav bar and content overlay) ---
+        // --- Bottom Banner Ad (Google AdMob Anchored Adaptive Banner - Positioned cleanly, never occludes modals/drawer/reader) ---
+        val shouldShowBanner = !showOnboarding && 
+                               bottomBannerAd != null && 
+                               !isDrawerOpen && 
+                               !isAppSettingsOpen && 
+                               !isNewsSettingsOpen && 
+                               !showClearCacheDialog &&
+                               page != "pdf"
+
         androidx.compose.animation.AnimatedVisibility(
-            visible = !showOnboarding && bottomBannerAd != null,
+            visible = shouldShowBanner,
             enter = slideInVertically(animationSpec = spring(dampingRatio = 0.8f, stiffness = 300f)) { it } + fadeIn(tween(250)),
             exit = slideOutVertically(animationSpec = spring(dampingRatio = 0.8f, stiffness = 300f)) { it } + fadeOut(tween(200)),
             modifier = Modifier
@@ -1381,10 +1389,10 @@ fun AppContent(
                 .windowInsetsPadding(WindowInsets.navigationBars.only(WindowInsetsSides.Bottom))
                 .padding(end = if (adaptiveConfig.isWide) adaptiveConfig.sideRailPaddingEnd else 0.dp)
                 .padding(bottom = animatedBannerBottomPadding)
-                .zIndex(550f).then(
+                .zIndex(150f).then(
                     if (LocalSharedTransitionScope.current != null) {
                         with(LocalSharedTransitionScope.current!!) {
-                            Modifier.renderInSharedTransitionScopeOverlay(zIndexInOverlay = 120f)
+                            Modifier.renderInSharedTransitionScopeOverlay(zIndexInOverlay = 30f)
                         }
                     } else Modifier
                 )

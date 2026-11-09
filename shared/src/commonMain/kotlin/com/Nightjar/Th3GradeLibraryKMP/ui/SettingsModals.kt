@@ -136,7 +136,7 @@ fun AppSettingsModal(
         visible = isOpen,
         enter = fadeIn(),
         exit = fadeOut(),
-        modifier = Modifier.zIndex(300f)
+        modifier = Modifier.zIndex(800f)
     ) {
         Box(
             modifier = Modifier
@@ -528,7 +528,7 @@ fun NewsSettingsModal(
         visible = isOpen,
         enter = fadeIn(),
         exit = fadeOut(),
-        modifier = Modifier.zIndex(300f)
+        modifier = Modifier.zIndex(800f)
     ) {
         Box(
             modifier = Modifier

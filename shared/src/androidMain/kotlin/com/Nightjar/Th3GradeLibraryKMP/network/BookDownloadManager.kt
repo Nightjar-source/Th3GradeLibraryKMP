@@ -429,7 +429,7 @@ actual object BookDownloadManager {
                                 conn = URL(currentUrl).openConnection() as HttpURLConnection
                                 conn.connectTimeout = 20000
                                 conn.readTimeout = 35000
-                                conn.instanceFollowRedirects = true
+                                conn.instanceFollowRedirects = false
                                 conn.setRequestProperty("User-Agent", "Mozilla/5.0 (Android; Mobile)")
 
                                 if (currentUrl.contains("huggingface.co")) {

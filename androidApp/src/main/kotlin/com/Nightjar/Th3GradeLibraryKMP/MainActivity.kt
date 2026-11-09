@@ -39,12 +39,52 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.SupervisorJob
 
 fun scheduleBackgroundSync(context: Context, forceReplace: Boolean = false) {
-    // In our Cloudflare + FCM v1 Serverless architecture:
-    // All background polling is offloaded to the Cloudflare Worker Cron on the cloud.
-    // Local WorkManager background polling and WakeLocks are cancelled to guarantee 0% battery drain and 0MB RAM in background!
+    val syncInterval = SyncEngine.appSettings.value.syncInterval
+
+    if (syncInterval == "on_open") {
+        try {
+            WorkManager.getInstance(context).cancelUniqueWork("BackgroundNewsSync")
+            HeartbeatScheduler.cancelHeartbeat(context)
+        } catch (_: Exception) {}
+        return
+    }
+
+    // 1. Set up the Heartbeat (12h inexact batching to wake app from Doze)
+    HeartbeatScheduler.scheduleHeartbeat(context)
+
+    // 2. Set up Periodic WorkManager for News Sync
+    val intervalMinutes = when (syncInterval) {
+        "15m" -> 15L
+        "30m" -> 30L
+        "1h"  -> 60L
+        "6h"  -> 360L
+        "12h" -> 720L
+        "24h" -> 1440L
+        else  -> 30L
+    }
+
+    val constraints = Constraints.Builder()
+        .setRequiredNetworkType(NetworkType.CONNECTED)
+        .build()
+
+    val periodicWorkRequest = PeriodicWorkRequestBuilder<BackgroundSyncWorker>(
+        intervalMinutes, TimeUnit.MINUTES
+    )
+        .setConstraints(constraints)
+        .build()
+
+    val policy = if (forceReplace) {
+        ExistingPeriodicWorkPolicy.REPLACE
+    } else {
+        ExistingPeriodicWorkPolicy.KEEP
+    }
+
     try {
-        WorkManager.getInstance(context).cancelUniqueWork("BackgroundNewsSync")
-        HeartbeatScheduler.cancelHeartbeat(context)
+        WorkManager.getInstance(context).enqueueUniquePeriodicWork(
+            "BackgroundNewsSync",
+            policy,
+            periodicWorkRequest
+        )
     } catch (_: Exception) {}
 }
 
