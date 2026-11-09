@@ -284,6 +284,7 @@ class MainActivity : ComponentActivity() {
         window.statusBarColor = android.graphics.Color.TRANSPARENT
         window.navigationBarColor = android.graphics.Color.TRANSPARENT
         super.onCreate(savedInstanceState)
+        AdMobHelper.initialize(this)
         
         try {
             startService(Intent(this, AppCleanupService::class.java))
@@ -745,6 +746,9 @@ class MainActivity : ComponentActivity() {
                 initialPage = pageState.value,
                 initialSearchQuery = searchQueryState.value,
                 isProcessDeath = isProcessDeath,
+                bottomBannerAd = {
+                    FloatingAdMobBanner(isDark = isDarkThemeActive)
+                },
                 onIntentConsumed = {
                     bookIdState.value = null
                     pageState.value = null

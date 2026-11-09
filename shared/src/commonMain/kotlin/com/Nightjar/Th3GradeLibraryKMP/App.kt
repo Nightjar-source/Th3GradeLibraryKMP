@@ -1917,39 +1917,40 @@ fun AppContent(
             lastNonNullToastMessage = toastMessage
         }
 
-        // Global Toast Message (Floating Dynamic Pill with animateBackOutDown)
+        // Global Toast Notification (Fluid Dynamic Island below TopBar across ALL screens)
+        val dynamicIslandTopPadding = WindowInsets.statusBars.add(WindowInsets.captionBar).asPaddingValues().calculateTopPadding() + (if (isWide) 56.dp else 64.dp)
         androidx.compose.animation.AnimatedVisibility(
             visible = toastMessage != null,
             enter = (androidx.compose.animation.slideInVertically(
-                initialOffsetY = { (it * 0.5f).toInt() },
-                animationSpec = spring(dampingRatio = 0.65f, stiffness = 300f)
+                initialOffsetY = { -it },
+                animationSpec = spring(dampingRatio = 0.72f, stiffness = 280f)
             ) + androidx.compose.animation.scaleIn(
-                initialScale = 0.6f,
-                animationSpec = spring(dampingRatio = 0.65f, stiffness = 300f)
+                initialScale = 0.82f,
+                animationSpec = spring(dampingRatio = 0.72f, stiffness = 280f)
             ) + androidx.compose.animation.expandVertically(
-                expandFrom = Alignment.Bottom,
-                animationSpec = spring(dampingRatio = 0.65f, stiffness = 300f)
+                expandFrom = Alignment.Top,
+                animationSpec = spring(dampingRatio = 0.72f, stiffness = 280f)
             ) + androidx.compose.animation.expandHorizontally(
                 expandFrom = Alignment.CenterHorizontally,
-                animationSpec = spring(dampingRatio = 0.65f, stiffness = 300f)
-            ) + androidx.compose.animation.fadeIn(tween(200))),
+                animationSpec = spring(dampingRatio = 0.72f, stiffness = 280f)
+            ) + androidx.compose.animation.fadeIn(tween(180))),
             exit = (androidx.compose.animation.slideOutVertically(
-                targetOffsetY = { (it * 0.8f).toInt() },
-                animationSpec = spring(dampingRatio = 0.8f, stiffness = 400f)
+                targetOffsetY = { -it },
+                animationSpec = spring(dampingRatio = 0.82f, stiffness = 340f)
             ) + androidx.compose.animation.scaleOut(
-                targetScale = 0.4f,
-                animationSpec = spring(dampingRatio = 0.8f, stiffness = 400f)
+                targetScale = 0.82f,
+                animationSpec = spring(dampingRatio = 0.82f, stiffness = 340f)
             ) + androidx.compose.animation.shrinkVertically(
-                shrinkTowards = Alignment.Bottom,
-                animationSpec = spring(dampingRatio = 0.8f, stiffness = 400f)
+                shrinkTowards = Alignment.Top,
+                animationSpec = spring(dampingRatio = 0.82f, stiffness = 340f)
             ) + androidx.compose.animation.shrinkHorizontally(
                 shrinkTowards = Alignment.CenterHorizontally,
-                animationSpec = spring(dampingRatio = 0.8f, stiffness = 400f)
-            ) + androidx.compose.animation.fadeOut(tween(150))),
+                animationSpec = spring(dampingRatio = 0.82f, stiffness = 340f)
+            ) + androidx.compose.animation.fadeOut(tween(140))),
             modifier = Modifier
-                .align(Alignment.BottomCenter)
-                .windowInsetsPadding(WindowInsets.safeDrawing.only(WindowInsetsSides.Horizontal + WindowInsetsSides.Bottom))
-                .padding(bottom = (if (page == "pdf") 96.dp else if (page == "web") 24.dp else if (isWide) 24.dp else (if (bottomBannerAd != null) (animatedBannerBottomPadding + 64.dp) else 100.dp)).coerceAtLeast(0.dp))
+                .align(Alignment.TopCenter)
+                .windowInsetsPadding(WindowInsets.safeDrawing.only(WindowInsetsSides.Horizontal))
+                .padding(top = dynamicIslandTopPadding)
                 .zIndex(250f)
         ) {
             lastNonNullToastMessage?.let { msg ->
