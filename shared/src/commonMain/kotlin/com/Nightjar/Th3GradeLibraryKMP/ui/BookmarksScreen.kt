@@ -452,6 +452,14 @@ fun BookAccordionItem(
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .then(rowSharedModifier)
+                                .androidx.compose.ui.layout.onGloballyPositioned { coordinates ->
+                                    if (coordinates.isAttached) {
+                                        TransitionTargetTracker.updateTargetBounds(
+                                            rowTargetKey,
+                                            androidx.compose.ui.layout.boundsInWindow(coordinates)
+                                        )
+                                    }
+                                }
                                 .expressiveButtonMorph(
                                     restRadius = 14.dp,
                                     pressedRadius = 8.dp,
