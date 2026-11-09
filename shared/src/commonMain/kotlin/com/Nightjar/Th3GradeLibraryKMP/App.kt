@@ -1371,13 +1371,7 @@ fun AppContent(
         val animatedBannerBottomPadding = rawAnimatedBannerBottomPadding.coerceAtLeast(0.dp)
 
         // --- Bottom Banner Ad (Google AdMob Anchored Adaptive Banner - Positioned cleanly, never occludes modals/drawer/reader) ---
-        val shouldShowBanner = !showOnboarding && 
-                               bottomBannerAd != null && 
-                               !isDrawerOpen && 
-                               !isAppSettingsOpen && 
-                               !isNewsSettingsOpen && 
-                               !showClearCacheDialog &&
-                               page != "pdf"
+        val shouldShowBanner = !showOnboarding && bottomBannerAd != null
 
         androidx.compose.animation.AnimatedVisibility(
             visible = shouldShowBanner,

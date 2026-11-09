@@ -1,6 +1,8 @@
 package com.Nightjar.Th3GradeLibraryKMP.ui
 
 import androidx.compose.animation.core.*
+import androidx.compose.foundation.layout.offset
+import kotlin.math.roundToInt
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.composed
@@ -11,52 +13,42 @@ import androidx.compose.ui.input.nestedscroll.NestedScrollSource
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.unit.Velocity
-import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.launch
 
 /**
- * Samsung One UI Reachability pull-down effect (One-Handed Operation).
- * Pulling down at the top smoothly translates content down towards the quarter of the screen
- * allowing comfortable one-handed interaction and tapping without any scale or size distortion.
- * Upward bounce at the bottom is strictly disabled.
+ * Elastic bounce/overscroll effect on vertical scrolling.
+ * Custom built smooth rubber band effect.
  */
 fun Modifier.elasticOverscroll(
-    maxReachDistancePx: Float = 260f,
+    maxStretchRatio: Float = 0.32f,
     topEnabled: Boolean = true,
-    bottomEnabled: Boolean = false
+    bottomEnabled: Boolean = true
 ): Modifier = composed {
     val isLowEnd = com.Nightjar.Th3GradeLibraryKMP.theme.LocalIsLowEndDevice.current
     if (isLowEnd) return@composed this
 
+    var componentHeight by remember { mutableStateOf(0f) }
     val overscrollOffset = remember { Animatable(0f) }
     val scope = rememberCoroutineScope()
-    val windowInfo = androidx.compose.ui.platform.LocalWindowInfo.current
-    val density = androidx.compose.ui.platform.LocalDensity.current
 
-    // Samsung One UI Reachability: Smooth pull-down to exactly one quarter (25%) of screen height
-    val quarterReachPx = remember(windowInfo.containerSize, density) {
-        val screenHeightPx = windowInfo.containerSize.height.toFloat()
-        with(density) {
-            (screenHeightPx * 0.25f).coerceIn(150.dp.toPx(), 260.dp.toPx())
-        }
-    }
-    val effectiveMaxReachPx = if (maxReachDistancePx > 0f && maxReachDistancePx != 260f) maxReachDistancePx else quarterReachPx
-
-    val nestedScrollConnection = remember(topEnabled, bottomEnabled, effectiveMaxReachPx) {
+    val nestedScrollConnection = remember {
         object : NestedScrollConnection {
             override fun onPreScroll(available: Offset, source: NestedScrollSource): Offset {
                 val current = overscrollOffset.value
-                if (current > 0f && source == NestedScrollSource.UserInput) {
+                if (current != 0f && source == NestedScrollSource.UserInput) {
                     val delta = available.y
-                    if (delta < 0f) {
-                        val newOffset = current + delta
-                        return if (newOffset <= 0f) {
-                            scope.launch { overscrollOffset.snapTo(0f) }
-                            Offset(0f, current)
-                        } else {
-                            scope.launch { overscrollOffset.snapTo(newOffset) }
-                            Offset(0f, delta)
-                        }
+                    // If pulled down into Reachability zone (current > 0) and user scrolls up (delta < 0),
+                    // smoothly scroll the reachability zone back up to 0 first.
+                    if (current > 0 && delta < 0) {
+                        val newOffset = (current + delta).coerceAtLeast(0f)
+                        scope.launch { overscrollOffset.snapTo(newOffset) }
+                        return Offset(0f, delta)
+                    }
+                    // If stretched upward at bottom edge (current < 0) and user scrolls down (delta > 0)
+                    if (current < 0 && delta > 0) {
+                        val newOffset = (current + delta).coerceAtMost(0f)
+                        scope.launch { overscrollOffset.snapTo(newOffset) }
+                        return Offset(0f, delta)
                     }
                 }
                 return Offset.Zero
@@ -67,28 +59,72 @@ fun Modifier.elasticOverscroll(
                 available: Offset,
                 source: NestedScrollSource
             ): Offset {
-                // Smoothly pull down content into exactly the quarter of the screen
-                if (source == NestedScrollSource.UserInput && available.y > 0f && topEnabled) {
+                if (source == NestedScrollSource.UserInput && available.y != 0f) {
+                    val isPullingDown = available.y > 0 // Top edge pull (One UI Reachability)
+                    val isPullingUp = available.y < 0   // Bottom edge overscroll stretch
+                    
+                    if ((isPullingDown && !topEnabled) || (isPullingUp && !bottomEnabled)) {
+                        return Offset.Zero
+                    }
+                    
+                    val maxReachability = 220f // Brings top content comfortably to mid-screen
+                    val maxOffset = if (componentHeight > 0) (componentHeight * maxStretchRatio).coerceIn(200f, 320f) else 240f
                     val current = overscrollOffset.value
-                    val progress = (current / effectiveMaxReachPx).coerceIn(0f, 1f)
-                    val resistance = 0.55f * (1f - progress * 0.50f)
-                    val targetOffset = (current + available.y * resistance).coerceIn(0f, effectiveMaxReachPx)
-                    scope.launch { overscrollOffset.snapTo(targetOffset) }
-                    return Offset(0f, available.y)
+
+                    if (isPullingDown) {
+                        // Smoothly pull down towards mid-screen and stay there without spring rebound
+                        val newTarget = (current + available.y * 0.65f).coerceIn(0f, maxOffset)
+                        scope.launch { overscrollOffset.snapTo(newTarget) }
+                        return Offset(0f, available.y)
+                    } else {
+                        // Bottom edge rubber-band stretch
+                        val progress = (kotlin.math.abs(current) / maxOffset).coerceIn(0f, 1f)
+                        val resistance = 0.55f * (1f - progress * 0.75f)
+                        val targetOffset = (current + available.y * resistance).coerceIn(-maxOffset, 0f)
+                        scope.launch { overscrollOffset.snapTo(targetOffset) }
+                        return Offset(0f, available.y)
+                    }
                 }
                 return Offset.Zero
             }
 
             override suspend fun onPreFling(available: Velocity): Velocity {
                 val current = overscrollOffset.value
-                // Official Android Elastic Overscroll: Fluid organic spring return directly to 0 (Rubber-band physics)
-                if (current > 0f) {
+                // When transitioning to or from PDF, reset overscroll cleanly to 0 with fluid spring
+                if (TransitionTargetTracker.isTransitionActive) {
                     overscrollOffset.animateTo(
                         0f,
-                        spring(dampingRatio = 0.78f, stiffness = 300f)
+                        spring(
+                            dampingRatio = 0.85f,
+                            stiffness = Spring.StiffnessMediumLow
+                        )
                     )
                     return available
                 }
+                // Bottom edge stretch rebounds back to 0.
+                if (current < 0f) {
+                    overscrollOffset.animateTo(
+                        0f,
+                        spring(
+                            dampingRatio = Spring.DampingRatioLowBouncy,
+                            stiffness = Spring.StiffnessLow
+                        )
+                    )
+                    return available
+                }
+                // If pulled beyond max reachability at the top, gently settle at maxReachability without jumping back to 0
+                val maxReachability = 220f
+                if (current > maxReachability) {
+                    overscrollOffset.animateTo(
+                        maxReachability,
+                        spring(
+                            dampingRatio = Spring.DampingRatioLowBouncy,
+                            stiffness = Spring.StiffnessLow
+                        )
+                    )
+                    return available
+                }
+                // One UI Reachability: remains pulled down at user's release position (ينزل ولا يرتد لأعلى)
                 return Velocity.Zero
             }
         }
@@ -98,13 +134,10 @@ fun Modifier.elasticOverscroll(
         TransitionTargetTracker.currentOverscrollY = overscrollOffset.value
     }
 
-    val offsetVal = overscrollOffset.value
-
     this
+        .onSizeChanged { componentHeight = it.height.toFloat() }
         .nestedScroll(nestedScrollConnection)
         .graphicsLayer {
-            // Pure downward translation to quarter area for one-handed reachability
-            // Zero scale distortion (scaleX = 1f, scaleY = 1f) preserving crisp original elements
-            this.translationY = offsetVal
+            translationY = overscrollOffset.value
         }
 }

@@ -187,9 +187,9 @@ fun BookmarksScreen(
                             val pages = groupedPages[bookId] ?: emptyList()
                                 BookAccordionItem(
                                 modifier = Modifier.animateItem(
-                                    fadeInSpec = tween(220),
-                                    fadeOutSpec = tween(180),
-                                    placementSpec = spring(dampingRatio = 0.92f, stiffness = 320f)
+                                    fadeInSpec = tween(160, easing = androidx.compose.animation.core.FastOutSlowInEasing),
+                                    fadeOutSpec = tween(120),
+                                    placementSpec = spring(dampingRatio = 0.98f, stiffness = 450f)
                                 ),
                                 item = book,
                                 pages = pages,
@@ -398,18 +398,18 @@ fun BookAccordionItem(
             visible = isExpandedEffective,
             enter = expandVertically(
                 animationSpec = spring(
-                    dampingRatio = 0.82f,
-                    stiffness = 280f
+                    dampingRatio = 0.96f,
+                    stiffness = 400f
                 ),
                 expandFrom = Alignment.Top
-            ) + fadeIn(tween(200, easing = androidx.compose.animation.core.FastOutSlowInEasing)),
+            ) + fadeIn(tween(150, easing = androidx.compose.animation.core.FastOutSlowInEasing)),
             exit = shrinkVertically(
                 animationSpec = spring(
-                    dampingRatio = 0.82f,
-                    stiffness = 280f
+                    dampingRatio = 0.96f,
+                    stiffness = 420f
                 ),
                 shrinkTowards = Alignment.Top
-            ) + fadeOut(tween(180, easing = androidx.compose.animation.core.FastOutSlowInEasing))
+            ) + fadeOut(tween(120, easing = androidx.compose.animation.core.FastOutSlowInEasing))
         ) {
             Column(
                 modifier = Modifier
