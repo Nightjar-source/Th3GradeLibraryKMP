@@ -353,71 +353,106 @@ async function handleRequest(request, event) {
 
 /**
  * Scheduled Cron Handler (runs every 10 minutes)
- * Checks FeedBurner, detects fresh items, and triggers FCM v1
+ * Checks FeedBurner, detects all fresh items published since last sync, and triggers FCM v1
  */
 async function handleScheduledEvent(force = false) {
   try {
     const feedResp = await fetch(RSS_FEED_URL, {
-      headers: { "User-Agent": "Th3Books-Edge-Bot/2.2.4 (Android KMP Cloud)" }
+      headers: { "User-Agent": "Th3Books-Edge-Bot/2.2.9 (Android KMP Cloud)" }
     });
     if (!feedResp.ok) return { error: "Failed to fetch RSS feed" };
 
     const xml = await feedResp.text();
 
-    const titleMatch = xml.match(/<item>[\s\S]*?<title>(?:<!\[CDATA\[)?([\s\S]*?)(?:\]\]>)?<\/title>/i);
-    const linkMatch = xml.match(/<item>[\s\S]*?<link>(?:<!\[CDATA\[)?([\s\S]*?)(?:\]\]>)?<\/link>/i);
-    const pubDateMatch = xml.match(/<item>[\s\S]*?<pubDate>(?:<!\[CDATA\[)?([\s\S]*?)(?:\]\]>)?<\/pubDate>/i);
-    const descMatch = xml.match(/<item>[\s\S]*?<description>(?:<!\[CDATA\[)?([\s\S]*?)(?:\]\]>)?<\/description>/i);
-    const imgMatch = xml.match(/<item>[\s\S]*?<enclosure[^>]*url="([^"]*)"/i) ||
-                     xml.match(/<item>[\s\S]*?<media:content[^>]*url="([^"]*)"/i) ||
-                     (descMatch && descMatch[1].match(/src="([^"]*)"/i));
+    // Extract all <item> tags
+    const itemRegex = /<item>([\s\S]*?)<\/item>/gi;
+    const items = [];
+    let match;
+    while ((match = itemRegex.exec(xml)) !== null) {
+      const itemContent = match[1];
+      const titleMatch = itemContent.match(/<title>(?:<!\[CDATA\[)?([\s\S]*?)(?:\]\]>)?<\/title>/i);
+      const linkMatch = itemContent.match(/<link>(?:<!\[CDATA\[)?([\s\S]*?)(?:\]\]>)?<\/link>/i);
+      const pubDateMatch = itemContent.match(/<pubDate>(?:<!\[CDATA\[)?([\s\S]*?)(?:\]\]>)?<\/pubDate>/i);
+      const descMatch = itemContent.match(/<description>(?:<!\[CDATA\[)?([\s\S]*?)(?:\]\]>)?<\/description>/i);
+      const imgMatch = itemContent.match(/<enclosure[^>]*url="([^"]*)"/i) ||
+                       itemContent.match(/<media:content[^>]*url="([^"]*)"/i) ||
+                       (descMatch && descMatch[1].match(/src="([^"]*)"/i));
 
-    if (!titleMatch) return { status: "no_items_found" };
+      if (titleMatch) {
+        const rawTitle = titleMatch[1].replace(/<[^>]*>/g, "").trim();
+        const title = cleanHtmlEntities(rawTitle.replace("أخبار الثالث متوسط:", "").replace("أخبار الثالث متوسط", "").trim());
+        const link = linkMatch ? linkMatch[1].trim() : "";
+        const pubDate = pubDateMatch ? pubDateMatch[1].trim() : "";
+        const imageUrl = imgMatch ? imgMatch[1].trim() : "";
+        const snippet = descMatch ? cleanHtmlEntities(descMatch[1]).substring(0, 150) : "";
 
-    const rawTitle = titleMatch[1].replace(/<[^>]*>/g, "").trim();
-    const title = cleanHtmlEntities(rawTitle.replace("أخبار الثالث متوسط:", "").replace("أخبار الثالث متوسط", "").trim());
-    const link = linkMatch ? linkMatch[1].trim() : "";
-    const pubDate = pubDateMatch ? pubDateMatch[1].trim() : "";
-    const imageUrl = imgMatch ? imgMatch[1].trim() : "";
-    const snippet = descMatch ? cleanHtmlEntities(descMatch[1]).substring(0, 150) : "";
+        const parsedTime = Date.parse(pubDate);
+        const epochSec = isNaN(parsedTime) ? Math.floor(Date.now() / 1000) : Math.floor(parsedTime / 1000);
+        const marker = `${link}___${epochSec}`;
 
-    // Parse timestamp to exact epoch seconds for strict temporal boundary verification
-    const parsedTime = Date.parse(pubDate);
-    const epochSec = isNaN(parsedTime) ? Math.floor(Date.now() / 1000) : Math.floor(parsedTime / 1000);
-    const currentTopMarker = `${link}___${epochSec}`;
+        items.push({
+          title,
+          link,
+          pubDate,
+          imageUrl,
+          snippet,
+          marker
+        });
+      }
+    }
+
+    if (items.length === 0) return { status: "no_items_found" };
 
     // Read stored boundary watermark from Cloudflare KV
     const storedTopMarker = await getLastNotifiedGuid();
+    const newestMarker = items[0].marker;
 
-    if (!force && storedTopMarker === currentTopMarker) {
-      return { status: "unchanged", marker: currentTopMarker };
+    if (!force && storedTopMarker === newestMarker) {
+      return { status: "unchanged", marker: newestMarker };
     }
 
-    // Update boundary watermark in Cloudflare KV
-    await setLastNotifiedGuid(currentTopMarker);
-
-    // Differentiate between Web News (Title + Link + Image) vs In-App Administrative Announcement
-    const hasWebLink = link.startsWith("http://") || link.startsWith("https://");
-    const hasImage = imageUrl.length > 0;
-    const isWebArticle = hasWebLink && hasImage && !link.includes("dev_") && !link.includes("admin_");
-
-    // Send FCM v1 pure Data-Only push
-    const pushResult = await sendFcmNotification({
-      title: title,
-      body: "", // Keep body empty so headline is solely displayed
-      imageUrl: imageUrl || "",
-      data: {
-        title: title,
-        link: link,
-        pubDate: pubDate,
-        content: snippet || "",
-        image_url: imageUrl || "",
-        is_news_article: isWebArticle ? "true" : "false",
-        is_announcement: isWebArticle ? "false" : "true"
+    // Collect ALL new items published since last sync (from newest down to boundary)
+    const newItems = [];
+    for (const itm of items) {
+      if (!force && itm.marker === storedTopMarker) {
+        break; // Reached last notified boundary
       }
-    });
+      newItems.push(itm);
+    }
 
-    return { status: "notified", title: title, push: pushResult, marker: currentTopMarker };
+    // Update boundary watermark in Cloudflare KV to the newest item
+    await setLastNotifiedGuid(newestMarker);
+
+    const pushResults = [];
+    // Process items in reverse (oldest new item to newest) so notifications arrive in chronological order
+    const itemsToNotify = newItems.reverse();
+    for (const itm of itemsToNotify) {
+      const hasWebLink = itm.link.startsWith("http://") || itm.link.startsWith("https://");
+      const isWebArticle = hasWebLink && !itm.link.includes("dev_") && !itm.link.includes("admin_");
+
+      const res = await sendFcmNotification({
+        title: itm.title,
+        body: itm.snippet || "",
+        imageUrl: itm.imageUrl || "",
+        data: {
+          type: isWebArticle ? "news" : "general",
+          title: itm.title,
+          link: itm.link,
+          click_url: itm.link,
+          pubDate: itm.pubDate,
+          content: itm.snippet || "",
+          image_url: itm.imageUrl || ""
+        }
+      });
+      pushResults.push(res);
+    }
+
+    return {
+      status: "notified_batch",
+      count: itemsToNotify.length,
+      newestMarker,
+      pushes: pushResults
+    };
   } catch (e) {
     console.error("Scheduled check error:", e);
     return { error: e.message };
