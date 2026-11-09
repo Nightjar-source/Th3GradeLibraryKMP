@@ -29,7 +29,7 @@
         android:resizeableActivity="true"
         android:icon="@drawable/ic_launcher"
         android:roundIcon="@drawable/ic_launcher"
-        android:label="مكتبة الثالث متوسط"
+        android:label="@string/app_name"
         android:supportsRtl="true"
         android:largeHeap="true"
         android:hardwareAccelerated="true"
