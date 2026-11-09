@@ -194,12 +194,18 @@ class AppFirebaseMessagingService : FirebaseMessagingService() {
             val id = if (link.isNotEmpty()) link else ("news_" + title.hashCode())
             val formattedDate = SyncEngine.formatNewsDate(pubDate)
 
-            // Prevent duplicates (Smart Watermark & Boundary verification)
-            val topLink = AppDataStore.getString("Top_Link", "")
-            val topTime = AppDataStore.getString("Top_Time", "")
-            val isDuplicate = (link.isNotEmpty() && link == topLink && (pubDate.isEmpty() || pubDate == topTime)) ||
-                    existingList.any { it.id == id || (it.title == title && it.pubDate == pubDate) || (link.isNotEmpty() && it.link == link) }
+            // Strict temporal & link boundary check:
+            // A news item is only a duplicate if both its ID/link AND its pubDate match the cached item.
+            // If the same link/article was updated with a new publication timestamp, it is treated as a fresh update!
+            val existingItem = existingList.find { it.id == id || (link.isNotEmpty() && it.link == link) }
+            val isDuplicate = existingItem != null && (pubDate.isEmpty() || existingItem.pubDate == pubDate)
+
             if (!isDuplicate) {
+                // If it existed with older timestamp, remove old version so updated article takes top position
+                if (existingItem != null) {
+                    existingList.remove(existingItem)
+                }
+
                 val newItem = NewsItem(
                     id = id,
                     title = title,
