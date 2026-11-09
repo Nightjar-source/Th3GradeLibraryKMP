@@ -172,10 +172,15 @@ fun BookmarksScreen(
                 }
 
                 val dynamicBookmarkColumns = remember(widthClass, heightClass, screenWidthDp) {
-                    val targetBookmarkWidth = 360.dp
-                    val availableWidth = (screenWidthDp - (if (isMedium) 120.dp else 32.dp)).coerceAtLeast(280.dp)
-                    val computedCols = (availableWidth / targetBookmarkWidth).toInt().coerceIn(1, 4)
-                    GridCells.Fixed(computedCols)
+                    val cols = when {
+                        widthClass == WindowWidthSizeClass.COMPACT || screenWidthDp < 600.dp -> 1
+                        widthClass == WindowWidthSizeClass.MEDIUM || screenWidthDp < 840.dp -> 2
+                        else -> {
+                            val availableWidth = (screenWidthDp - 120.dp).coerceAtLeast(600.dp)
+                            (availableWidth / 360.dp).toInt().coerceIn(2, 4)
+                        }
+                    }
+                    GridCells.Fixed(cols)
                 }
 
                 LazyVerticalGrid(
@@ -412,7 +417,7 @@ fun BookAccordionItem(
                                 renderInOverlayDuringTransition = true,
                                 clipInOverlayDuringTransition = OverlayClip(RoundedCornerShape(14.dp)),
                                 boundsTransform = { _, _ ->
-                                    spring(dampingRatio = Spring.DampingRatioLowBouncy, stiffness = Spring.StiffnessLow)
+                                    spring(dampingRatio = 0.82f, stiffness = Spring.StiffnessMediumLow)
                                 },
                                 resizeMode = SharedTransitionScope.ResizeMode.RemeasureToBounds
                             )

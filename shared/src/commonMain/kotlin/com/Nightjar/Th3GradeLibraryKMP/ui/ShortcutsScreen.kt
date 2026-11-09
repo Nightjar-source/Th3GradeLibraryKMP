@@ -93,13 +93,18 @@ fun ShortcutsScreen(
 
             val isCompactHeight = heightClass == WindowHeightSizeClass.COMPACT
             val dynamicShortcutColumns = remember(widthClass, heightClass, screenWidthDp) {
-                val targetShortcutWidth = if (isCompactHeight) 130.dp else 150.dp
-                val availableWidth = (screenWidthDp - (if (isWide) 120.dp else 32.dp)).coerceAtLeast(260.dp)
-                val computedCols = (availableWidth / targetShortcutWidth).toInt().coerceIn(
-                    minimumValue = if (isCompactHeight) 4 else 2,
-                    maximumValue = 8
-                )
-                GridCells.Fixed(computedCols)
+                val cols = when {
+                    // Split screen or compact floating popups (< 600dp): strictly 2 columns!
+                    widthClass == WindowWidthSizeClass.COMPACT || screenWidthDp < 600.dp -> 2
+                    // Medium width / unfolded / landscape (600dp - 839dp): 4 columns
+                    widthClass == WindowWidthSizeClass.MEDIUM || screenWidthDp < 840.dp -> 4
+                    // Expanded tablets / desktop: scale based on 160.dp per item
+                    else -> {
+                        val availableWidth = (screenWidthDp - 120.dp).coerceAtLeast(600.dp)
+                        (availableWidth / 160.dp).toInt().coerceIn(4, 7)
+                    }
+                }
+                GridCells.Fixed(cols)
             }
 
             LazyVerticalGrid(
@@ -167,10 +172,10 @@ fun ShortcutItemCard(
         modifier = modifier
             .fillMaxWidth()
             .adaptiveItemEntrance(index, itemId = item.id)
-            .clip(RoundedCornerShape(28.dp))
-            .background(if (isDark) Color.White.copy(alpha = 0.05f) else Color.Black.copy(alpha = 0.03f))
+            .liquidGlass(isDark, borderRadius = 20.dp, alpha = 0.5f)
+            .clip(RoundedCornerShape(20.dp))
             .clickable { onClick() }
-            .padding(12.dp),
+            .padding(10.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         Box(

@@ -367,7 +367,7 @@ actual fun PdfViewerScreen(
                 renderInOverlayDuringTransition = true,
                 clipInOverlayDuringTransition = OverlayClip(androidx.compose.foundation.shape.RoundedCornerShape(safeCornerRadius)),
                 boundsTransform = { _, _ ->
-                    spring(dampingRatio = Spring.DampingRatioLowBouncy, stiffness = Spring.StiffnessLow)
+                    spring(dampingRatio = 0.82f, stiffness = Spring.StiffnessMediumLow)
                 },
                 resizeMode = SharedTransitionScope.ResizeMode.RemeasureToBounds
             )

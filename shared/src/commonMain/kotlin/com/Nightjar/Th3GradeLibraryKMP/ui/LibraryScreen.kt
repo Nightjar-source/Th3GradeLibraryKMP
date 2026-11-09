@@ -565,7 +565,7 @@ fun LazyGridItemScope.ContentCard(
                 ),
                 renderInOverlayDuringTransition = true,
                 clipInOverlayDuringTransition = OverlayClip(RoundedCornerShape(cardCornerRadius)),
-                boundsTransform = { _, _ -> spring(dampingRatio = Spring.DampingRatioLowBouncy, stiffness = Spring.StiffnessLow) },
+                boundsTransform = { _, _ -> spring(dampingRatio = 0.82f, stiffness = Spring.StiffnessMediumLow) },
                 resizeMode = SharedTransitionScope.ResizeMode.RemeasureToBounds
             )
         }

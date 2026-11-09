@@ -90,6 +90,17 @@ fun Modifier.elasticOverscroll(
 
             override suspend fun onPreFling(available: Velocity): Velocity {
                 val current = overscrollOffset.value
+                // When transitioning to or from PDF, reset overscroll cleanly to 0 with fluid spring
+                if (TransitionTargetTracker.isTransitionActive) {
+                    overscrollOffset.animateTo(
+                        0f,
+                        spring(
+                            dampingRatio = 0.85f,
+                            stiffness = Spring.StiffnessMediumLow
+                        )
+                    )
+                    return available
+                }
                 // Bottom edge stretch rebounds back to 0.
                 if (current < 0f) {
                     overscrollOffset.animateTo(
