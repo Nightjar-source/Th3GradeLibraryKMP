@@ -96,25 +96,30 @@ class AppFirebaseMessagingService : FirebaseMessagingService() {
 
         val data = remoteMessage.data
         val title = data["title"] ?: remoteMessage.notification?.title ?: "خبر دراسي جديد"
-        val link = data["link"] ?: ""
+        val link = data["link"] ?: data["click_url"] ?: ""
         val imageUrl = data["image_url"] ?: data["imageUrl"] ?: ""
         val pubDate = data["pubDate"] ?: ""
-        val content = data["content"] ?: remoteMessage.notification?.body ?: ""
+        val content = data["content"] ?: data["body"] ?: remoteMessage.notification?.body ?: ""
 
         val isDevTest = title.contains("المطور") || title.contains("تجريبي") || link.startsWith("dev_") || data["is_test"] == "true"
         
         // 1. Silent Local Cache Update (Smart Watermark deduplication)
         val fromTopic = remoteMessage.from ?: ""
+        val isNewsTopic = fromTopic.endsWith("/news") || data["type"] == "news" || data["channel"] == "news"
         val isKarTopic = fromTopic.endsWith("/kar") || fromTopic.endsWith("/announcements")
-        val hasKarFlag = data["is_announcement"] == "true" || 
-                         data["type"] == "announcement" || 
-                         data["type"] == "admin" || 
-                         data["type"] == "kar" || 
-                         data["channel"] == "kar" ||
-                         data.containsKey("kar") ||
-                         isKarTopic
+        val isGeneralOrAdmin = data["type"] == "general" ||
+                               data["type"] == "announcement" || 
+                               data["type"] == "admin" || 
+                               data["type"] == "kar" || 
+                               data["channel"] == "kar" ||
+                               data.containsKey("kar") ||
+                               data.containsKey("target_screen") ||
+                               isKarTopic ||
+                               (!isNewsTopic && data["type"] != "news")
+        val isAnnouncement = isGeneralOrAdmin && !isNewsTopic
+
         val isNewItem = if (!isDevTest) {
-            saveToCache(title, link, imageUrl, pubDate, content, hasKarFlag)
+            saveToCache(title, link, imageUrl, pubDate, content, isAnnouncement)
         } else false
 
         if (!isNewItem && !isDevTest) {
@@ -129,14 +134,20 @@ class AppFirebaseMessagingService : FirebaseMessagingService() {
             return
         }
 
-        if (SyncEngine.isUserOnNewsScreen && !isDevTest) {
+        if (SyncEngine.isUserOnNewsScreen && !isDevTest && !isAnnouncement) {
             // User is currently actively looking at the News screen: already displayed in front of them, ZERO redundant notifications
             return
         }
 
         if (isDevTest) {
             // Explicit developer test trigger: show immediately as a micro-thumbnail notification
-            showMicroThumbnailNotification(title, content, link, imageUrl)
+            showMicroThumbnailNotification(title, content, link, imageUrl, isNews = !isAnnouncement)
+            return
+        }
+
+        // If it's general/admin announcement, show immediately in details activity/screen
+        if (isAnnouncement) {
+            showMicroThumbnailNotification(title, content, link, imageUrl, isNews = false)
             return
         }
 
@@ -165,7 +176,7 @@ class AppFirebaseMessagingService : FirebaseMessagingService() {
                 // Bundle all accumulated items from newest to oldest into ONE notification
                 NotificationHelper.showNotifications(this, pendingTitles, pendingTitles.size, soundEnabled, microThumb)
             } else {
-                showMicroThumbnailNotification(title, content, link, imageUrl)
+                showMicroThumbnailNotification(title, content, link, imageUrl, isNews = true)
             }
         }
     }
@@ -265,9 +276,11 @@ class AppFirebaseMessagingService : FirebaseMessagingService() {
      * Micro-Thumbnail Single Notification:
      * - Micro-Thumbnail (setLargeIcon) at 48x48px RGB_565 (~3.5KB).
      * - Full Android 7.0 to Android 17 compatibility.
-     * - Uses ic_notification vector with #2563EB brand color.
+     * - Strict routing:
+     *   * If isNews is true: opens directly in external browser / Custom Tab via click_url.
+     *   * If isNews is false (general/admin/announcement): opens in DetailsActivity / NotificationDetailScreen.
      */
-    private fun showMicroThumbnailNotification(title: String, content: String, link: String, imageUrl: String) {
+    private fun showMicroThumbnailNotification(title: String, content: String, link: String, imageUrl: String, isNews: Boolean = true) {
         val notificationManager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
         createChannels(notificationManager)
 
@@ -286,9 +299,19 @@ class AppFirebaseMessagingService : FirebaseMessagingService() {
 
         val intent = Intent(this, MainActivity::class.java).apply {
             flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
-            data = Uri.parse(if (link.isNotEmpty()) "th3books://library?page=news&link=" + Uri.encode(link) else "th3books://library?page=news")
-            putExtra("page", "news")
-            if (link.isNotEmpty()) putExtra("link", link)
+            if (isNews && link.startsWith("http")) {
+                // News topic / type=news: opens directly in the browser / CustomTab
+                putExtra("open_browser_url", link)
+                data = Uri.parse(link)
+            } else {
+                // General announcement: opens in app NotificationDetailScreen
+                data = Uri.parse(if (link.isNotEmpty()) "th3books://library?page=notification_detail&link=" + Uri.encode(link) else "th3books://library?page=notification_detail")
+                putExtra("page", "notification_detail")
+                if (link.isNotEmpty()) {
+                    putExtra("link", link)
+                    putExtra("open_notification_id", link)
+                }
+            }
         }
 
         val pendingIntent = PendingIntent.getActivity(
@@ -314,7 +337,7 @@ class AppFirebaseMessagingService : FirebaseMessagingService() {
             .setContentIntent(pendingIntent)
             .setGroup(GROUP_KEY)
 
-        if (isDevNotification && cleanContent.isNotBlank()) {
+        if ((!isNews || isDevNotification) && cleanContent.isNotBlank()) {
             notificationBuilder.setContentText(cleanContent)
             notificationBuilder.setStyle(NotificationCompat.BigTextStyle().bigText(cleanContent))
         }

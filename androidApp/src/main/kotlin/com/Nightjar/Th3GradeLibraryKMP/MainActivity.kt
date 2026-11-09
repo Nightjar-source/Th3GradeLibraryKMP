@@ -805,6 +805,32 @@ class MainActivity : ComponentActivity() {
 
     private fun handleIntent(intent: Intent?) {
         if (intent == null) return
+        
+        // 1. Direct browser / Custom Tab redirection for type=news
+        val browserUrl = intent.getStringExtra("open_browser_url")
+        if (!browserUrl.isNullOrEmpty()) {
+            NotificationHelper.clearNewsNotifications(this)
+            val primaryColorHex = com.Nightjar.Th3GradeLibraryKMP.network.SyncEngine.appSettings.value.primaryColor
+            try {
+                val colorInt = android.graphics.Color.parseColor(primaryColorHex)
+                val defaultColors = CustomTabColorSchemeParams.Builder()
+                    .setToolbarColor(colorInt)
+                    .setNavigationBarColor(android.graphics.Color.TRANSPARENT)
+                    .setNavigationBarDividerColor(android.graphics.Color.TRANSPARENT)
+                    .build()
+                val customTabsIntent = CustomTabsIntent.Builder()
+                    .setDefaultColorSchemeParams(defaultColors)
+                    .setShowTitle(true)
+                    .build()
+                customTabsIntent.launchUrl(this, android.net.Uri.parse(browserUrl))
+            } catch (_: Exception) {
+                try {
+                    startActivity(Intent(Intent.ACTION_VIEW, android.net.Uri.parse(browserUrl)))
+                } catch (_: Exception) {}
+            }
+            return
+        }
+
         val targetPage = intent.getStringExtra("page")
         if (targetPage == "news" || intent.hasExtra("link") || intent.data?.getQueryParameter("page") == "news") {
             NotificationHelper.clearNewsNotifications(this)

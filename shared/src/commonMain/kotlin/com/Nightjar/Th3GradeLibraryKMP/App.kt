@@ -1241,67 +1241,100 @@ fun AppContent(
                     }
                 }
 
-        // --- Floating Alert Dynamic Island Capsule for Cloud Downloads (Root Level Overlay) ---
+        // --- Unified Top Dynamic Island Notification & Alert Capsule (All Screens Overlay) ---
         val rootActiveNotice by com.Nightjar.Th3GradeLibraryKMP.network.BookDownloadManager.activeNoticeMessage.collectAsState()
+        val currentToast = toastMessage
+        val activeIslandText = rootActiveNotice ?: currentToast
+        val isIslandVisible = activeIslandText != null
+
         Box(
             modifier = Modifier
                 .fillMaxWidth()
                 .windowInsetsPadding(WindowInsets.statusBars.add(WindowInsets.captionBar))
                 .padding(top = if (isWide) 52.dp else 58.dp)
-                .zIndex(250f).then(
+                .zIndex(900f).then(
                     if (LocalSharedTransitionScope.current != null) {
                         with(LocalSharedTransitionScope.current!!) {
-                            Modifier.renderInSharedTransitionScopeOverlay(zIndexInOverlay = 60f)
+                            Modifier.renderInSharedTransitionScopeOverlay(zIndexInOverlay = 90f)
                         }
                     } else Modifier
                 ),
             contentAlignment = Alignment.TopCenter
         ) {
             androidx.compose.animation.AnimatedVisibility(
-                visible = rootActiveNotice != null && page != "pdf" && (page == "home" || page == "list"),
+                visible = isIslandVisible,
                 enter = slideInVertically(
-                    initialOffsetY = { -it / 2 },
-                    animationSpec = spring(dampingRatio = Spring.DampingRatioLowBouncy, stiffness = 380f)
-                ) + expandVertically(expandFrom = Alignment.Top) + fadeIn(tween(220)),
+                    initialOffsetY = { -it },
+                    animationSpec = spring(dampingRatio = 0.82f, stiffness = 320f)
+                ) + expandVertically(
+                    expandFrom = Alignment.Top,
+                    animationSpec = spring(dampingRatio = 0.82f, stiffness = 320f)
+                ) + fadeIn(tween(180)),
                 exit = slideOutVertically(
-                    targetOffsetY = { -it / 2 },
-                    animationSpec = spring(dampingRatio = Spring.DampingRatioNoBouncy, stiffness = 420f)
-                ) + shrinkVertically(shrinkTowards = Alignment.Top) + fadeOut(tween(180))
+                    targetOffsetY = { -it },
+                    animationSpec = spring(dampingRatio = 0.82f, stiffness = 380f)
+                ) + shrinkVertically(
+                    shrinkTowards = Alignment.Top,
+                    animationSpec = spring(dampingRatio = 0.82f, stiffness = 380f)
+                ) + fadeOut(tween(150))
             ) {
-                val noticeText = rootActiveNotice ?: ""
-                val isDownloading = noticeText.contains("%") || noticeText.contains("جاري تنزيل") || noticeText.contains("جاري تحميل")
-                val isCompleted = noticeText.contains("اكتمل") || noticeText.contains("✓")
-                val isPaused = noticeText.contains("إيقاف") || noticeText.contains("مؤقتاً")
-                val isFailed = noticeText.contains("تعذر") || noticeText.contains("فشل") || noticeText.contains("✕")
+                val islandText = activeIslandText ?: ""
+                val isDownloading = islandText.contains("%") || islandText.contains("جاري تنزيل") || islandText.contains("جاري تحميل")
+                val isCompleted = islandText.contains("اكتمل") || islandText.contains("✓")
+                val isPaused = islandText.contains("إيقاف") || islandText.contains("مؤقتاً")
+                val isFailed = islandText.contains("تعذر") || islandText.contains("فشل") || islandText.contains("✕")
 
                 Surface(
                     shape = RoundedCornerShape(26.dp),
-                    color = MaterialTheme.colorScheme.surfaceColorAtElevation(6.dp).copy(alpha = 0.96f),
+                    color = if (rootActiveNotice != null) {
+                        MaterialTheme.colorScheme.surfaceColorAtElevation(6.dp).copy(alpha = 0.96f)
+                    } else {
+                        MaterialTheme.colorScheme.inverseSurface.copy(alpha = 0.96f)
+                    },
                     tonalElevation = 10.dp,
-                    shadowElevation = 12.dp,
+                    shadowElevation = 10.dp,
                     modifier = Modifier
-                        .widthIn(min = 180.dp, max = 500.dp)
+                        .wrapContentWidth()
+                        .widthIn(min = 160.dp, max = 520.dp)
                         .padding(horizontal = 16.dp)
                         .border(
                             width = 1.dp,
                             color = when {
-                                isCompleted -> Color(0xFF10B981).copy(alpha = 0.55f)
-                                isPaused -> Color(0xFFF59E0B).copy(alpha = 0.55f)
-                                isFailed -> MaterialTheme.colorScheme.error.copy(alpha = 0.55f)
-                                else -> MaterialTheme.colorScheme.primary.copy(alpha = 0.45f)
+                                isCompleted -> Color(0xFF10B981).copy(alpha = 0.65f)
+                                isPaused -> Color(0xFFF59E0B).copy(alpha = 0.65f)
+                                isFailed -> MaterialTheme.colorScheme.error.copy(alpha = 0.65f)
+                                rootActiveNotice != null -> MaterialTheme.colorScheme.primary.copy(alpha = 0.55f)
+                                else -> MaterialTheme.colorScheme.outline.copy(alpha = 0.25f)
                             },
                             shape = RoundedCornerShape(26.dp)
                         )
+                        .clickable(
+                            interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() },
+                            indication = null
+                        ) {
+                            if (rootActiveNotice == null) {
+                                com.Nightjar.Th3GradeLibraryKMP.ui.ToastManager.clearToast()
+                            }
+                        }
+                        .pointerInput(Unit) {
+                            detectHorizontalDragGestures(
+                                onDragStart = {
+                                    if (rootActiveNotice == null) {
+                                        com.Nightjar.Th3GradeLibraryKMP.ui.ToastManager.clearToast()
+                                    }
+                                }
+                            ) { change, _ -> change.consume() }
+                        }
                 ) {
                     Row(
                         modifier = Modifier
                             .animateContentSize(
                                 animationSpec = spring(
-                                    dampingRatio = Spring.DampingRatioLowBouncy,
-                                    stiffness = Spring.StiffnessMediumLow
+                                    dampingRatio = 0.82f,
+                                    stiffness = 320f
                                 )
                             )
-                            .padding(horizontal = 18.dp, vertical = 10.dp),
+                            .padding(horizontal = 20.dp, vertical = 11.dp),
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.Center
                     ) {
@@ -1319,7 +1352,7 @@ fun AppContent(
                                 tint = Color(0xFF10B981),
                                 modifier = Modifier.size(20.dp)
                             )
-                            Spacer(modifier = Modifier.width(8.dp))
+                            Spacer(modifier = Modifier.width(10.dp))
                         } else if (isPaused) {
                             Icon(
                                 imageVector = Icons.Default.PauseCircle,
@@ -1327,7 +1360,7 @@ fun AppContent(
                                 tint = Color(0xFFF59E0B),
                                 modifier = Modifier.size(20.dp)
                             )
-                            Spacer(modifier = Modifier.width(8.dp))
+                            Spacer(modifier = Modifier.width(10.dp))
                         } else if (isFailed) {
                             Icon(
                                 imageVector = Icons.Default.Error,
@@ -1335,16 +1368,24 @@ fun AppContent(
                                 tint = MaterialTheme.colorScheme.error,
                                 modifier = Modifier.size(20.dp)
                             )
-                            Spacer(modifier = Modifier.width(8.dp))
+                            Spacer(modifier = Modifier.width(10.dp))
+                        } else {
+                            Icon(
+                                imageVector = Icons.Default.Info,
+                                contentDescription = null,
+                                tint = if (rootActiveNotice != null) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.inversePrimary,
+                                modifier = Modifier.size(20.dp)
+                            )
+                            Spacer(modifier = Modifier.width(10.dp))
                         }
                         Text(
-                            text = noticeText,
+                            text = islandText,
                             style = MaterialTheme.typography.bodyMedium.copy(
                                 fontWeight = FontWeight.Bold,
-                                fontSize = 13.sp,
+                                fontSize = 13.5.sp,
                                 textAlign = TextAlign.Center
                             ),
-                            color = MaterialTheme.colorScheme.onSurface,
+                            color = if (rootActiveNotice != null) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.inverseOnSurface,
                             maxLines = 2,
                             overflow = TextOverflow.Ellipsis
                         )
@@ -2114,111 +2155,6 @@ fun AppContent(
         // Clear toast immediately on navigation to prevent lingering toasts from previous screens
         LaunchedEffect(page) {
             ToastManager.clearToast()
-        }
-
-        var lastNonNullToastMessage by remember { mutableStateOf<String?>(null) }
-        if (toastMessage != null) {
-            lastNonNullToastMessage = toastMessage
-        }
-
-        // Global Toast Message (Floating Dynamic Pill with animateBackOutDown)
-        androidx.compose.animation.AnimatedVisibility(
-            visible = toastMessage != null,
-            enter = (androidx.compose.animation.slideInVertically(
-                initialOffsetY = { (it * 0.5f).toInt() },
-                animationSpec = spring(dampingRatio = 0.65f, stiffness = 300f)
-            ) + androidx.compose.animation.scaleIn(
-                initialScale = 0.6f,
-                animationSpec = spring(dampingRatio = 0.65f, stiffness = 300f)
-            ) + androidx.compose.animation.expandVertically(
-                expandFrom = Alignment.Bottom,
-                animationSpec = spring(dampingRatio = 0.65f, stiffness = 300f)
-            ) + androidx.compose.animation.expandHorizontally(
-                expandFrom = Alignment.CenterHorizontally,
-                animationSpec = spring(dampingRatio = 0.65f, stiffness = 300f)
-            ) + androidx.compose.animation.fadeIn(tween(200))),
-            exit = (androidx.compose.animation.slideOutVertically(
-                targetOffsetY = { (it * 0.8f).toInt() },
-                animationSpec = spring(dampingRatio = 0.8f, stiffness = 400f)
-            ) + androidx.compose.animation.scaleOut(
-                targetScale = 0.4f,
-                animationSpec = spring(dampingRatio = 0.8f, stiffness = 400f)
-            ) + androidx.compose.animation.shrinkVertically(
-                shrinkTowards = Alignment.Bottom,
-                animationSpec = spring(dampingRatio = 0.8f, stiffness = 400f)
-            ) + androidx.compose.animation.shrinkHorizontally(
-                shrinkTowards = Alignment.CenterHorizontally,
-                animationSpec = spring(dampingRatio = 0.8f, stiffness = 400f)
-            ) + androidx.compose.animation.fadeOut(tween(150))),
-            modifier = Modifier
-                .align(Alignment.BottomCenter)
-                .windowInsetsPadding(WindowInsets.safeDrawing.only(WindowInsetsSides.Horizontal + WindowInsetsSides.Bottom))
-                .padding(bottom = (if (page == "pdf") 96.dp else if (page == "web") 24.dp else if (isWide) 24.dp else (if (bottomBannerAd != null) (animatedBannerBottomPadding + 64.dp) else 100.dp)).coerceAtLeast(0.dp))
-                .zIndex(250f)
-        ) {
-            lastNonNullToastMessage?.let { msg ->
-                Surface(
-                    shape = RoundedCornerShape(24.dp),
-                    color = MaterialTheme.colorScheme.inverseSurface,
-                    border = androidx.compose.foundation.BorderStroke(
-                        width = 1.dp,
-                        color = MaterialTheme.colorScheme.outline.copy(alpha = 0.2f)
-                    ),
-                    shadowElevation = 0.dp,
-                    modifier = Modifier
-                        .wrapContentWidth()
-                        .padding(horizontal = 16.dp)
-                        .animateContentSize(
-                            animationSpec = spring(
-                                dampingRatio = 0.82f,
-                                stiffness = 320f
-                            ),
-                            alignment = Alignment.Center
-                        )
-                        .clickable(
-                            interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() },
-                            indication = null
-                        ) { com.Nightjar.Th3GradeLibraryKMP.ui.ToastManager.clearToast() }
-                        .pointerInput(Unit) {
-                            detectHorizontalDragGestures(
-                                onDragStart = { com.Nightjar.Th3GradeLibraryKMP.ui.ToastManager.clearToast() }
-                            ) { change, _ -> change.consume() }
-                        }
-                ) {
-                    androidx.compose.animation.AnimatedContent(
-                        targetState = msg,
-                        transitionSpec = {
-                            (slideInVertically(spring(dampingRatio = 0.7f, stiffness = 250f)) { it / 2 } + fadeIn(tween(160)))
-                                .togetherWith(slideOutVertically(tween(140)) { -it / 2 } + fadeOut(tween(140)))
-                        },
-                        contentAlignment = Alignment.Center,
-                        label = "toastTextContent"
-                    ) { targetMsg ->
-                        Row(
-                            modifier = Modifier
-                                .padding(horizontal = 24.dp, vertical = 14.dp),
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.Center
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.Info,
-                                contentDescription = null,
-                                tint = MaterialTheme.colorScheme.inversePrimary,
-                                modifier = Modifier.size(20.dp)
-                            )
-                            Spacer(modifier = Modifier.width(12.dp))
-                            Text(
-                                text = targetMsg,
-                                color = MaterialTheme.colorScheme.inverseOnSurface,
-                                fontWeight = FontWeight.Bold,
-                                fontSize = 14.sp,
-                                maxLines = 1,
-                                overflow = TextOverflow.Ellipsis
-                            )
-                        }
-                    }
-                }
-            }
         }
     }
 }
