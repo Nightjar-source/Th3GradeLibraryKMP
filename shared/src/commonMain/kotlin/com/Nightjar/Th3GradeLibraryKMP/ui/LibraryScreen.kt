@@ -237,8 +237,8 @@ fun LibraryScreen(
                 val gridListFraction by animateFloatAsState(
                     targetValue = if (isGridView) 1f else 0f,
                     animationSpec = spring(
-                        dampingRatio = Spring.DampingRatioLowBouncy, // Fluid moist curve
-                        stiffness = Spring.StiffnessLow
+                        dampingRatio = 0.68f,
+                        stiffness = 380f
                     ),
                     label = "global_grid_list_fraction"
                 )
@@ -320,8 +320,8 @@ fun LibraryScreen(
                                 fadeInSpec = tween(durationMillis = 240),
                                 fadeOutSpec = tween(durationMillis = 180),
                                 placementSpec = spring(
-                                    dampingRatio = Spring.DampingRatioLowBouncy,
-                                    stiffness = Spring.StiffnessLow
+                                    dampingRatio = 0.68f,
+                                    stiffness = 380f
                                 )
                             ),
                             item = item,
@@ -536,7 +536,7 @@ fun LazyGridItemScope.ContentCard(
 ) {
     val cardCornerRadius by animateDpAsState(
         targetValue = if (isGridView) 20.dp else 24.dp,
-        animationSpec = spring(dampingRatio = Spring.DampingRatioLowBouncy, stiffness = Spring.StiffnessLow),
+        animationSpec = spring(dampingRatio = 0.7f, stiffness = 380f),
         label = "cardCornerRadius"
     )
     val sharedTransitionScope = LocalSharedTransitionScope.current
@@ -553,18 +553,18 @@ fun LazyGridItemScope.ContentCard(
                     animationSpec = androidx.compose.animation.core.tween(
                         durationMillis = 180,
                         delayMillis = 50,
-                        easing = androidx.compose.animation.core.LinearEasing
+                        easing = androidx.compose.animation.core.FastOutSlowInEasing
                     )
                 ),
                 exit = androidx.compose.animation.fadeOut(
                     animationSpec = androidx.compose.animation.core.tween(
                         durationMillis = 150,
-                        easing = androidx.compose.animation.core.LinearEasing
+                        easing = androidx.compose.animation.core.FastOutSlowInEasing
                     )
                 ),
                 renderInOverlayDuringTransition = true,
                 clipInOverlayDuringTransition = OverlayClip(RoundedCornerShape(cardCornerRadius)),
-                boundsTransform = { _, _ -> spring(dampingRatio = 0.82f, stiffness = Spring.StiffnessMediumLow) },
+                boundsTransform = { _, _ -> spring(dampingRatio = 0.7f, stiffness = 380f) },
                 resizeMode = SharedTransitionScope.ResizeMode.RemeasureToBounds
             )
         }
@@ -575,7 +575,7 @@ fun LazyGridItemScope.ContentCard(
             Modifier.sharedBounds(
                 sharedContentState = rememberSharedContentState(key = "cover_img_${item.id}"),
                 animatedVisibilityScope = animatedVisibilityScope,
-                boundsTransform = { _, _ -> spring(dampingRatio = Spring.DampingRatioLowBouncy, stiffness = Spring.StiffnessLow) },
+                boundsTransform = { _, _ -> spring(dampingRatio = 0.68f, stiffness = 390f) },
                 resizeMode = SharedTransitionScope.ResizeMode.RemeasureToBounds
             )
         }
@@ -584,8 +584,8 @@ fun LazyGridItemScope.ContentCard(
     val contentSizeModifier = if (!isReturningFromPdf && !isThisCardTarget) {
         Modifier.animateContentSize(
             animationSpec = spring(
-                dampingRatio = Spring.DampingRatioLowBouncy,
-                stiffness = Spring.StiffnessLow
+                dampingRatio = 0.68f,
+                stiffness = 380f
             )
         )
     } else Modifier
@@ -612,7 +612,7 @@ fun LazyGridItemScope.ContentCard(
                 (fadeIn(animationSpec = tween(220, delayMillis = 60)) togetherWith
                  fadeOut(animationSpec = tween(160)))
                     .using(SizeTransform(clip = false, sizeAnimationSpec = { _, _ ->
-                        spring(dampingRatio = Spring.DampingRatioLowBouncy, stiffness = Spring.StiffnessLow)
+                        spring(dampingRatio = 0.68f, stiffness = 390f)
                     }))
             },
             label = "card_grid_list_morph"

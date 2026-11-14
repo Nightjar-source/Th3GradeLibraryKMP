@@ -414,12 +414,12 @@ fun BookAccordionItem(
                             Modifier.sharedBounds(
                                 sharedContentState = rememberSharedContentState(key = rowTargetKey),
                                 animatedVisibilityScope = screenVisibilityScope,
-                                enter = fadeIn(animationSpec = tween(durationMillis = 180, delayMillis = 50, easing = LinearEasing)),
-                                exit = fadeOut(animationSpec = tween(durationMillis = 150, easing = LinearEasing)),
+                                enter = fadeIn(animationSpec = tween(durationMillis = 180, delayMillis = 50, easing = androidx.compose.animation.core.FastOutSlowInEasing)),
+                                exit = fadeOut(animationSpec = tween(durationMillis = 150, easing = androidx.compose.animation.core.FastOutSlowInEasing)),
                                 renderInOverlayDuringTransition = true,
                                 clipInOverlayDuringTransition = OverlayClip(RoundedCornerShape(14.dp)),
                                 boundsTransform = { _, _ ->
-                                    spring(dampingRatio = 0.82f, stiffness = Spring.StiffnessMediumLow)
+                                    spring(dampingRatio = 0.7f, stiffness = 380f)
                                 },
                                 resizeMode = SharedTransitionScope.ResizeMode.RemeasureToBounds
                             )

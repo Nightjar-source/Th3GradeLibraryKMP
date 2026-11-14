@@ -369,20 +369,20 @@ actual fun PdfViewerScreen(
                 enter = androidx.compose.animation.fadeIn(
                     animationSpec = androidx.compose.animation.core.tween(
                         durationMillis = 130,
-                        easing = androidx.compose.animation.core.LinearEasing
+                        easing = androidx.compose.animation.core.FastOutSlowInEasing
                     )
                 ),
                 exit = androidx.compose.animation.fadeOut(
                     animationSpec = androidx.compose.animation.core.tween(
                         durationMillis = 150,
                         delayMillis = 75,
-                        easing = androidx.compose.animation.core.LinearEasing
+                        easing = androidx.compose.animation.core.FastOutSlowInEasing
                     )
                 ),
                 renderInOverlayDuringTransition = true,
                 clipInOverlayDuringTransition = OverlayClip(androidx.compose.foundation.shape.RoundedCornerShape(safeCornerRadius)),
                 boundsTransform = { _, _ ->
-                    spring(dampingRatio = 0.82f, stiffness = Spring.StiffnessMediumLow)
+                    spring(dampingRatio = 0.7f, stiffness = 380f)
                 },
                 resizeMode = SharedTransitionScope.ResizeMode.RemeasureToBounds
             )
@@ -392,14 +392,14 @@ actual fun PdfViewerScreen(
         with(animatedVisibilityScope) {
             Modifier.animateEnterExit(
                 enter = androidx.compose.animation.fadeIn(androidx.compose.animation.core.tween(220)) + androidx.compose.animation.scaleIn(initialScale = 0.92f),
-                exit = androidx.compose.animation.fadeOut(androidx.compose.animation.core.tween(220, delayMillis = 60)) + 
+                exit = androidx.compose.animation.fadeOut(androidx.compose.animation.core.tween(220, delayMillis = 60)) +
                        androidx.compose.animation.scaleOut(
-                           targetScale = 0.28f, 
-                           animationSpec = spring(dampingRatio = 0.78f, stiffness = Spring.StiffnessMediumLow)
-                       ) + 
+                           targetScale = 0.28f,
+                           animationSpec = spring(dampingRatio = 0.7f, stiffness = 380f)
+                       ) +
                        androidx.compose.animation.slideOutVertically(
                            targetOffsetY = { it },
-                           animationSpec = spring(dampingRatio = 0.78f, stiffness = Spring.StiffnessMediumLow)
+                           animationSpec = spring(dampingRatio = 0.7f, stiffness = 380f)
                        )
             )
         }

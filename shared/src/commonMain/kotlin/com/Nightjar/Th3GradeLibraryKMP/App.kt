@@ -426,6 +426,12 @@ fun AppContent(
         
             val currentNavBar = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
             val currentStatusBar = WindowInsets.statusBars.add(WindowInsets.captionBar).asPaddingValues().calculateTopPadding()
+
+            // Dynamic per-system insets (landscape/foldables/tablets): never a fixed measurement.
+            val isCompactTopBarGlobal = isWide || heightClass == WindowHeightSizeClass.COMPACT
+            val topBarHeightGlobal = if (isCompactTopBarGlobal) 40.dp else 48.dp
+            val topBarPaddingVGlobal = if (isCompactTopBarGlobal) 4.dp else 6.dp
+            val topBarBlockHeight = currentStatusBar + topBarHeightGlobal + topBarPaddingVGlobal * 2
         
             val listBottomPadding = (if (isWide) 24.dp else 110.dp) + currentNavBar + (if (bottomBannerAd != null) 56.dp else 0.dp)
 
@@ -819,6 +825,12 @@ fun AppContent(
                             }
 
                             // 2. Detached Actions: Separate Floating Circular Buttons
+                            // Hidden while the side drawer is open so nothing overlaps the drawer panel.
+                            androidx.compose.animation.AnimatedVisibility(
+                                visible = !isDrawerOpen,
+                                enter = fadeIn(tween(180)) + scaleIn(initialScale = 0.6f, animationSpec = spring(dampingRatio = 0.6f, stiffness = 300f)),
+                                exit = fadeOut(tween(140)) + scaleOut(targetScale = 0.6f, animationSpec = tween(140))
+                            ) {
                             Row(
                                 verticalAlignment = Alignment.CenterVertically,
                                 horizontalArrangement = Arrangement.spacedBy(8.dp)
@@ -922,6 +934,7 @@ fun AppContent(
                                     }
                                 }
                             }
+                            }
                         }
                     }
                 }
@@ -947,8 +960,7 @@ fun AppContent(
                 ) {
                     val isCompactTopBar = isWide || heightClass == WindowHeightSizeClass.COMPACT
                     val searchBarHeight = if (isCompactTopBar) 44.dp else 52.dp
-                    val topBarTotalHeight = if (isCompactTopBar) 48.dp else 60.dp
-                    val searchTopPadding = topBarTotalHeight + 6.dp
+                    val searchTopPadding = topBarBlockHeight + 6.dp
                     val searchFontSize = if (isCompactTopBar) 14.sp else 15.sp
                     var isListening by remember { mutableStateOf(false) }
 
@@ -1168,7 +1180,7 @@ fun AppContent(
 
         // --- Bottom Banner Ad (Google AdMob Anchored Adaptive Banner - Positioned ABOVE bottom nav bar) ---
         androidx.compose.animation.AnimatedVisibility(
-            visible = !showOnboarding && page != "pdf" && bottomBannerAd != null,
+            visible = !showOnboarding && page != "pdf" && bottomBannerAd != null && !com.Nightjar.Th3GradeLibraryKMP.ui.TransitionTargetTracker.isTransitionActive,
             enter = slideInVertically(animationSpec = spring(dampingRatio = 0.8f, stiffness = 300f)) { it } + fadeIn(tween(250)),
             exit = slideOutVertically(animationSpec = spring(dampingRatio = 0.8f, stiffness = 300f)) { it } + fadeOut(tween(200)),
             modifier = Modifier

@@ -257,8 +257,8 @@ fun AppSettingsModal(
                     // Pure White Mode (Light only)
                     AnimatedVisibility(
                         visible = isLightThemeActive,
-                        enter = expandVertically(spring(dampingRatio = 0.8f, stiffness = 400f)) + fadeIn(),
-                        exit = shrinkVertically(spring(dampingRatio = 0.8f, stiffness = 400f)) + fadeOut()
+                        enter = expandVertically(spring(dampingRatio = 0.72f, stiffness = 380f)) + fadeIn(),
+                        exit = shrinkVertically(spring(dampingRatio = 0.72f, stiffness = 380f)) + fadeOut()
                     ) {
                         Column {
                             Text("الوضع الأبيض الصافي", fontWeight = FontWeight.Bold, fontSize = 13.sp, color = MaterialTheme.colorScheme.primary, modifier = Modifier.padding(horizontal = 20.dp))
@@ -295,8 +295,8 @@ fun AppSettingsModal(
                     // Pure Black Mode (Dark only)
                     AnimatedVisibility(
                         visible = isDarkThemeActive,
-                        enter = expandVertically(spring(dampingRatio = 0.8f, stiffness = 400f)) + fadeIn(),
-                        exit = shrinkVertically(spring(dampingRatio = 0.8f, stiffness = 400f)) + fadeOut()
+                        enter = expandVertically(spring(dampingRatio = 0.72f, stiffness = 380f)) + fadeIn(),
+                        exit = shrinkVertically(spring(dampingRatio = 0.72f, stiffness = 380f)) + fadeOut()
                     ) {
                         Column {
                             Text("الوضع الأسود النقي", fontWeight = FontWeight.Bold, fontSize = 13.sp, color = MaterialTheme.colorScheme.primary, modifier = Modifier.padding(horizontal = 20.dp))
@@ -518,8 +518,8 @@ fun NewsSettingsModal(
 
                     AnimatedVisibility(
                         visible = !batteryStateIgnored || !autoRevokeIgnored,
-                        enter = expandVertically(spring(dampingRatio = 0.8f, stiffness = 400f)) + fadeIn(),
-                        exit = shrinkVertically(spring(dampingRatio = 0.8f, stiffness = 400f)) + fadeOut()
+                        enter = expandVertically(spring(dampingRatio = 0.72f, stiffness = 380f)) + fadeIn(),
+                        exit = shrinkVertically(spring(dampingRatio = 0.72f, stiffness = 380f)) + fadeOut()
                     ) {
                         Card(
                             modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp),
