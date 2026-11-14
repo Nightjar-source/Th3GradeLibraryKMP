@@ -100,6 +100,7 @@ fun getGradientForColor(colorHex: String): Brush {
     }
 }
 
+@OptIn(androidx.compose.material3.ExperimentalMaterial3Api::class)
 @Composable
 fun AppSettingsModal(
     isOpen: Boolean,
@@ -131,42 +132,19 @@ fun AppSettingsModal(
         "#9C27B0"  // Purple
     )
 
-    AnimatedVisibility(
-        visible = isOpen,
-        enter = fadeIn(),
-        exit = fadeOut(),
-        modifier = Modifier.zIndex(300f)
-    ) {
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .background(Color.Black.copy(alpha = 0.5f))
-                .clickable { onClose() },
-            contentAlignment = Alignment.BottomCenter
+    if (isOpen) {
+        val sheetState = androidx.compose.material3.rememberModalBottomSheetState(skipPartiallyExpanded = false)
+        androidx.compose.material3.ModalBottomSheet(
+            onDismissRequest = onClose,
+            sheetState = sheetState,
+            dragHandle = { androidx.compose.material3.BottomSheetDefaults.DragHandle() },
+            containerColor = MaterialTheme.colorScheme.surface,
+            sheetMaxWidth = 480.dp // Responsive capsule for tablets/DeX
         ) {
-            Box(
-                modifier = Modifier
-                    .widthIn(max = 480.dp) // Responsive capsule for tablets/DeX
-                    .fillMaxWidth()
-                                        .clickable(enabled = false) {}
-                    .clip(RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp))
-                    .background(MaterialTheme.colorScheme.surface)
-                    .animateEnterExit(
-                        enter = slideInVertically(
-                            initialOffsetY = { it },
-                            animationSpec = androidx.compose.animation.core.spring(dampingRatio = 0.8f, stiffness = androidx.compose.animation.core.Spring.StiffnessLow)
-                        ),
-                        exit = slideOutVertically(
-                            targetOffsetY = { it },
-                            animationSpec = androidx.compose.animation.core.spring(dampingRatio = 0.9f, stiffness = androidx.compose.animation.core.Spring.StiffnessMedium)
-                        )
-                    )
-            ) {
                 Column(
                     modifier = Modifier
-                        .fillMaxWidth()
                         .verticalScroll(rememberScrollState())
-                        .padding(top = 16.dp, start = 20.dp, end = 20.dp) // Compact padding
+                        .padding(top = 4.dp, start = 20.dp, end = 20.dp) // Compact padding
                 ) {
                     Row(
                         modifier = Modifier.fillMaxWidth(),
@@ -257,8 +235,8 @@ fun AppSettingsModal(
                     // Pure White Mode (Light only)
                     AnimatedVisibility(
                         visible = isLightThemeActive,
-                        enter = expandVertically(spring(dampingRatio = 0.72f, stiffness = 380f)) + fadeIn(),
-                        exit = shrinkVertically(spring(dampingRatio = 0.72f, stiffness = 380f)) + fadeOut()
+                        enter = expandVertically(animationSpec = spring(dampingRatio = 0.72f, stiffness = 380f), clip = false),
+                        exit = shrinkVertically(animationSpec = spring(dampingRatio = 0.72f, stiffness = 380f), clip = false)
                     ) {
                         Column {
                             Text("الوضع الأبيض الصافي", fontWeight = FontWeight.Bold, fontSize = 13.sp, color = MaterialTheme.colorScheme.primary, modifier = Modifier.padding(horizontal = 20.dp))
@@ -295,8 +273,8 @@ fun AppSettingsModal(
                     // Pure Black Mode (Dark only)
                     AnimatedVisibility(
                         visible = isDarkThemeActive,
-                        enter = expandVertically(spring(dampingRatio = 0.72f, stiffness = 380f)) + fadeIn(),
-                        exit = shrinkVertically(spring(dampingRatio = 0.72f, stiffness = 380f)) + fadeOut()
+                        enter = expandVertically(animationSpec = spring(dampingRatio = 0.72f, stiffness = 380f), clip = false),
+                        exit = shrinkVertically(animationSpec = spring(dampingRatio = 0.72f, stiffness = 380f), clip = false)
                     ) {
                         Column {
                             Text("الوضع الأسود النقي", fontWeight = FontWeight.Bold, fontSize = 13.sp, color = MaterialTheme.colorScheme.primary, modifier = Modifier.padding(horizontal = 20.dp))
@@ -363,19 +341,13 @@ fun AppSettingsModal(
                     AnimatedVisibility(
                         visible = !settings.useMaterialYou,
                         enter = expandVertically(
-                            animationSpec = spring(
-                                dampingRatio = 0.82f,
-                                stiffness = androidx.compose.animation.core.Spring.StiffnessLow
-                            ),
+                            animationSpec = spring(dampingRatio = 0.72f, stiffness = 380f),
                             clip = false
-                        ) + fadeIn(androidx.compose.animation.core.tween(300)),
+                        ),
                         exit = shrinkVertically(
-                            animationSpec = spring(
-                                dampingRatio = 0.85f,
-                                stiffness = androidx.compose.animation.core.Spring.StiffnessLow
-                            ),
+                            animationSpec = spring(dampingRatio = 0.72f, stiffness = 380f),
                             clip = false
-                        ) + fadeOut(androidx.compose.animation.core.tween(220))
+                        )
                     ) {
                         Column {
                             Text("اختر لونك المفضل يدوياً:", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(horizontal = 20.dp))
@@ -423,13 +395,11 @@ fun AppSettingsModal(
                     
                     Spacer(modifier = Modifier.navigationBarsPadding().height(16.dp))
                 } // Close Column
-
-
-            }
-        }
-    }
+        } // ModalBottomSheet
+    } // if (isOpen)
 }
 
+@OptIn(androidx.compose.material3.ExperimentalMaterial3Api::class)
 @Composable
 fun NewsSettingsModal(
     isOpen: Boolean,
@@ -439,43 +409,21 @@ fun NewsSettingsModal(
     onRequestClearCache: () -> Unit
 ) {
 
-    AnimatedVisibility(
-        visible = isOpen,
-        enter = fadeIn(),
-        exit = fadeOut(),
-        modifier = Modifier.zIndex(300f)
-    ) {
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .background(Color.Black.copy(alpha = 0.5f))
-                .clickable { onClose() },
-            contentAlignment = Alignment.BottomCenter
+    if (isOpen) {
+        val sheetState = androidx.compose.material3.rememberModalBottomSheetState(skipPartiallyExpanded = false)
+        androidx.compose.material3.ModalBottomSheet(
+            onDismissRequest = onClose,
+            sheetState = sheetState,
+            dragHandle = { androidx.compose.material3.BottomSheetDefaults.DragHandle() },
+            containerColor = MaterialTheme.colorScheme.surface,
+            sheetMaxWidth = 480.dp // Responsive capsule for tablets/DeX
         ) {
-            Box(
-                modifier = Modifier
-                    .widthIn(max = 480.dp) // Responsive capsule for tablets/DeX
-                    .fillMaxWidth()
-                                        .clickable(enabled = false) {}
-                    .clip(RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp))
-                    .background(MaterialTheme.colorScheme.surface)
-                    .animateEnterExit(
-                        enter = slideInVertically(
-                            initialOffsetY = { it },
-                            animationSpec = androidx.compose.animation.core.spring(dampingRatio = 0.8f, stiffness = androidx.compose.animation.core.Spring.StiffnessLow)
-                        ),
-                        exit = slideOutVertically(
-                            targetOffsetY = { it },
-                            animationSpec = androidx.compose.animation.core.spring(dampingRatio = 0.9f, stiffness = androidx.compose.animation.core.Spring.StiffnessMedium)
-                        )
-                    )
-            ) {
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
                         .animateContentSize()
                         .verticalScroll(rememberScrollState())
-                        .padding(top = 16.dp)
+                        .padding(top = 4.dp)
                 ) {
                     Row(
                         modifier = Modifier
@@ -518,8 +466,8 @@ fun NewsSettingsModal(
 
                     AnimatedVisibility(
                         visible = !batteryStateIgnored || !autoRevokeIgnored,
-                        enter = expandVertically(spring(dampingRatio = 0.72f, stiffness = 380f)) + fadeIn(),
-                        exit = shrinkVertically(spring(dampingRatio = 0.72f, stiffness = 380f)) + fadeOut()
+                        enter = expandVertically(animationSpec = spring(dampingRatio = 0.72f, stiffness = 380f), clip = false),
+                        exit = shrinkVertically(animationSpec = spring(dampingRatio = 0.72f, stiffness = 380f), clip = false)
                     ) {
                         Card(
                             modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp),
@@ -550,8 +498,8 @@ fun NewsSettingsModal(
                                 
                                 AnimatedVisibility(
                                     visible = !batteryStateIgnored,
-                                    enter = expandVertically() + fadeIn(),
-                                    exit = shrinkVertically() + fadeOut()
+                                    enter = expandVertically(animationSpec = spring(dampingRatio = 0.72f, stiffness = 380f), clip = false),
+                                    exit = shrinkVertically(animationSpec = spring(dampingRatio = 0.72f, stiffness = 380f), clip = false)
                                 ) {
                                     // تخطي الخمول
                                     Row(
@@ -580,8 +528,8 @@ fun NewsSettingsModal(
                                 
                                 AnimatedVisibility(
                                     visible = !batteryStateIgnored && !autoRevokeIgnored,
-                                    enter = expandVertically() + fadeIn(),
-                                    exit = shrinkVertically() + fadeOut()
+                                    enter = expandVertically(animationSpec = spring(dampingRatio = 0.72f, stiffness = 380f), clip = false),
+                                    exit = shrinkVertically(animationSpec = spring(dampingRatio = 0.72f, stiffness = 380f), clip = false)
                                 ) {
                                     Column {
                                         Spacer(modifier = Modifier.height(8.dp))
@@ -592,8 +540,8 @@ fun NewsSettingsModal(
                                 
                                 AnimatedVisibility(
                                     visible = !autoRevokeIgnored,
-                                    enter = expandVertically() + fadeIn(),
-                                    exit = shrinkVertically() + fadeOut()
+                                    enter = expandVertically(animationSpec = spring(dampingRatio = 0.72f, stiffness = 380f), clip = false),
+                                    exit = shrinkVertically(animationSpec = spring(dampingRatio = 0.72f, stiffness = 380f), clip = false)
                                 ) {
                                     // منع السبات
                                     Row(
@@ -714,11 +662,8 @@ fun NewsSettingsModal(
                     }
                     Spacer(modifier = Modifier.navigationBarsPadding().height(16.dp))
                 } // Close Column
-
-
-            }
-        }
-    }
+        } // ModalBottomSheet
+    } // if (isOpen)
 }
 
 

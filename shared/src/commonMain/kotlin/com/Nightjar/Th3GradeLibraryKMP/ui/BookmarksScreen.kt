@@ -165,7 +165,7 @@ fun BookmarksScreen(
                 val expandedSet by SyncEngine.expandedBookmarks.collectAsState()
 
                 val statusBarHeight = WindowInsets.statusBars.add(WindowInsets.captionBar).asPaddingValues().calculateTopPadding()
-                val dynamicTopPadding = if (heightClass == WindowHeightSizeClass.COMPACT) statusBarHeight + 58.dp else if (isMedium) statusBarHeight + 66.dp else statusBarHeight + 76.dp
+                val dynamicTopPadding = if (heightClass == WindowHeightSizeClass.COMPACT) statusBarHeight + 52.dp else if (isMedium) statusBarHeight + 52.dp else statusBarHeight + 76.dp
 
                 val sortedBookIds = remember(groupedPages, savedItems) {
                     groupedPages.keys.sortedBy { bookId ->
@@ -205,7 +205,7 @@ fun BookmarksScreen(
                                 modifier = Modifier.animateItem(
                                     fadeInSpec = tween(220),
                                     fadeOutSpec = tween(180),
-                                    placementSpec = spring(dampingRatio = Spring.DampingRatioNoBouncy, stiffness = Spring.StiffnessMediumLow)
+                                    placementSpec = spring(dampingRatio = 0.82f, stiffness = 300f)
                                 ),
                                 item = book,
                                 pages = pages,
@@ -419,7 +419,7 @@ fun BookAccordionItem(
                                 renderInOverlayDuringTransition = true,
                                 clipInOverlayDuringTransition = OverlayClip(RoundedCornerShape(14.dp)),
                                 boundsTransform = { _, _ ->
-                                    spring(dampingRatio = 0.7f, stiffness = 380f)
+                                    spring(dampingRatio = 0.82f, stiffness = 280f)
                                 },
                                 resizeMode = SharedTransitionScope.ResizeMode.RemeasureToBounds
                             )
@@ -442,13 +442,15 @@ fun BookAccordionItem(
                     AnimatedVisibility(
                         visible = isVisible,
                         enter = expandVertically(
-                            animationSpec = spring(dampingRatio = Spring.DampingRatioLowBouncy, stiffness = Spring.StiffnessLow),
-                            expandFrom = Alignment.Top
-                        ) + fadeIn(tween(180)),
+                            animationSpec = spring(dampingRatio = 0.72f, stiffness = 380f),
+                            expandFrom = Alignment.Top,
+                            clip = false
+                        ),
                         exit = shrinkVertically(
-                            animationSpec = spring(dampingRatio = Spring.DampingRatioLowBouncy, stiffness = Spring.StiffnessLow),
-                            shrinkTowards = Alignment.Top
-                        ) + fadeOut(tween(140))
+                            animationSpec = spring(dampingRatio = 0.72f, stiffness = 380f),
+                            shrinkTowards = Alignment.Top,
+                            clip = false
+                        )
                     ) {
                         Row(
                             modifier = Modifier

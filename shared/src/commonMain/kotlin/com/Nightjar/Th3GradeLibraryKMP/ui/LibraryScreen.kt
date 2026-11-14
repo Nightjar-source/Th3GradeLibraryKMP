@@ -115,7 +115,7 @@ fun LibraryScreen(
     ) {
         val isWide = widthClass != WindowWidthSizeClass.COMPACT
         val statusBarHeight = WindowInsets.statusBars.add(WindowInsets.captionBar).asPaddingValues().calculateTopPadding()
-        val dynamicTopPadding = if (heightClass == WindowHeightSizeClass.COMPACT) statusBarHeight + 58.dp else if (isWide) statusBarHeight + 66.dp else statusBarHeight + 76.dp
+        val dynamicTopPadding = if (heightClass == WindowHeightSizeClass.COMPACT) statusBarHeight + 52.dp else if (isWide) statusBarHeight + 52.dp else statusBarHeight + 76.dp
         Column(modifier = Modifier.fillMaxSize()) {
             if (category == null) {
                 // Home/Categories view
@@ -234,15 +234,6 @@ fun LibraryScreen(
 
 
 
-                val gridListFraction by animateFloatAsState(
-                    targetValue = if (isGridView) 1f else 0f,
-                    animationSpec = spring(
-                        dampingRatio = 0.68f,
-                        stiffness = 380f
-                    ),
-                    label = "global_grid_list_fraction"
-                )
-
                 if (filteredList.isEmpty()) {
                     LaunchedEffect(Unit) {
                         onScrollableStateChanged(false)
@@ -273,8 +264,8 @@ fun LibraryScreen(
                     val reachabilityZone = if (!isWide && !isCompactHeight) 40.dp else 0.dp
 
                     val baseTopPadding = when {
-                        isCompactHeight -> statusBarHeight + 58.dp
-                        isWide -> statusBarHeight + 66.dp
+                        isCompactHeight -> statusBarHeight + 52.dp
+                        isWide -> statusBarHeight + 52.dp
                         else -> statusBarHeight + 76.dp + reachabilityZone
                     }
                     val dynamicTopPadding = baseTopPadding
@@ -320,8 +311,8 @@ fun LibraryScreen(
                                 fadeInSpec = tween(durationMillis = 240),
                                 fadeOutSpec = tween(durationMillis = 180),
                                 placementSpec = spring(
-                                    dampingRatio = 0.68f,
-                                    stiffness = 380f
+                                    dampingRatio = 0.82f,
+                                    stiffness = 300f
                                 )
                             ),
                             item = item,
@@ -536,7 +527,7 @@ fun LazyGridItemScope.ContentCard(
 ) {
     val cardCornerRadius by animateDpAsState(
         targetValue = if (isGridView) 20.dp else 24.dp,
-        animationSpec = spring(dampingRatio = 0.7f, stiffness = 380f),
+        animationSpec = spring(dampingRatio = 0.82f, stiffness = 280f),
         label = "cardCornerRadius"
     )
     val sharedTransitionScope = LocalSharedTransitionScope.current
@@ -564,7 +555,7 @@ fun LazyGridItemScope.ContentCard(
                 ),
                 renderInOverlayDuringTransition = true,
                 clipInOverlayDuringTransition = OverlayClip(RoundedCornerShape(cardCornerRadius)),
-                boundsTransform = { _, _ -> spring(dampingRatio = 0.7f, stiffness = 380f) },
+                boundsTransform = { _, _ -> spring(dampingRatio = 0.82f, stiffness = 280f) },
                 resizeMode = SharedTransitionScope.ResizeMode.RemeasureToBounds
             )
         }
@@ -575,7 +566,7 @@ fun LazyGridItemScope.ContentCard(
             Modifier.sharedBounds(
                 sharedContentState = rememberSharedContentState(key = "cover_img_${item.id}"),
                 animatedVisibilityScope = animatedVisibilityScope,
-                boundsTransform = { _, _ -> spring(dampingRatio = 0.68f, stiffness = 390f) },
+                boundsTransform = { _, _ -> spring(dampingRatio = 0.82f, stiffness = 280f) },
                 resizeMode = SharedTransitionScope.ResizeMode.RemeasureToBounds
             )
         }
@@ -584,8 +575,8 @@ fun LazyGridItemScope.ContentCard(
     val contentSizeModifier = if (!isReturningFromPdf && !isThisCardTarget) {
         Modifier.animateContentSize(
             animationSpec = spring(
-                dampingRatio = 0.68f,
-                stiffness = 380f
+                dampingRatio = 0.82f,
+                stiffness = 300f
             )
         )
     } else Modifier
@@ -612,7 +603,7 @@ fun LazyGridItemScope.ContentCard(
                 (fadeIn(animationSpec = tween(220, delayMillis = 60)) togetherWith
                  fadeOut(animationSpec = tween(160)))
                     .using(SizeTransform(clip = false, sizeAnimationSpec = { _, _ ->
-                        spring(dampingRatio = 0.68f, stiffness = 390f)
+                        spring(dampingRatio = 0.82f, stiffness = 280f)
                     }))
             },
             label = "card_grid_list_morph"

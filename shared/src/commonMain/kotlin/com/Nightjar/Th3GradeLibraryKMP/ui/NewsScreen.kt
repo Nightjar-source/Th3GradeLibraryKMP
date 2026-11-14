@@ -252,7 +252,7 @@ fun NewsScreen(
                     ) {
                         item(key = "top_spacer", contentType = "spacer", span = { androidx.compose.foundation.lazy.grid.GridItemSpan(maxLineSpan) }) {
                             val statusBarHeight = WindowInsets.statusBars.add(WindowInsets.captionBar).asPaddingValues().calculateTopPadding()
-                            val dynamicTopPadding = if (heightClass == WindowHeightSizeClass.COMPACT) statusBarHeight + 58.dp else if (isMedium) statusBarHeight + 66.dp else statusBarHeight + 76.dp
+                            val dynamicTopPadding = if (heightClass == WindowHeightSizeClass.COMPACT) statusBarHeight + 52.dp else if (isMedium) statusBarHeight + 52.dp else statusBarHeight + 76.dp
                             Spacer(modifier = Modifier.height(dynamicTopPadding))
                         }
                         
@@ -308,7 +308,7 @@ fun NewsScreen(
                                     modifier = Modifier
                                         .animateItem(
                                             fadeInSpec = tween(500),
-                                            placementSpec = spring(stiffness = Spring.StiffnessMediumLow),
+                                            placementSpec = spring(dampingRatio = 0.82f, stiffness = 300f),
                                             fadeOutSpec = tween(200)
                                         )
                                         .adaptiveItemEntrance(index, itemId = newsItem.id),
@@ -542,7 +542,7 @@ fun NewsCardSwipeable(
             cardModifier = cardModifier.sharedBounds(
                 sharedContentState = rememberSharedContentState(key = "news-${news.link}"),
                 animatedVisibilityScope = animatedVisibilityScope,
-                boundsTransform = { _, _ -> spring(dampingRatio = 0.7f, stiffness = 380f) },
+                boundsTransform = { _, _ -> spring(dampingRatio = 0.82f, stiffness = 280f) },
                 renderInOverlayDuringTransition = false
             )
         }

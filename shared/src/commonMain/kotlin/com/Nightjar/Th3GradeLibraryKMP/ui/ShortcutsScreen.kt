@@ -81,7 +81,7 @@ fun ShortcutsScreen(
                 .fillMaxSize()
         ) {
             val statusBarHeight = WindowInsets.statusBars.add(WindowInsets.captionBar).asPaddingValues().calculateTopPadding()
-            val dynamicTopPadding = if (heightClass == WindowHeightSizeClass.COMPACT) statusBarHeight + 58.dp else if (isWide) statusBarHeight + 66.dp else statusBarHeight + 76.dp
+            val dynamicTopPadding = if (heightClass == WindowHeightSizeClass.COMPACT) statusBarHeight + 52.dp else if (isWide) statusBarHeight + 52.dp else statusBarHeight + 76.dp
 
             val isNavigatingBack = com.Nightjar.Th3GradeLibraryKMP.theme.LocalIsNavigatingBack.current
             LaunchedEffect(isNavigatingBack) {
@@ -139,8 +139,8 @@ fun ShortcutsScreen(
                             fadeInSpec = tween(durationMillis = 240),
                             fadeOutSpec = tween(durationMillis = 180),
                             placementSpec = spring(
-                                dampingRatio = Spring.DampingRatioLowBouncy,
-                                stiffness = Spring.StiffnessLow
+                                dampingRatio = 0.82f,
+                                stiffness = 300f
                             )
                         ),
                         item = item,

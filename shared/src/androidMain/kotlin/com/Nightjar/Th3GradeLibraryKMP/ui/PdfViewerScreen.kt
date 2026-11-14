@@ -382,7 +382,7 @@ actual fun PdfViewerScreen(
                 renderInOverlayDuringTransition = true,
                 clipInOverlayDuringTransition = OverlayClip(androidx.compose.foundation.shape.RoundedCornerShape(safeCornerRadius)),
                 boundsTransform = { _, _ ->
-                    spring(dampingRatio = 0.7f, stiffness = 380f)
+                    spring(dampingRatio = 0.82f, stiffness = 280f)
                 },
                 resizeMode = SharedTransitionScope.ResizeMode.RemeasureToBounds
             )
@@ -395,11 +395,11 @@ actual fun PdfViewerScreen(
                 exit = androidx.compose.animation.fadeOut(androidx.compose.animation.core.tween(220, delayMillis = 60)) +
                        androidx.compose.animation.scaleOut(
                            targetScale = 0.28f,
-                           animationSpec = spring(dampingRatio = 0.7f, stiffness = 380f)
+                           animationSpec = spring(dampingRatio = 0.82f, stiffness = 280f)
                        ) +
                        androidx.compose.animation.slideOutVertically(
                            targetOffsetY = { it },
-                           animationSpec = spring(dampingRatio = 0.7f, stiffness = 380f)
+                           animationSpec = spring(dampingRatio = 0.82f, stiffness = 280f)
                        )
             )
         }
