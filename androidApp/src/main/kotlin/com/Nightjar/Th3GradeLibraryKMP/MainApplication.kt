@@ -22,16 +22,16 @@ class MainApplication : LibraryApplication(), SingletonImageLoader.Factory {
         return ImageLoader.Builder(context)
             .memoryCache {
                 MemoryCache.Builder()
-                    // Limit RAM cache to 25% of available application memory
-                    .maxSizePercent(context, 0.25)
+                    // Strict Android guideline: Limit RAM cache to 15% with weak references to prevent background memory pressure
+                    .maxSizePercent(context, 0.15)
                     .weakReferencesEnabled(true)
                     .build()
             }
             .diskCache {
                 DiskCache.Builder()
                     .directory(context.cacheDir.resolve("image_cache").path.toPath())
-                    // Limit disk cache to 50MB to keep app size minimal
-                    .maxSizeBytes(50 * 1024 * 1024L)
+                    // Dynamic disk allocation based on available storage, allowing rich offline caching without rigid arbitrary limit
+                    .maxSizePercent(0.05)
                     .build()
             }
             .crossfade(true)
