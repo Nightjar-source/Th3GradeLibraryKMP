@@ -42,7 +42,7 @@ object AdMobManager {
 
     private var interstitialAd: InterstitialAd? = null
     private var openCounter = 0
-    private const val CAPPING_FREQUENCY = 3 // Show interstitial once every 3 book opens
+    private const val CAPPING_FREQUENCY = 4 // Show interstitial once every 4 book opens (Google AdMob Policy compliance)
 
     fun initialize(context: Context) {
         try {
