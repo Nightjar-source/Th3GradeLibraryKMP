@@ -23,7 +23,8 @@ val LocalSystemStretchOverscroll = compositionLocalOf { false }
 
 /**
  * Elastic bounce/overscroll effect on vertical scrolling (custom rubber band).
- * Custom built smooth rubber band effect — used only where the OS has no native stretch (pre-Android 12).
+ * Top edge: One UI-style pull-down reachability that stays held mid-screen (restore).
+ * Bottom edge: on Android 12+ the system stretch handles the bounce; pre-12 falls back to custom rubber-band.
  */
 fun Modifier.elasticOverscroll(
     maxStretchRatio: Float = 0.32f,
@@ -32,9 +33,7 @@ fun Modifier.elasticOverscroll(
 ): Modifier = composed {
     val isLowEnd = com.Nightjar.Th3GradeLibraryKMP.theme.LocalIsLowEndDevice.current
     if (isLowEnd) return@composed this
-
-    // Android 12+ already draws the native stretch overscroll — never double it.
-    if (LocalSystemStretchOverscroll.current) return@composed this
+    val systemStretch = LocalSystemStretchOverscroll.current
 
     var componentHeight by remember { mutableStateOf(0f) }
     val overscrollOffset = remember { Animatable(0f) }
@@ -86,6 +85,7 @@ fun Modifier.elasticOverscroll(
                         scope.launch { overscrollOffset.snapTo(newTarget) }
                         return Offset(0f, available.y)
                     } else {
+                        if (systemStretch) return Offset.Zero // Android 12+: system stretch owns the bottom edge — don't double it
                         // Bottom edge rubber-band stretch
                         val progress = (kotlin.math.abs(current) / maxOffset).coerceIn(0f, 1f)
                         val resistance = 0.55f * (1f - progress * 0.75f)
@@ -110,8 +110,8 @@ fun Modifier.elasticOverscroll(
                     )
                     return available
                 }
-                // Bottom edge stretch rebounds back to 0 — creamy settle.
-                if (current < 0f) {
+                // Bottom edge stretch rebounds back to 0 (pre-Android 12 only — Android 12+ system stretch owns it).
+                if (current < 0f && !systemStretch) {
                     overscrollOffset.animateTo(
                         0f,
                         spring(

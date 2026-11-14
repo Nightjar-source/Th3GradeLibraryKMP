@@ -16,14 +16,15 @@
 # 3. حماية نماذج البيانات الخاصة بمكتبة RSS 
 -keep class com.prof18.rssparser.model.** { *; }
 
-# 3.5 حماية مكتبات النظام الأساسية التي تعتمد على Reflection (WorkManager, Room, Startup, Coil, DataStore)
--keep class androidx.work.** { *; }
--keep class androidx.room.** { *; }
--keep class androidx.sqlite.** { *; }
--keep class androidx.startup.** { *; }
--keep class androidx.datastore.** { *; }
--keep class androidx.glance.** { *; }
--keep class coil3.** { *; }
+# 3.5 مكتبات النظام التي تعتمد على Reflection (WorkManager, Room, Startup, Coil, DataStore, Glance)
+# تُحمّل مكتباتها Consumer Rules بنفسها — لا حاجة لقواعد keep للحزم كاملة.
+-keep class androidx.work.impl.WorkDatabase_Impl { *; }
+-keepclassmembers class * extends androidx.work.Worker {
+    <init>(android.content.Context, androidx.work.WorkerParameters);
+}
+-keepclassmembers class * extends androidx.work.ListenableWorker {
+    <init>(android.content.Context, androidx.work.WorkerParameters);
+}
 -keepclassmembers class * extends androidx.compose.ui.graphics.painter.Painter { *; }
 
 # 4. الحفاظ على أسماء مكونات Coroutines الحساسة
@@ -44,5 +45,14 @@
 # يزيل تلقائياً Verbose (2), Debug (3), Info (4) ويبقي التحذيرات والأخطاء Warn (5) و Error (6)
 -maximumremovedandroidloglevel 4
 
-# Keep all application classes
--keep class com.Nightjar.Th3GradeLibraryKMP.** { *; }
+# مكوّنات التطبيق المسجلة في الـ Manifest (الـ Manifest لا يُعاد كتابته بواسطة R8 فلازم تُحفظ أسماءها)
+-keep class com.Nightjar.Th3GradeLibraryKMP.MainApplication { *; }
+-keep class com.Nightjar.Th3GradeLibraryKMP.MainActivity { *; }
+-keep class com.Nightjar.Th3GradeLibraryKMP.HeartbeatReceiver { *; }
+-keep class com.Nightjar.Th3GradeLibraryKMP.BootReceiver { *; }
+-keep class com.Nightjar.Th3GradeLibraryKMP.widget.LibraryGlanceWidgetReceiver { *; }
+-keep class com.Nightjar.Th3GradeLibraryKMP.AppCleanupService { *; }
+-keep class com.Nightjar.Th3GradeLibraryKMP.LibraryAppFunctionService { *; }
+
+# Keep فقط ما تحتاجه Serialization / reflection صراحةً — لا شيء آخر.
+# الكلاسات الأخرى كلها تمر عبر R8 الكامل (Shrinking + 25%+ optimization/obfuscation).

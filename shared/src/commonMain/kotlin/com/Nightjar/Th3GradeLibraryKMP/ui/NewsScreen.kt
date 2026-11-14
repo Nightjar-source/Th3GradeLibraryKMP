@@ -234,10 +234,7 @@ fun NewsScreen(
                     val density = androidx.compose.ui.platform.LocalDensity.current
                     val screenWidthDp = with(density) { windowInfo.containerSize.width.toDp() }
                     val dynamicNewsColumns = remember(widthClass, screenWidthDp) {
-                        val targetNewsWidth = 380.dp
-                        val availableWidth = (screenWidthDp - (if (isMedium) 120.dp else 32.dp)).coerceAtLeast(280.dp)
-                        val computedCols = (availableWidth / targetNewsWidth).toInt().coerceIn(1, 3)
-                        GridCells.Fixed(computedCols)
+                        com.Nightjar.Th3GradeLibraryKMP.adaptation.AdaptiveLayout.newsColumns(widthClass, screenWidthDp)
                     }
                     LazyVerticalGrid(
                         columns = dynamicNewsColumns,
@@ -252,7 +249,7 @@ fun NewsScreen(
                     ) {
                         item(key = "top_spacer", contentType = "spacer", span = { androidx.compose.foundation.lazy.grid.GridItemSpan(maxLineSpan) }) {
                             val statusBarHeight = WindowInsets.statusBars.add(WindowInsets.captionBar).asPaddingValues().calculateTopPadding()
-                            val dynamicTopPadding = statusBarHeight + com.Nightjar.Th3GradeLibraryKMP.theme.resolveTopBarHeight(heightClass, isMedium) + 12.dp
+                            val dynamicTopPadding = statusBarHeight + com.Nightjar.Th3GradeLibraryKMP.adaptation.AdaptiveLayout.topBarHeight(heightClass, widthClass) + 12.dp
                             Spacer(modifier = Modifier.height(dynamicTopPadding))
                         }
                         

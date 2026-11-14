@@ -115,7 +115,7 @@ fun LibraryScreen(
     ) {
         val isWide = widthClass != WindowWidthSizeClass.COMPACT
         val statusBarHeight = WindowInsets.statusBars.add(WindowInsets.captionBar).asPaddingValues().calculateTopPadding()
-        val dynamicTopPadding = statusBarHeight + com.Nightjar.Th3GradeLibraryKMP.theme.resolveTopBarHeight(heightClass, isWide) + 12.dp
+        val dynamicTopPadding = statusBarHeight + com.Nightjar.Th3GradeLibraryKMP.adaptation.AdaptiveLayout.topBarHeight(heightClass, widthClass) + 12.dp
         Column(modifier = Modifier.fillMaxSize()) {
             if (category == null) {
                 // Home/Categories view
@@ -263,26 +263,10 @@ fun LibraryScreen(
                     val reachabilityZone = if (!isWide && !isCompactHeight) 40.dp else 0.dp
 
                     val dynamicTopPadding = statusBarHeight +
-                        com.Nightjar.Th3GradeLibraryKMP.theme.resolveTopBarHeight(heightClass, isWide) + 12.dp + reachabilityZone
+                        com.Nightjar.Th3GradeLibraryKMP.adaptation.AdaptiveLayout.topBarHeight(heightClass, widthClass) + 12.dp + reachabilityZone
 
                     val dynamicGridColumns = remember(widthClass, screenWidthDp, isGridView) {
-                        if (isGridView) {
-                            val cols = when {
-                                // 1. Compact Width (< 600dp): Phones in portrait, fold cover, split screen -> strictly 2 columns!
-                                widthClass == WindowWidthSizeClass.COMPACT -> 2
-                                // 2. Medium Width (600dp - 839dp): Phones in landscape, small fold open -> strictly 4 columns!
-                                widthClass == WindowWidthSizeClass.MEDIUM -> 4
-                                // 3. Expanded Width (>= 840dp): Tablets, desktop/DeX -> scale preserving standard card width
-                                else -> {
-                                    val availableWidth = (screenWidthDp - 120.dp).coerceAtLeast(600.dp)
-                                    (availableWidth / 175.dp).toInt().coerceIn(4, 7)
-                                }
-                            }
-                            GridCells.Fixed(cols)
-                        } else {
-                            val cols = if (widthClass == WindowWidthSizeClass.EXPANDED) 2 else 1
-                            GridCells.Fixed(cols)
-                        }
+                        com.Nightjar.Th3GradeLibraryKMP.adaptation.AdaptiveLayout.libraryColumns(widthClass, screenWidthDp, isGridView)
                     }
 
                 LazyVerticalGrid(

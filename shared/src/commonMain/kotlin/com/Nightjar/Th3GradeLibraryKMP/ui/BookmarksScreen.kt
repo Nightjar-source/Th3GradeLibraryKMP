@@ -165,7 +165,7 @@ fun BookmarksScreen(
                 val expandedSet by SyncEngine.expandedBookmarks.collectAsState()
 
                 val statusBarHeight = WindowInsets.statusBars.add(WindowInsets.captionBar).asPaddingValues().calculateTopPadding()
-                val dynamicTopPadding = statusBarHeight + com.Nightjar.Th3GradeLibraryKMP.theme.resolveTopBarHeight(heightClass, isMedium) + 12.dp
+                val dynamicTopPadding = statusBarHeight + com.Nightjar.Th3GradeLibraryKMP.adaptation.AdaptiveLayout.topBarHeight(heightClass, widthClass) + 12.dp
 
                 val sortedBookIds = remember(groupedPages, savedItems) {
                     groupedPages.keys.sortedBy { bookId ->

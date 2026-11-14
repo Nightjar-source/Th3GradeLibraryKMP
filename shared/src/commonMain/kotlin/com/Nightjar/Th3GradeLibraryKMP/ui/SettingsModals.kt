@@ -3,7 +3,6 @@ package com.Nightjar.Th3GradeLibraryKMP.ui
 import com.Nightjar.Th3GradeLibraryKMP.theme.expressiveButtonMorph
 import com.Nightjar.Th3GradeLibraryKMP.theme.contrastingTextColor
 import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInVertically
@@ -133,11 +132,11 @@ fun AppSettingsModal(
     )
 
     if (isOpen) {
-        val sheetState = androidx.compose.material3.rememberModalBottomSheetState(skipPartiallyExpanded = false)
+        val sheetState = androidx.compose.material3.rememberModalBottomSheetState(skipPartiallyExpanded = true)
         androidx.compose.material3.ModalBottomSheet(
             onDismissRequest = onClose,
             sheetState = sheetState,
-            dragHandle = { androidx.compose.material3.BottomSheetDefaults.DragHandle() },
+            dragHandle = null,
             containerColor = MaterialTheme.colorScheme.surface,
             sheetMaxWidth = 480.dp // Responsive capsule for tablets/DeX
         ) {
@@ -410,18 +409,17 @@ fun NewsSettingsModal(
 ) {
 
     if (isOpen) {
-        val sheetState = androidx.compose.material3.rememberModalBottomSheetState(skipPartiallyExpanded = false)
+        val sheetState = androidx.compose.material3.rememberModalBottomSheetState(skipPartiallyExpanded = true)
         androidx.compose.material3.ModalBottomSheet(
             onDismissRequest = onClose,
             sheetState = sheetState,
-            dragHandle = { androidx.compose.material3.BottomSheetDefaults.DragHandle() },
+            dragHandle = null,
             containerColor = MaterialTheme.colorScheme.surface,
             sheetMaxWidth = 480.dp // Responsive capsule for tablets/DeX
         ) {
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .animateContentSize()
                         .verticalScroll(rememberScrollState())
                         .padding(top = 4.dp)
                 ) {

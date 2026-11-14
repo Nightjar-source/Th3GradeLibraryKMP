@@ -65,25 +65,6 @@ fun parseHexColor(hex: String): Color {
 
 val LocalIsLowEndDevice = compositionLocalOf { false }
 
-/**
- * M3-aligned title-bar heights (Material 3 small TopAppBar = 64.dp on large windows).
- * Phone landscape (compact height) -> 56.dp; normal phone portrait -> 48.dp;
- * tablets / desktops / wide windows (isWide) -> 64.dp (M3 recommended).
- */
-fun resolveTopBarHeight(
-    heightClass: androidx.window.core.layout.WindowHeightSizeClass,
-    isWide: Boolean
-): Dp = when {
-    heightClass == androidx.window.core.layout.WindowHeightSizeClass.COMPACT -> 56.dp
-    isWide -> 64.dp
-    else -> 48.dp
-}
-
-/** Vertical padding inside the floating title bar for the given window height class. */
-fun resolveTopBarPaddingV(
-    heightClass: androidx.window.core.layout.WindowHeightSizeClass
-): Dp = if (heightClass == androidx.window.core.layout.WindowHeightSizeClass.COMPACT) 4.dp else 6.dp
-
 
 val LocalIsNavigatingBack = compositionLocalOf { false }
 val LocalSeenEntranceItems = compositionLocalOf<androidx.compose.runtime.snapshots.SnapshotStateMap<String, Boolean>?> { null }

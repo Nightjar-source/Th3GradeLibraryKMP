@@ -64,7 +64,7 @@ fun AboutScreen(
     ) {
         
         val statusBarHeight = WindowInsets.statusBars.add(WindowInsets.captionBar).asPaddingValues().calculateTopPadding()
-        val dynamicTopPadding = statusBarHeight + com.Nightjar.Th3GradeLibraryKMP.theme.resolveTopBarHeight(heightClass, isWide) + 12.dp
+        val dynamicTopPadding = statusBarHeight + com.Nightjar.Th3GradeLibraryKMP.adaptation.AdaptiveLayout.topBarHeight(heightClass, adaptiveInfo.windowSizeClass.windowWidthSizeClass) + 12.dp
 
         Column(
             modifier = Modifier

@@ -81,7 +81,7 @@ fun ShortcutsScreen(
                 .fillMaxSize()
         ) {
             val statusBarHeight = WindowInsets.statusBars.add(WindowInsets.captionBar).asPaddingValues().calculateTopPadding()
-            val dynamicTopPadding = statusBarHeight + com.Nightjar.Th3GradeLibraryKMP.theme.resolveTopBarHeight(heightClass, isWide) + 12.dp
+            val dynamicTopPadding = statusBarHeight + com.Nightjar.Th3GradeLibraryKMP.adaptation.AdaptiveLayout.topBarHeight(heightClass, widthClass) + 12.dp
 
             val isNavigatingBack = com.Nightjar.Th3GradeLibraryKMP.theme.LocalIsNavigatingBack.current
             LaunchedEffect(isNavigatingBack) {
@@ -92,18 +92,7 @@ fun ShortcutsScreen(
 
             val isCompactHeight = heightClass == WindowHeightSizeClass.COMPACT
             val dynamicShortcutColumns = remember(widthClass, heightClass, screenWidthDp) {
-                val cols = when {
-                    // Split screen or compact floating popups (< 600dp): strictly 2 columns!
-                    widthClass == WindowWidthSizeClass.COMPACT || screenWidthDp < 600.dp -> 2
-                    // Medium width / unfolded / landscape (600dp - 839dp): 4 columns
-                    widthClass == WindowWidthSizeClass.MEDIUM || screenWidthDp < 840.dp -> 4
-                    // Expanded tablets / desktop: scale based on 160.dp per item
-                    else -> {
-                        val availableWidth = (screenWidthDp - 120.dp).coerceAtLeast(600.dp)
-                        (availableWidth / 160.dp).toInt().coerceIn(4, 7)
-                    }
-                }
-                GridCells.Fixed(cols)
+                com.Nightjar.Th3GradeLibraryKMP.adaptation.AdaptiveLayout.shortcutsColumns(widthClass, screenWidthDp)
             }
 
             LazyVerticalGrid(
