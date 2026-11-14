@@ -115,7 +115,7 @@ fun LibraryScreen(
     ) {
         val isWide = widthClass != WindowWidthSizeClass.COMPACT
         val statusBarHeight = WindowInsets.statusBars.add(WindowInsets.captionBar).asPaddingValues().calculateTopPadding()
-        val dynamicTopPadding = if (heightClass == WindowHeightSizeClass.COMPACT) statusBarHeight + 52.dp else if (isWide) statusBarHeight + 52.dp else statusBarHeight + 76.dp
+        val dynamicTopPadding = statusBarHeight + com.Nightjar.Th3GradeLibraryKMP.theme.resolveTopBarHeight(heightClass, isWide) + 12.dp
         Column(modifier = Modifier.fillMaxSize()) {
             if (category == null) {
                 // Home/Categories view
@@ -260,15 +260,10 @@ fun LibraryScreen(
                     val density = androidx.compose.ui.platform.LocalDensity.current
                     val screenWidthDp = with(density) { windowInfo.containerSize.width.toDp() }
                     val isCompactHeight = heightClass == WindowHeightSizeClass.COMPACT
-                    val isCompactTopBar = isWide || isCompactHeight
                     val reachabilityZone = if (!isWide && !isCompactHeight) 40.dp else 0.dp
 
-                    val baseTopPadding = when {
-                        isCompactHeight -> statusBarHeight + 52.dp
-                        isWide -> statusBarHeight + 52.dp
-                        else -> statusBarHeight + 76.dp + reachabilityZone
-                    }
-                    val dynamicTopPadding = baseTopPadding
+                    val dynamicTopPadding = statusBarHeight +
+                        com.Nightjar.Th3GradeLibraryKMP.theme.resolveTopBarHeight(heightClass, isWide) + 12.dp + reachabilityZone
 
                     val dynamicGridColumns = remember(widthClass, screenWidthDp, isGridView) {
                         if (isGridView) {

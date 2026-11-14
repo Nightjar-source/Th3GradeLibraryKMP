@@ -428,9 +428,8 @@ fun AppContent(
             val currentStatusBar = WindowInsets.statusBars.add(WindowInsets.captionBar).asPaddingValues().calculateTopPadding()
 
             // Dynamic per-system insets (landscape/foldables/tablets): never a fixed measurement.
-            val isCompactTopBarGlobal = isWide || heightClass == WindowHeightSizeClass.COMPACT
-            val topBarHeightGlobal = if (isCompactTopBarGlobal) 40.dp else 48.dp
-            val topBarPaddingVGlobal = if (isCompactTopBarGlobal) 4.dp else 6.dp
+            val topBarHeightGlobal = com.Nightjar.Th3GradeLibraryKMP.theme.resolveTopBarHeight(heightClass, isWide)
+            val topBarPaddingVGlobal = com.Nightjar.Th3GradeLibraryKMP.theme.resolveTopBarPaddingV(heightClass)
             val topBarBlockHeight = currentStatusBar + topBarHeightGlobal + topBarPaddingVGlobal * 2
         
             val listBottomPadding = (if (isWide) 24.dp else 110.dp) + currentNavBar + (if (bottomBannerAd != null) 56.dp else 0.dp)
@@ -701,9 +700,8 @@ fun AppContent(
                         } else Modifier
                     )
                 ) {
-                    val isCompactTopBar = isWide || heightClass == WindowHeightSizeClass.COMPACT
-                    val topBarHeight = if (isCompactTopBar) 40.dp else 48.dp
-                    val topBarPaddingV = if (isCompactTopBar) 4.dp else 6.dp
+                    val topBarHeight = topBarHeightGlobal
+                    val topBarPaddingV = topBarPaddingVGlobal
                     Box(
                         modifier = Modifier
                             .fillMaxWidth()
