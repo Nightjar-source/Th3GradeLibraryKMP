@@ -25,11 +25,18 @@ fun Modifier.elasticOverscroll(
     bottomEnabled: Boolean = true
 ): Modifier = composed {
     val isLowEnd = com.Nightjar.Th3GradeLibraryKMP.theme.LocalIsLowEndDevice.current
-    if (isLowEnd) return@composed this
 
     var componentHeight by remember { mutableStateOf(0f) }
     val overscrollOffset = remember { Animatable(0f) }
     val scope = rememberCoroutineScope()
+
+    // Smooth Spring physics matching Android 12+ / Material 3 Fluid Stretch
+    val springSpec = remember(isLowEnd) {
+        spring<Float>(
+            dampingRatio = if (isLowEnd) Spring.DampingRatioNoBouncy else 0.75f,
+            stiffness = if (isLowEnd) Spring.StiffnessMedium else Spring.StiffnessLow
+        )
+    }
 
     val nestedScrollConnection = remember {
         object : NestedScrollConnection {
@@ -101,27 +108,15 @@ fun Modifier.elasticOverscroll(
                     )
                     return available
                 }
-                // Bottom edge stretch rebounds back to 0.
+                // Bottom edge stretch rebounds back to 0 with fluid spring.
                 if (current < 0f) {
-                    overscrollOffset.animateTo(
-                        0f,
-                        spring(
-                            dampingRatio = Spring.DampingRatioLowBouncy,
-                            stiffness = Spring.StiffnessLow
-                        )
-                    )
+                    overscrollOffset.animateTo(0f, springSpec)
                     return available
                 }
-                // If pulled beyond max reachability at the top, gently settle at maxReachability without jumping back to 0
+                // If pulled beyond max reachability at the top, gently settle at maxReachability with fluid spring
                 val maxReachability = 220f
                 if (current > maxReachability) {
-                    overscrollOffset.animateTo(
-                        maxReachability,
-                        spring(
-                            dampingRatio = Spring.DampingRatioLowBouncy,
-                            stiffness = Spring.StiffnessLow
-                        )
-                    )
+                    overscrollOffset.animateTo(maxReachability, springSpec)
                     return available
                 }
                 // One UI Reachability: remains pulled down at user's release position (ينزل ولا يرتد لأعلى)
