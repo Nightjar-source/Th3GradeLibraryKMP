@@ -342,9 +342,21 @@ class AppFirebaseMessagingService : FirebaseMessagingService() {
             .setContentIntent(pendingIntent)
             .setGroup(GROUP_KEY)
 
-        if ((!isNews || isDevNotification) && cleanContent.isNotBlank()) {
+        // Ensure full headline text wraps nicely without truncation (BigTextStyle on single notifications)
+        if (cleanContent.isNotBlank()) {
             notificationBuilder.setContentText(cleanContent)
-            notificationBuilder.setStyle(NotificationCompat.BigTextStyle().bigText(cleanContent))
+            notificationBuilder.setStyle(
+                NotificationCompat.BigTextStyle()
+                    .setBigContentTitle(cleanTitle)
+                    .bigText(cleanContent)
+            )
+        } else {
+            notificationBuilder.setContentText(cleanTitle)
+            notificationBuilder.setStyle(
+                NotificationCompat.BigTextStyle()
+                    .setBigContentTitle(cleanTitle)
+                    .bigText(cleanTitle)
+            )
         }
 
         // Micro-thumbnail beside headline (text line size)

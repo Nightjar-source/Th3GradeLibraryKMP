@@ -179,6 +179,14 @@ object NotificationHelper {
             }
             builder.setStyle(inboxStyle)
             builder.setContentText(titles.take(3).joinToString(" • "))
+        } else {
+            // Single news item: use BigTextStyle to allow title to wrap fully to multiple lines without truncation
+            builder.setContentText(mainTitle)
+            builder.setStyle(
+                NotificationCompat.BigTextStyle()
+                    .setBigContentTitle(mainTitle)
+                    .bigText(mainTitle)
+            )
         }
 
         // Ultra-compact micro-thumbnail (text line size ~48x48px) - Zero Main-Thread Network Delay!
