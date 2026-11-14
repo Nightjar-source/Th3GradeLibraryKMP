@@ -64,9 +64,17 @@ class MainApplication : LibraryApplication(), SingletonImageLoader.Factory {
 
     override fun onTrimMemory(level: Int) {
         super.onTrimMemory(level)
-        if (level >= android.content.ComponentCallbacks2.TRIM_MEMORY_UI_HIDDEN) {
-            // التطبيق في الخلفية (Cached State)، نفرغ الرام فوراً
+        // Play Vitals memory guidance: reclaim as soon as the system reports pressure.
+        if (level >= android.content.ComponentCallbacks2.TRIM_MEMORY_UI_HIDDEN ||
+            level >= android.content.ComponentCallbacks2.TRIM_MEMORY_RUNNING_LOW) {
+            // التطبيق في الخلفية أو تحت الضغط: نفرغ الذاكرة فوراً
             SingletonImageLoader.get(this).memoryCache?.clear()
+            com.Nightjar.Th3GradeLibraryKMP.ui.PdfBitmapCache.cache.evictAll()
+        }
+        if (level >= android.content.ComponentCallbacks2.TRIM_MEMORY_MODERATE ||
+            level >= android.content.ComponentCallbacks2.TRIM_MEMORY_RUNNING_CRITICAL ||
+            level >= android.content.ComponentCallbacks2.TRIM_MEMORY_COMPLETE) {
+            // أوضاع الخطر (اقتراب الـBackground kill): إفراغ كامل للذاكرة المؤقتة
             com.Nightjar.Th3GradeLibraryKMP.ui.PdfBitmapCache.cache.evictAll()
         }
     }

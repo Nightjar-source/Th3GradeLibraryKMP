@@ -39,7 +39,7 @@
         android:roundIcon="@drawable/ic_launcher"
         android:label="مكتبة الثالث متوسط"
         android:supportsRtl="true"
-        android:largeHeap="true"
+        android:largeHeap="false"
         android:hardwareAccelerated="true"
         android:usesCleartextTraffic="true"
         android:enableOnBackInvokedCallback="true"
