@@ -45,6 +45,7 @@ import androidx.compose.ui.graphics.BlendMode
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.composed
 import androidx.compose.ui.layout.layout
+import kotlinx.coroutines.launch
 
 fun Modifier.horizontalFadingEdges(
     scrollState: androidx.compose.foundation.ScrollState,
@@ -133,6 +134,7 @@ fun AppSettingsModal(
 
     if (isOpen) {
         val sheetState = androidx.compose.material3.rememberModalBottomSheetState(skipPartiallyExpanded = true)
+        val dismissScope = androidx.compose.runtime.rememberCoroutineScope()
         androidx.compose.material3.ModalBottomSheet(
             onDismissRequest = onClose,
             sheetState = sheetState,
@@ -157,9 +159,14 @@ fun AppSettingsModal(
                             color = MaterialTheme.colorScheme.onSurface
                         )
                         IconButton(
-                            onClick = onClose,
+                            onClick = {
+                                dismissScope.launch {
+                                    sheetState.hide()
+                                    onClose()
+                                }
+                            },
                             modifier = Modifier
-                                .size(36.dp) // Compact close button
+                                .size(40.dp) // 40dp touch target (M3) — never clipped
                                 .background(MaterialTheme.colorScheme.surfaceVariant, CircleShape)
                         ) {
                             Icon(Icons.Default.Close, contentDescription = "Close", modifier = Modifier.size(20.dp))
@@ -410,6 +417,7 @@ fun NewsSettingsModal(
 
     if (isOpen) {
         val sheetState = androidx.compose.material3.rememberModalBottomSheetState(skipPartiallyExpanded = true)
+        val dismissScope = androidx.compose.runtime.rememberCoroutineScope()
         androidx.compose.material3.ModalBottomSheet(
             onDismissRequest = onClose,
             sheetState = sheetState,
@@ -437,9 +445,14 @@ fun NewsSettingsModal(
                             color = MaterialTheme.colorScheme.onSurface
                         )
                         IconButton(
-                            onClick = onClose,
+                            onClick = {
+                                dismissScope.launch {
+                                    sheetState.hide()
+                                    onClose()
+                                }
+                            },
                             modifier = Modifier
-                                .size(36.dp) // Compact close button
+                                .size(40.dp) // 40dp touch target (M3) — never clipped
                                 .background(MaterialTheme.colorScheme.surfaceVariant, CircleShape)
                         ) {
                             Icon(Icons.Default.Close, contentDescription = "Close", modifier = Modifier.size(20.dp))

@@ -600,27 +600,8 @@ fun LazyGridItemScope.ContentCard(
                             .clip(RoundedCornerShape(16.dp))
                             .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
                     ) {
-                        val coverData = remember(item) {
-                            try {
-                                com.Nightjar.Th3GradeLibraryKMP.generated.resources.Res.getUri("drawable/${item.coverResName}." + if (item.coverResName in listOf("ayajaaa", "english", "englishactivity", "kss1")) "jpg" else "png")
-                            } catch (_: Exception) {
-                                null
-                            }
-                        }
 
-                        coil3.compose.AsyncImage(
-                            model = coil3.request.ImageRequest.Builder(coil3.compose.LocalPlatformContext.current)
-                                .data(coverData)
-                                .crossfade(!isReturningFromPdf)
-                                .memoryCacheKey("book_cover_${item.id}")
-                                .diskCacheKey("book_cover_${item.id}")
-                                .memoryCachePolicy(coil3.request.CachePolicy.ENABLED)
-                                .diskCachePolicy(coil3.request.CachePolicy.ENABLED)
-                                .build(),
-                            contentDescription = item.title,
-                            contentScale = ContentScale.Crop,
-                            modifier = Modifier.fillMaxSize()
-                        )
+                        CoverImage(item, Modifier.fillMaxSize())
                     }
 
                     Spacer(modifier = Modifier.height(10.dp))
@@ -656,27 +637,8 @@ fun LazyGridItemScope.ContentCard(
                             .clip(RoundedCornerShape(12.dp))
                             .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
                     ) {
-                        val coverData = remember(item) {
-                            try {
-                                com.Nightjar.Th3GradeLibraryKMP.generated.resources.Res.getUri("drawable/${item.coverResName}." + if (item.coverResName in listOf("ayajaaa", "english", "englishactivity", "kss1")) "jpg" else "png")
-                            } catch (_: Exception) {
-                                null
-                            }
-                        }
 
-                        coil3.compose.AsyncImage(
-                            model = coil3.request.ImageRequest.Builder(coil3.compose.LocalPlatformContext.current)
-                                .data(coverData)
-                                .crossfade(!isReturningFromPdf)
-                                .memoryCacheKey("book_cover_${item.id}")
-                                .diskCacheKey("book_cover_${item.id}")
-                                .memoryCachePolicy(coil3.request.CachePolicy.ENABLED)
-                                .diskCachePolicy(coil3.request.CachePolicy.ENABLED)
-                                .build(),
-                            contentDescription = item.title,
-                            contentScale = ContentScale.Crop,
-                            modifier = Modifier.fillMaxSize()
-                        )
+                        CoverImage(item, Modifier.fillMaxSize())
                     }
 
                     Spacer(modifier = Modifier.width(16.dp))
@@ -705,4 +667,32 @@ fun LazyGridItemScope.ContentCard(
             }
         }
     }
+}
+
+
+// Shared cover renderer used by both grid and list morph branches: single request, same cache key — no reload from zero on toggle.
+@Composable
+private fun CoverImage(item: BookItem, modifier: Modifier = Modifier) {
+    val coverData = remember(item) {
+        try {
+            com.Nightjar.Th3GradeLibraryKMP.generated.resources.Res.getUri(
+                "drawable/${item.coverResName}." + if (item.coverResName in listOf("ayajaaa", "english", "englishactivity", "kss1")) "jpg" else "png"
+            )
+        } catch (_: Exception) {
+            null
+        }
+    }
+    coil3.compose.AsyncImage(
+        model = coil3.request.ImageRequest.Builder(coil3.compose.LocalPlatformContext.current)
+            .data(coverData)
+            .crossfade(false) // local asset + L2 memory cache = instant; no perceived reload from zero
+            .memoryCacheKey("book_cover_${item.id}")
+            .diskCacheKey("book_cover_${item.id}")
+            .memoryCachePolicy(coil3.request.CachePolicy.ENABLED)
+            .diskCachePolicy(coil3.request.CachePolicy.ENABLED)
+            .build(),
+        contentDescription = item.title,
+        contentScale = ContentScale.Crop,
+        modifier = modifier,
+    )
 }

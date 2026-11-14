@@ -497,14 +497,14 @@ fun AppContent(
                                 val isFromPdf = initialState == "pdf"
 
                                 if (isToPdf) {
-                                    (fadeIn(animationSpec = tween(durationMillis = 130, easing = androidx.compose.animation.core.LinearEasing))).togetherWith(
-                                        fadeOut(animationSpec = tween(durationMillis = 130, easing = androidx.compose.animation.core.LinearEasing))
+                                    (fadeIn(animationSpec = tween(durationMillis = 140, easing = androidx.compose.animation.core.FastOutSlowInEasing))).togetherWith(
+                                        fadeOut(animationSpec = tween(durationMillis = 140, easing = androidx.compose.animation.core.FastOutSlowInEasing))
                                     ).apply {
                                         targetContentZIndex = 50f
                                     }
                                 } else if (isFromPdf) {
-                                    (fadeIn(animationSpec = tween(durationMillis = 150, delayMillis = 75, easing = androidx.compose.animation.core.LinearEasing))).togetherWith(
-                                        fadeOut(animationSpec = tween(durationMillis = 150, delayMillis = 75, easing = androidx.compose.animation.core.LinearEasing))
+                                    (fadeIn(animationSpec = tween(durationMillis = 150, delayMillis = 0, easing = androidx.compose.animation.core.FastOutSlowInEasing))).togetherWith(
+                                        fadeOut(animationSpec = tween(durationMillis = 150, delayMillis = 0, easing = androidx.compose.animation.core.FastOutSlowInEasing))
                                     ).apply {
                                         targetContentZIndex = -1f
                                     }
@@ -702,6 +702,8 @@ fun AppContent(
                 ) {
                     val topBarHeight = topBarHeightGlobal
                     val topBarPaddingV = topBarPaddingVGlobal
+                    // Wide windows show the floating side rail at the END edge (RTL left) - reserve its width so the top bar never collides with it.
+                    val sideRailVisible = !showOnboarding && page in listOf("home", "list", "news", "bookmarks", "shortcuts", "about") && isWide
                     Box(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -709,7 +711,7 @@ fun AppContent(
                             .windowInsetsPadding(WindowInsets.safeDrawing.only(WindowInsetsSides.Horizontal))
                             .padding(
                                 start = if (isWide) 24.dp else 16.dp,
-                                end = if (isWide) 24.dp else 16.dp,
+                                end = (if (isWide) 24.dp else 16.dp) + if (sideRailVisible) 96.dp else 0.dp,
                                 top = topBarPaddingV,
                                 bottom = topBarPaddingV
                             ),
@@ -996,7 +998,7 @@ fun AppContent(
                             .padding(
                                 top = searchTopPadding,
                                 start = if (isWide) 24.dp else 16.dp,
-                                end = if (isWide) 24.dp else 16.dp
+                                end = (if (isWide) 24.dp else 16.dp) + if (isWide && page == "list") 96.dp else 0.dp
                             ),
                         contentAlignment = if (isWide) Alignment.TopEnd else Alignment.TopCenter
                     ) {

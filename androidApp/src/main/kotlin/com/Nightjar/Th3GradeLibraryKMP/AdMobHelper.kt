@@ -120,6 +120,11 @@ fun FloatingAdMobBanner(
     modifier: Modifier = Modifier,
     isDark: Boolean = false
 ) {
+    // Adaptive ad sizing per window form factor: phones -> 320x50, tablets/foldables/wide windows -> 468x60.
+    val windowInfo = androidx.compose.ui.platform.LocalWindowInfo.current
+    val density = androidx.compose.ui.platform.LocalDensity.current
+    val widthDp = with(density) { windowInfo.containerSize.width.toDp() }
+    val adaptiveAdSize = if (widthDp >= 500.dp) AdSize.FULL_BANNER else AdSize.BANNER
     Box(
         modifier = modifier
             .wrapContentSize()
@@ -142,10 +147,10 @@ fun FloatingAdMobBanner(
         contentAlignment = Alignment.Center
     ) {
         AndroidView(
-            modifier = Modifier.defaultMinSize(minWidth = 320.dp, minHeight = 50.dp),
+            modifier = Modifier.defaultMinSize(minWidth = adaptiveAdSize.width.dp, minHeight = adaptiveAdSize.height.dp),
             factory = { context ->
                 AdView(context).apply {
-                    setAdSize(AdSize.BANNER)
+                    setAdSize(adaptiveAdSize)
                     adUnitId = AdMobHelper.TEST_BANNER_AD_UNIT_ID
                     loadAd(AdRequest.Builder().build())
                 }
