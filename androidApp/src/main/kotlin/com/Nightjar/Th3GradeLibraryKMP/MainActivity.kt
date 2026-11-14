@@ -403,6 +403,11 @@ class MainActivity : ComponentActivity() {
         // Sequence is handled by hasCompletedInitialSetup above, so we remove the duplicate check here
 
         val platformHandler = object : PlatformActionHandler {
+            override fun hasSystemStretchOverscroll(): Boolean {
+                // Android 12 (API 31)+ draws the native stretch overscroll; custom rubber-band must not double it.
+                return Build.VERSION.SDK_INT >= Build.VERSION_CODES.S
+            }
+
             override fun isLowEndDevice(): Boolean {
                 // 1. Android 9 and older (legacy Skia drivers)
                 if (Build.VERSION.SDK_INT <= Build.VERSION_CODES.P) return true

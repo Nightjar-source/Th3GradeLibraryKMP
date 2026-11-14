@@ -16,8 +16,14 @@ import androidx.compose.ui.unit.Velocity
 import kotlinx.coroutines.launch
 
 /**
- * Elastic bounce/overscroll effect on vertical scrolling.
- * Custom built smooth rubber band effect.
+ * True when the platform draws its own stretch overscroll (Android 12+ / API 31+).
+ * The custom rubber-band stands aside there so the system elasticity runs without conflict.
+ */
+val LocalSystemStretchOverscroll = compositionLocalOf { false }
+
+/**
+ * Elastic bounce/overscroll effect on vertical scrolling (custom rubber band).
+ * Custom built smooth rubber band effect — used only where the OS has no native stretch (pre-Android 12).
  */
 fun Modifier.elasticOverscroll(
     maxStretchRatio: Float = 0.32f,
@@ -26,6 +32,9 @@ fun Modifier.elasticOverscroll(
 ): Modifier = composed {
     val isLowEnd = com.Nightjar.Th3GradeLibraryKMP.theme.LocalIsLowEndDevice.current
     if (isLowEnd) return@composed this
+
+    // Android 12+ already draws the native stretch overscroll — never double it.
+    if (LocalSystemStretchOverscroll.current) return@composed this
 
     var componentHeight by remember { mutableStateOf(0f) }
     val overscrollOffset = remember { Animatable(0f) }
@@ -101,7 +110,7 @@ fun Modifier.elasticOverscroll(
                     )
                     return available
                 }
-                // Bottom edge stretch rebounds back to 0.
+                // Bottom edge stretch rebounds back to 0 — creamy settle.
                 if (current < 0f) {
                     overscrollOffset.animateTo(
                         0f,

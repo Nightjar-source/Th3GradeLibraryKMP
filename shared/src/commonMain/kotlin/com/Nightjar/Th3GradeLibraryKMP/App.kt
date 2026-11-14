@@ -106,7 +106,8 @@ fun App(
     ) {
         CompositionLocalProvider(
             LocalLayoutDirection provides LayoutDirection.Rtl,
-            com.Nightjar.Th3GradeLibraryKMP.theme.LocalIsLowEndDevice provides (platformActionHandler?.isLowEndDevice() ?: false)
+            com.Nightjar.Th3GradeLibraryKMP.theme.LocalIsLowEndDevice provides (platformActionHandler?.isLowEndDevice() ?: false),
+            com.Nightjar.Th3GradeLibraryKMP.ui.LocalSystemStretchOverscroll provides (platformActionHandler?.hasSystemStretchOverscroll() ?: false)
         ) {
             val isDirectShortcutLaunch = initialBookId != null || (initialPage != null && initialPage != "home")
             var showSplash by androidx.compose.runtime.saveable.rememberSaveable { mutableStateOf(!isDirectShortcutLaunch) }

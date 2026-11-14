@@ -142,12 +142,12 @@ fun Modifier.expressiveButtonMorph(
     val isPressed by interactionSource.collectIsPressedAsState()
     val cornerRadius by androidx.compose.animation.core.animateDpAsState(
         targetValue = if (isPressed) pressedRadius else restRadius,
-        animationSpec = androidx.compose.animation.core.spring(dampingRatio = 0.52f, stiffness = 420f),
+        animationSpec = androidx.compose.animation.core.spring(dampingRatio = 0.6f, stiffness = 360f),
         label = "expressive_corner_morph"
     )
     val scale by androidx.compose.animation.core.animateFloatAsState(
         targetValue = if (isPressed) pressedScale else 1.0f,
-        animationSpec = androidx.compose.animation.core.spring(dampingRatio = 0.52f, stiffness = 420f),
+        animationSpec = androidx.compose.animation.core.spring(dampingRatio = 0.6f, stiffness = 360f),
         label = "expressive_scale_morph"
     )
     val shape = RoundedCornerShape(cornerRadius.coerceAtLeast(0.dp))
@@ -453,12 +453,12 @@ fun MorphingButton(
 
     val cornerRadius by androidx.compose.animation.core.animateDpAsState(
         targetValue = if (isMorphActive) pressedRadius else restRadius,
-        animationSpec = androidx.compose.animation.core.spring(dampingRatio = 0.52f, stiffness = 420f),
+        animationSpec = androidx.compose.animation.core.spring(dampingRatio = 0.6f, stiffness = 360f),
         label = "expressive_corner_morph"
     )
     val scale by androidx.compose.animation.core.animateFloatAsState(
         targetValue = if (isMorphActive) pressedScale else 1.0f,
-        animationSpec = androidx.compose.animation.core.spring(dampingRatio = 0.52f, stiffness = 420f),
+        animationSpec = androidx.compose.animation.core.spring(dampingRatio = 0.6f, stiffness = 360f),
         label = "expressive_scale_morph"
     )
 

@@ -21,8 +21,8 @@ android {
         applicationId = "com.Nightjar.Th3GradeLibraryKMP"
         minSdk = libs.versions.android.minSdk.get().toInt()
         targetSdk = libs.versions.android.targetSdk.get().toInt()
-        versionCode = 12094
-        versionName = "1.2.94"
+        versionCode = 12095
+        versionName = "1.2.95"
     }
     
     val keystoreProperties = Properties()
@@ -31,12 +31,14 @@ android {
         keystoreProperties.load(FileInputStream(keystorePropertiesFile))
     }
 
+    // Signing secrets are NEVER hardcoded: local builds read local.properties / env vars,
+    // CI reads GitHub Secrets (KEYSTORE_BASE64, KEYSTORE_PASSWORD, KEY_PASSWORD).
     signingConfigs {
         create("release") {
             storeFile = file("Nightjar.keystore")
-            storePassword = keystoreProperties.getProperty("KEYSTORE_PASSWORD") ?: System.getenv("KEYSTORE_PASSWORD") ?: "19941994"
+            storePassword = keystoreProperties.getProperty("KEYSTORE_PASSWORD") ?: System.getenv("KEYSTORE_PASSWORD")
             keyAlias = "Nightjar"
-            keyPassword = keystoreProperties.getProperty("KEY_PASSWORD") ?: System.getenv("KEY_PASSWORD") ?: "19941994"
+            keyPassword = keystoreProperties.getProperty("KEY_PASSWORD") ?: System.getenv("KEY_PASSWORD")
             enableV1Signing = true
             enableV2Signing = true
         }
