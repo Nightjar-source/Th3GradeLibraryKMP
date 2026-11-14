@@ -264,34 +264,10 @@ object CloudCatalogManager {
             }
         }
 
-        // 3. Tertiary: Telegram worker / bot fallback
-        val telegramBackup = meta?.backup_telegram_url
-        if (!telegramBackup.isNullOrBlank() && !telegramBackup.contains("t.me")) {
-            candidates.add(convertToDirectUrl(telegramBackup))
-        } else {
-            val fileId = meta?.file_id
-            val fileSize = meta?.file_size ?: 0L
-            if (fileSize in 1..(20 * 1024 * 1024) && !fileId.isNullOrBlank()) {
-                candidates.add("https://th3books-gateway.karrar1iq.workers.dev/file/$fileId")
-            }
-        }
-
         return candidates.distinct().filter { it.isNotBlank() && it.startsWith("http") }
     }
 
     fun getStreamUrl(item: BookItem): String {
         return getStreamCandidateUrls(item).firstOrNull() ?: ""
-    }
-
-    fun getTelegramChannelLink(item: BookItem): String {
-        val meta = getMeta(item)
-        val msgId = meta?.msg_id ?: 1L
-        return "https://t.me/bookiraqi/$msgId"
-    }
-
-    fun getTelegramDeepLink(item: BookItem): String {
-        val meta = getMeta(item)
-        val msgId = meta?.msg_id ?: 1L
-        return "tg://resolve?domain=bookiraqi&post=$msgId"
     }
 }
