@@ -19,10 +19,13 @@ class MainApplication : LibraryApplication(), SingletonImageLoader.Factory {
     }
 
     override fun newImageLoader(context: coil3.PlatformContext): ImageLoader {
+        // Persistent storage scales with the device's available space (OS LRU caps effective use); RAM stays at Google/Android guidance.
+        val usableBytes = context.cacheDir.parentFile?.usableSpace ?: (512L * 1024 * 1024)
+        val diskCacheCapBytes = (usableBytes / 4).coerceIn(512L * 1024 * 1024, 4L * 1024 * 1024 * 1024)
         return ImageLoader.Builder(context)
             .memoryCache {
                 MemoryCache.Builder()
-                    // Limit RAM cache to 25% of available application memory
+                    // Google/Android guidance: RAM stays limited - keeps 25% of app memory ceiling while browsing.
                     .maxSizePercent(context, 0.25)
                     .weakReferencesEnabled(true)
                     .build()
@@ -30,8 +33,8 @@ class MainApplication : LibraryApplication(), SingletonImageLoader.Factory {
             .diskCache {
                 DiskCache.Builder()
                     .directory(context.cacheDir.resolve("image_cache").path.toPath())
-                    // Limit disk cache to 50MB to keep app size minimal
-                    .maxSizeBytes(50 * 1024 * 1024L)
+                    // Persistent storage: scales with device's available space, not a fixed tiny cap.
+                    .maxSizeBytes(diskCacheCapBytes)
                     .build()
             }
             .crossfade(true)

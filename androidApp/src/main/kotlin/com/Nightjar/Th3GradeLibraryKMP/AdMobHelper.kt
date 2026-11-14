@@ -37,6 +37,10 @@ object AdMobHelper {
     const val TEST_BANNER_AD_UNIT_ID = "ca-app-pub-3940256099942544/6300978111"
     const val TEST_INTERSTITIAL_AD_UNIT_ID = "ca-app-pub-3940256099942544/1033173712"
 
+    private const val PREFS_NAME = "admob_prefs"
+    private const val KEY_INTERSTITIAL_OPEN_COUNTER = "interstitial_reader_open_counter"
+    private const val INTERSTITIAL_EVERY_N_OPENS = 4
+
     private var interstitialAd: InterstitialAd? = null
     private var isLoadingInterstitial = false
 
@@ -71,7 +75,19 @@ object AdMobHelper {
         )
     }
 
+    /**
+     * Reader instrumentation point: called on EVERY reader open, but the interstitial
+     * is only actually shown on every 4th open (persisted across sessions).
+     */
     fun showInterstitial(activity: Activity, onDismiss: () -> Unit = {}) {
+        val prefs = activity.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        val opens = prefs.getInt(KEY_INTERSTITIAL_OPEN_COUNTER, 0) + 1
+        prefs.edit().putInt(KEY_INTERSTITIAL_OPEN_COUNTER, opens).apply()
+        if (opens % INTERSTITIAL_EVERY_N_OPENS != 0) {
+            // Not the 4th time: skip the ad entirely this session.
+            onDismiss()
+            return
+        }
         val ad = interstitialAd
         if (ad != null) {
             ad.fullScreenContentCallback = object : com.google.android.gms.ads.FullScreenContentCallback() {
@@ -122,7 +138,7 @@ fun FloatingAdMobBanner(
                 if (isDark) Color(0xFF1E293B).copy(alpha = 0.92f)
                 else Color(0xFFF8FAFC).copy(alpha = 0.94f)
             )
-            .padding(horizontal = 8.dp, vertical = 4.dp),
+            .padding(horizontal = 8.dp, vertical = 2.dp),
         contentAlignment = Alignment.Center
     ) {
         AndroidView(
