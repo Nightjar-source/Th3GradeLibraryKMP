@@ -73,6 +73,12 @@ actual object BookDownloadManager {
         }
     }
 
+    actual fun clearActiveNotice() {
+        noticeDismissJob?.cancel()
+        noticeDismissJob = null
+        _activeNoticeMessage.value = null
+    }
+
     private val downloadReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context?, intent: Intent?) {
             when (intent?.action) {
@@ -430,7 +436,12 @@ actual object BookDownloadManager {
                                 conn.connectTimeout = 20000
                                 conn.readTimeout = 35000
                                 conn.instanceFollowRedirects = false
-                                conn.setRequestProperty("User-Agent", "Mozilla/5.0 (Android; Mobile)")
+                                conn.setRequestProperty("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36")
+
+                                if (currentUrl.contains("manahj.edu.iq")) {
+                                    conn.setRequestProperty("Referer", "https://manahj.edu.iq/")
+                                    conn.setRequestProperty("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,application/pdf,*/*;q=0.8")
+                                }
 
                                 if (currentUrl.contains("huggingface.co")) {
                                     conn.setRequestProperty("Authorization", "Bearer $HF_TOKEN")

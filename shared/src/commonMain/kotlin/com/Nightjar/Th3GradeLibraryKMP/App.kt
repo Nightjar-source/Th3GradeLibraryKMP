@@ -392,6 +392,8 @@ fun AppContent(
         if (page == "news") {
             platformActionHandler.clearNewsNotifications()
         }
+        // Auto-dismiss floating notice when transitioning between screens or entering reader
+        com.Nightjar.Th3GradeLibraryKMP.ui.ToastManager.clearToast()
     }
 
     // Auto-fetch on start when the app opens and splash screen finishes (with delay to protect RenderThread & 120 FPS)
@@ -1312,16 +1314,23 @@ fun AppContent(
                             interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() },
                             indication = null
                         ) {
-                            if (rootActiveNotice == null) {
-                                com.Nightjar.Th3GradeLibraryKMP.ui.ToastManager.clearToast()
+                            com.Nightjar.Th3GradeLibraryKMP.ui.ToastManager.clearToast()
+                            com.Nightjar.Th3GradeLibraryKMP.network.BookDownloadManager.clearActiveNotice()
+                        }
+                        .pointerInput(Unit) {
+                            detectVerticalDragGestures { change, dragAmount ->
+                                if (dragAmount < -10f) {
+                                    change.consume()
+                                    com.Nightjar.Th3GradeLibraryKMP.ui.ToastManager.clearToast()
+                                    com.Nightjar.Th3GradeLibraryKMP.network.BookDownloadManager.clearActiveNotice()
+                                }
                             }
                         }
                         .pointerInput(Unit) {
                             detectHorizontalDragGestures(
                                 onDragStart = {
-                                    if (rootActiveNotice == null) {
-                                        com.Nightjar.Th3GradeLibraryKMP.ui.ToastManager.clearToast()
-                                    }
+                                    com.Nightjar.Th3GradeLibraryKMP.ui.ToastManager.clearToast()
+                                    com.Nightjar.Th3GradeLibraryKMP.network.BookDownloadManager.clearActiveNotice()
                                 }
                             ) { change, _ -> change.consume() }
                         }
@@ -1412,7 +1421,8 @@ fun AppContent(
         val animatedBannerBottomPadding = rawAnimatedBannerBottomPadding.coerceAtLeast(0.dp)
 
         // --- Bottom Banner Ad (Google AdMob Anchored Adaptive Banner - Positioned cleanly, never occludes modals/drawer/reader) ---
-        val shouldShowBanner = !showOnboarding && bottomBannerAd != null
+        var isReaderBannerDismissed by remember { mutableStateOf(false) }
+        val shouldShowBanner = !showOnboarding && bottomBannerAd != null && !(page == "pdf" && isReaderBannerDismissed)
 
         androidx.compose.animation.AnimatedVisibility(
             visible = shouldShowBanner,
@@ -1439,6 +1449,28 @@ fun AppContent(
                 contentAlignment = Alignment.Center
             ) {
                 bottomBannerAd?.invoke()
+
+                // Minimalist Spring Dismiss Pill Button in PDF Reader
+                if (page == "pdf") {
+                    Surface(
+                        onClick = { isReaderBannerDismissed = true },
+                        shape = CircleShape,
+                        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.92f),
+                        tonalElevation = 6.dp,
+                        shadowElevation = 4.dp,
+                        modifier = Modifier
+                            .align(Alignment.TopEnd)
+                            .padding(end = 12.dp, top = 2.dp)
+                            .size(24.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Close,
+                            contentDescription = "إخفاء الإعلان",
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.padding(4.dp)
+                        )
+                    }
+                }
             }
         }
 

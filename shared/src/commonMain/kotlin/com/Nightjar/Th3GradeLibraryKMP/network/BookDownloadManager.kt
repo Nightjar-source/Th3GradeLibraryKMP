@@ -16,4 +16,5 @@ expect object BookDownloadManager {
     fun pauseAll()
     fun downloadAll(context: Any, items: List<BookItem>)
     fun cancelAll()
+    fun clearActiveNotice()
 }

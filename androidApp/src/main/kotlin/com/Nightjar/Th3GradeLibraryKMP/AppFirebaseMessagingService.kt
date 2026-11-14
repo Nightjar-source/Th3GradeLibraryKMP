@@ -104,6 +104,7 @@ class AppFirebaseMessagingService : FirebaseMessagingService() {
         val isDevTest = title.contains("المطور") || title.contains("تجريبي") || link.startsWith("dev_") || data["is_test"] == "true"
         
         // 1. Silent Local Cache Update (Smart Watermark deduplication)
+        // Ensure ALL items (including test notifications) are always saved to cache and displayed in News cards!
         val fromTopic = remoteMessage.from ?: ""
         val isNewsTopic = fromTopic.endsWith("/news") || data["type"] == "news" || data["channel"] == "news"
         val isKarTopic = fromTopic.endsWith("/kar") || fromTopic.endsWith("/announcements")
@@ -118,9 +119,7 @@ class AppFirebaseMessagingService : FirebaseMessagingService() {
                                (!isNewsTopic && data["type"] != "news")
         val isAnnouncement = isGeneralOrAdmin && !isNewsTopic
 
-        val isNewItem = if (!isDevTest) {
-            saveToCache(title, link, imageUrl, pubDate, content, isAnnouncement)
-        } else false
+        val isNewItem = saveToCache(title, link, imageUrl, pubDate, content, isAnnouncement)
 
         if (!isNewItem && !isDevTest) {
             // Item already received and in cache: ZERO redundant background alerts!

@@ -25,4 +25,5 @@ actual object BookDownloadManager {
     actual fun pauseAll() {}
     actual fun downloadAll(context: Any, items: List<BookItem>) {}
     actual fun cancelAll() {}
+    actual fun clearActiveNotice() {}
 }
