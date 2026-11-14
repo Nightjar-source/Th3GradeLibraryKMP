@@ -102,10 +102,9 @@ fun Modifier.liquidGlass(
     }
 }
 
-@Composable
 fun Modifier.bounceClick(
     onClick: () -> Unit
-): Modifier {
+): Modifier = composed {
     val interactionSource = androidx.compose.runtime.remember { androidx.compose.foundation.interaction.MutableInteractionSource() }
     val isPressed by interactionSource.collectIsPressedAsState()
     val scale by androidx.compose.animation.core.animateFloatAsState(
@@ -115,7 +114,7 @@ fun Modifier.bounceClick(
             stiffness = androidx.compose.animation.core.Spring.StiffnessHigh
         )
     )
-    return this
+    this
         .graphicsLayer {
             scaleX = scale
             scaleY = scale
@@ -184,7 +183,10 @@ fun Modifier.screenEntranceStagger(index: Int = 0, itemId: String? = null): Modi
 
     // When returning from PDF or navigating back or on active shared target: keep 100% stationary with zero movement!
     if (isReturningFromPdf || isNavigatingBack || isActiveSharedTarget) {
-        seenMap?.put(itemKey, true)
+        // Writing snapshot state during composition is not allowed — mark seen via a side effect instead.
+        androidx.compose.runtime.LaunchedEffect(itemKey) {
+            seenMap?.put(itemKey, true)
+        }
         return@composed this
     }
 
@@ -208,8 +210,9 @@ fun Modifier.screenEntranceStagger(index: Int = 0, itemId: String? = null): Modi
         seenMap?.put(itemKey, true)
     }
 
-    val p = animProgress.value
+    // Read animation state inside the draw lambda: invalidates only the layer, not composition, per frame.
     this.graphicsLayer {
+        val p = animProgress.value
         this.alpha = 0.20f + 0.80f * p
         this.translationY = (1f - p) * offsetYPx
         this.scaleX = 0.94f + 0.06f * p
@@ -222,11 +225,6 @@ fun Modifier.screenEntranceStagger(index: Int = 0, itemId: String? = null): Modi
  * Screen entrance cascade alias with item ID support.
  */
 fun Modifier.screenEntranceCascade(index: Int = 0, itemId: String? = null): Modifier = this.screenEntranceStagger(index, itemId)
-
-/**
- * Pop-in animation on initial load (caliq5 standard).
- */
-fun Modifier.popInOnInitialLoad(index: Int = 0, itemId: String? = null): Modifier = this.screenEntranceStagger(index, itemId)
 
 /**
  * Unified adaptive entrance: Screen Entrance Cascade for initial visible items (0..8).

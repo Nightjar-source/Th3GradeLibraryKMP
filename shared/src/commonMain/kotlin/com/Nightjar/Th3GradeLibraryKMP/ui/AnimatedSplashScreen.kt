@@ -177,7 +177,7 @@ fun SwimmingShape(
         animationSpec = if (isExiting) tween(250) else spring(dampingRatio = 0.6f, stiffness = Spring.StiffnessMediumLow)
     )
 
-    val infiniteTransition = rememberInfiniteTransition()
+    val infiniteTransition = rememberInfiniteTransition(label = "splash_shapes")
 
     // Start on-screen evenly distributed across X
     val startX = -500f + (index * 200f)

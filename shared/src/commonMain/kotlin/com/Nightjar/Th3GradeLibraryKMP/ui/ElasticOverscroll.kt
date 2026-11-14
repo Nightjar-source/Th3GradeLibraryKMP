@@ -130,8 +130,11 @@ fun Modifier.elasticOverscroll(
         }
     }
 
-    LaunchedEffect(overscrollOffset.value) {
-        TransitionTargetTracker.currentOverscrollY = overscrollOffset.value
+    // Mirror the drag position into the global tracker via a flow — not a frame-keyed LaunchedEffect,
+    // which would cancel/restart the coroutine on every single pixel of movement.
+    LaunchedEffect(Unit) {
+        androidx.compose.runtime.snapshotFlow { overscrollOffset.value }
+            .collect { TransitionTargetTracker.currentOverscrollY = it }
     }
 
     this

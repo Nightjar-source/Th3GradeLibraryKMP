@@ -115,21 +115,6 @@ actual fun PdfViewerScreen(
     var loadingError by remember(item) { mutableStateOf<String?>(null) }
     var orientation by remember(appSettings.pdfScrollDirection) { mutableStateOf(appSettings.pdfScrollDirection) }
     var isZoomed by remember(item) { mutableStateOf(false) }
-    // Trigger Interstitial Ad when opening the reader (Official Google AdMob Test Ad)
-    LaunchedEffect(item.id) {
-        activity?.let { act ->
-            try {
-                val clazz = Class.forName("com.Nightjar.Th3GradeLibraryKMP.AdMobHelper")
-                val field = clazz.getField("INSTANCE")
-                val helper = field.get(null)
-                val method = clazz.getMethod("showInterstitial", android.app.Activity::class.java, kotlin.jvm.functions.Function0::class.java)
-                method.invoke(helper, act, { })
-            } catch (e: Exception) {
-                // Ignore if not present
-            }
-        }
-    }
-
     // Find and cast Activity context to toggle system status bars
     val activity = remember(context) {
         var currentContext = context
@@ -142,6 +127,22 @@ actual fun PdfViewerScreen(
             currentContext = currentContext.baseContext
         }
         act
+    }
+
+    // Trigger Interstitial Ad when opening the reader (Official Google AdMob Test Ad)
+    LaunchedEffect(item.id) {
+        activity?.let { act ->
+            try {
+                val clazz = Class.forName("com.Nightjar.Th3GradeLibraryKMP.AdMobHelper")
+                val field = clazz.getField("INSTANCE")
+                val helper = field.get(null)
+                val method = clazz.getMethod("showInterstitial", android.app.Activity::class.java, kotlin.jvm.functions.Function0::class.java)
+                val onDismiss: () -> Unit = {}
+                method.invoke(helper, act, onDismiss)
+            } catch (e: Exception) {
+                // Ignore if not present
+            }
+        }
     }
 
     var isCurrentPageTopLight by remember { mutableStateOf(!isAppDark) }

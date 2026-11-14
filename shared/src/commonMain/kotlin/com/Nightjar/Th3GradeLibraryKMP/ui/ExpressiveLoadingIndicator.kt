@@ -36,9 +36,7 @@ umWaves`   cycles through 3→8 to produce pentagon / oval / spiky blob shapes.
 fun ExpressiveLoadingIndicator(
     modifier: Modifier = Modifier,
     color: Color = MaterialTheme.colorScheme.primary,
-    containerColor: Color = Color.Unspecified, // ignored – no background
-    size: Dp = 48.dp,
-    strokeWidth: Dp = 4.dp
+    size: Dp = 48.dp
 ) {
     val infiniteTransition = rememberInfiniteTransition(label = "blob_loading")
 

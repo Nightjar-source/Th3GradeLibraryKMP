@@ -13,7 +13,6 @@ import androidx.compose.animation.core.*
 import androidx.compose.material3.adaptive.currentWindowAdaptiveInfo
 import androidx.window.core.layout.WindowWidthSizeClass
 import androidx.window.core.layout.WindowHeightSizeClass
-import com.Nightjar.Th3GradeLibraryKMP.theme.popInOnInitialLoad
 import com.Nightjar.Th3GradeLibraryKMP.theme.adaptiveItemEntrance
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background

@@ -68,7 +68,6 @@ import com.Nightjar.Th3GradeLibraryKMP.data.AllItems
 import com.Nightjar.Th3GradeLibraryKMP.theme.liquidGlass
 import com.Nightjar.Th3GradeLibraryKMP.theme.bounceClick
 import com.Nightjar.Th3GradeLibraryKMP.theme.parseHexColor
-import com.Nightjar.Th3GradeLibraryKMP.theme.popInOnInitialLoad
 import com.Nightjar.Th3GradeLibraryKMP.theme.screenEntranceStagger
 import com.Nightjar.Th3GradeLibraryKMP.theme.adaptiveItemEntrance
 import org.jetbrains.compose.resources.painterResource
@@ -597,7 +596,7 @@ fun LazyGridItemScope.ContentCard(
             .fillMaxWidth()
             .then(sharedBoundsModifier)
             .then(contentSizeModifier)
-            .androidx.compose.ui.layout.onGloballyPositioned { coordinates -> if (coordinates.isAttached) { TransitionTargetTracker.updateTargetBounds("card_${item.id}", androidx.compose.ui.layout.boundsInWindow(coordinates)) } }
+            .onGloballyPositioned { coordinates -> if (coordinates.isAttached) { TransitionTargetTracker.updateTargetBounds("card_${item.id}", coordinates.boundsInRoot()) } }
             .liquidGlass(isDark, borderRadius = cardCornerRadius, alpha = 0.5f)
             .clip(RoundedCornerShape(cardCornerRadius))
             .clickable {

@@ -39,6 +39,8 @@ import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.layout.boundsInRoot
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalWindowInfo
 import androidx.compose.ui.text.font.FontWeight
@@ -452,11 +454,11 @@ fun BookAccordionItem(
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .then(rowSharedModifier)
-                                .androidx.compose.ui.layout.onGloballyPositioned { coordinates ->
+                                .onGloballyPositioned { coordinates ->
                                     if (coordinates.isAttached) {
                                         TransitionTargetTracker.updateTargetBounds(
                                             rowTargetKey,
-                                            androidx.compose.ui.layout.boundsInWindow(coordinates)
+                                            coordinates.boundsInRoot()
                                         )
                                     }
                                 }

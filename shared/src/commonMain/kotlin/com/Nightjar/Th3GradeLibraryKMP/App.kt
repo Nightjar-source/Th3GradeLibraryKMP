@@ -704,7 +704,7 @@ fun AppContent(
                             .windowInsetsPadding(WindowInsets.safeDrawing.only(WindowInsetsSides.Horizontal))
                             .padding(
                                 start = if (isWide) 24.dp else 16.dp,
-                                end = if (isWide) 100.dp else 16.dp,
+                                end = if (isWide) 24.dp else 16.dp,
                                 top = topBarPaddingV,
                                 bottom = topBarPaddingV
                             ),
@@ -730,7 +730,7 @@ fun AppContent(
                                 ) {
                                     androidx.compose.animation.AnimatedVisibility(
                                         visible = (page != "home"),
-                                        enter = fadeIn(tween(220)) + scaleIn(initialScale = 0.75f, animationSpec = tween(220)),
+                                        enter = fadeIn(tween(200)) + scaleIn(initialScale = 0.4f, animationSpec = spring(dampingRatio = 0.58f, stiffness = 300f)) + expandHorizontally(expandFrom = Alignment.Start, animationSpec = spring(dampingRatio = 0.72f, stiffness = 280f)),
                                         exit = fadeOut(tween(200)) + scaleOut(targetScale = 0.75f, animationSpec = tween(200))
                                     ) {
                                         IconButton(
@@ -749,7 +749,7 @@ fun AppContent(
 
                                     androidx.compose.animation.AnimatedVisibility(
                                         visible = (page == "home"),
-                                        enter = fadeIn(tween(220)) + scaleIn(initialScale = 0.75f, animationSpec = tween(220)),
+                                        enter = fadeIn(tween(200)) + scaleIn(initialScale = 0.4f, animationSpec = spring(dampingRatio = 0.58f, stiffness = 300f)) + expandHorizontally(expandFrom = Alignment.Start, animationSpec = spring(dampingRatio = 0.72f, stiffness = 280f)),
                                         exit = fadeOut(tween(200)) + scaleOut(targetScale = 0.75f, animationSpec = tween(200))
                                     ) {
                                         Box(
@@ -825,8 +825,15 @@ fun AppContent(
                                 AnimatedContent(
                                     targetState = page,
                                     transitionSpec = {
-                                        (scaleIn(initialScale = 0.8f, animationSpec = spring(dampingRatio = 0.72f, stiffness = 260f)) + fadeIn(tween(220)))
-                                            .togetherWith(scaleOut(targetScale = 0.8f, animationSpec = tween(180)) + fadeOut(tween(180)))
+                                        // Droplet-like entrance: the action islands grow out of the title pill side
+                                        (expandHorizontally(expandFrom = Alignment.Start, animationSpec = spring(dampingRatio = 0.72f, stiffness = 280f)) +
+                                            fadeIn(tween(220)) +
+                                            scaleIn(initialScale = 0.4f, animationSpec = spring(dampingRatio = 0.58f, stiffness = 300f)))
+                                            .togetherWith(
+                                                shrinkHorizontally(shrinkTowards = Alignment.Start, animationSpec = spring(dampingRatio = 0.85f, stiffness = 340f)) +
+                                                    fadeOut(tween(170)) +
+                                                    scaleOut(targetScale = 0.4f, animationSpec = tween(170))
+                                            )
                                             .using(SizeTransform(clip = false))
                                     },
                                     label = "topBarActions"
@@ -850,7 +857,7 @@ fun AppContent(
                                                     androidx.compose.animation.AnimatedContent(
                                                         targetState = isGridView,
                                                         transitionSpec = {
-                                                            (fadeIn(tween(200)) + scaleIn(initialScale = 0.8f)).togetherWith(fadeOut(tween(160)) + scaleOut(targetScale = 0.8f))
+                                                            (fadeIn(tween(180)) + scaleIn(initialScale = 0.55f, animationSpec = spring(dampingRatio = 0.6f, stiffness = 320f))).togetherWith(fadeOut(tween(160)) + scaleOut(targetScale = 0.55f, animationSpec = tween(160)))
                                                         },
                                                         label = "gridToggle"
                                                     ) { isGrid ->
@@ -877,7 +884,7 @@ fun AppContent(
                                                     androidx.compose.animation.AnimatedContent(
                                                         targetState = isSearchOpen,
                                                         transitionSpec = {
-                                                            (fadeIn(tween(200)) + scaleIn(initialScale = 0.8f)).togetherWith(fadeOut(tween(160)) + scaleOut(targetScale = 0.8f))
+                                                            (fadeIn(tween(180)) + scaleIn(initialScale = 0.55f, animationSpec = spring(dampingRatio = 0.6f, stiffness = 320f))).togetherWith(fadeOut(tween(160)) + scaleOut(targetScale = 0.55f, animationSpec = tween(160)))
                                                         },
                                                         label = "searchToggle"
                                                     ) { isOpen ->
@@ -929,7 +936,7 @@ fun AppContent(
                         targetOffsetY = { -it / 2 },
                         animationSpec = spring(dampingRatio = 0.75f, stiffness = Spring.StiffnessMediumLow)
                     ) + fadeOut(animationSpec = tween(200)),
-                    modifier = Modifier.align(Alignment.TopCenter).zIndex(200f).then(
+                    modifier = Modifier.align(if (isWide) Alignment.TopEnd else Alignment.TopCenter).fillMaxWidth().zIndex(200f).then(
                         if (LocalSharedTransitionScope.current != null) {
                             with(LocalSharedTransitionScope.current!!) {
                                 Modifier.renderInSharedTransitionScopeOverlay(zIndexInOverlay = 50f)
@@ -944,10 +951,11 @@ fun AppContent(
                     val searchFontSize = if (isCompactTopBar) 14.sp else 15.sp
                     var isListening by remember { mutableStateOf(false) }
 
-                    var isClearingAnimation by remember { mutableStateOf(false) }
-                    var displayClearText by remember { mutableStateOf("") }
-                    val clearTextSlideOffset = remember { androidx.compose.animation.core.Animatable(0f) }
-                    val clearTextSlideAlpha = remember { androidx.compose.animation.core.Animatable(1f) }
+                    val clearAnimator = remember { com.Nightjar.Th3GradeLibraryKMP.ui.ClearSearchAnimator() }
+                    val isClearingAnimation = clearAnimator.isClearingAnimation
+                    val displayClearText = clearAnimator.displayClearText
+                    val clearTextSlideOffset = clearAnimator.clearTextSlideOffset
+                    val clearTextSlideAlpha = clearAnimator.clearTextSlideAlpha
                     
                     DisposableEffect(Unit) {
                         onDispose {
@@ -958,12 +966,15 @@ fun AppContent(
                         }
                     }
                     
-                    val pulseAnim = animateFloatAsState(
-                        targetValue = if (isListening) 1.2f else 1f,
+                    val voicePulseTransition = rememberInfiniteTransition(label = "voice_pulse")
+                    val pulseAnim = voicePulseTransition.animateFloat(
+                        initialValue = 1f,
+                        targetValue = 1.2f,
                         animationSpec = infiniteRepeatable(
                             animation = tween(500, easing = FastOutSlowInEasing),
                             repeatMode = RepeatMode.Reverse
-                        )
+                        ),
+                        label = "voice_pulse_scale"
                     )
 
                     Box(
@@ -974,13 +985,13 @@ fun AppContent(
                             .padding(
                                 top = searchTopPadding,
                                 start = if (isWide) 24.dp else 16.dp,
-                                end = if (isWide) 100.dp else 16.dp
+                                end = if (isWide) 24.dp else 16.dp
                             ),
-                        contentAlignment = Alignment.TopCenter
+                        contentAlignment = if (isWide) Alignment.TopEnd else Alignment.TopCenter
                     ) {
                         Row(
                             modifier = Modifier
-                                .widthIn(max = if (isWide) 720.dp else 608.dp)
+                                .widthIn(max = if (isWide) 460.dp else 608.dp)
                                 .fillMaxWidth()
                                 .defaultMinSize(minHeight = searchBarHeight)
                                 .wrapContentHeight()
@@ -1083,13 +1094,14 @@ fun AppContent(
                                     .background(
                                         color = if (isListening) MaterialTheme.colorScheme.primary.copy(alpha = 0.2f) else Color.Transparent,
                                         shape = CircleShape
-                                    )
+                                    ),
+                                enabled = !isClearingAnimation
                             ) {
                                 androidx.compose.animation.AnimatedContent(
                                     targetState = isListening,
                                     transitionSpec = {
-                                        (androidx.compose.animation.scaleIn(initialScale = 0.7f) + androidx.compose.animation.fadeIn()) togetherWith
-                                        (androidx.compose.animation.scaleOut(targetScale = 1.3f) + androidx.compose.animation.fadeOut())
+                                        (androidx.compose.animation.scaleIn(initialScale = 0.5f, animationSpec = spring(dampingRatio = 0.55f, stiffness = 320f)) + androidx.compose.animation.fadeIn(tween(160))) togetherWith
+                                        (androidx.compose.animation.scaleOut(targetScale = 1.4f, animationSpec = tween(170)) + androidx.compose.animation.fadeOut(tween(140)))
                                     }
                                 ) { listening ->
                                     Icon(
@@ -1115,31 +1127,9 @@ fun AppContent(
                                 IconButton(
                                     onClick = {
                                         val textToClear = searchQuery
-                                        if (textToClear.isNotEmpty() && !isClearingAnimation) {
-                                            displayClearText = textToClear
-                                            isClearingAnimation = true
+                                        if (textToClear.isNotEmpty()) {
                                             searchQuery = ""
-                                            scope.launch {
-                                                clearTextSlideOffset.snapTo(0f)
-                                                clearTextSlideAlpha.snapTo(1f)
-                                                launch {
-                                                    clearTextSlideOffset.animateTo(
-                                                        targetValue = 90f,
-                                                        animationSpec = tween(280, easing = androidx.compose.animation.core.CubicBezierEasing(0.2f, 0f, 0.2f, 1f))
-                                                    )
-                                                }
-                                                launch {
-                                                    clearTextSlideAlpha.animateTo(
-                                                        targetValue = 0f,
-                                                        animationSpec = tween(220, easing = androidx.compose.animation.core.LinearEasing)
-                                                    )
-                                                }
-                                                kotlinx.coroutines.delay(280)
-                                                isClearingAnimation = false
-                                                displayClearText = ""
-                                                clearTextSlideOffset.snapTo(0f)
-                                                clearTextSlideAlpha.snapTo(1f)
-                                            }
+                                            clearAnimator.startClear(scope, textToClear)
                                         }
                                     },
                                     modifier = Modifier

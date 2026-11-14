@@ -7,7 +7,6 @@ import androidx.compose.animation.ExperimentalSharedTransitionApi
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.Spring
-import com.Nightjar.Th3GradeLibraryKMP.theme.popInOnInitialLoad
 import com.Nightjar.Th3GradeLibraryKMP.theme.screenEntranceCascade
 import com.Nightjar.Th3GradeLibraryKMP.theme.adaptiveItemEntrance
 import androidx.compose.material3.adaptive.currentWindowAdaptiveInfo

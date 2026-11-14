@@ -21,8 +21,8 @@ android {
         applicationId = "com.Nightjar.Th3GradeLibraryKMP"
         minSdk = libs.versions.android.minSdk.get().toInt()
         targetSdk = libs.versions.android.targetSdk.get().toInt()
-        versionCode = 12093
-        versionName = "1.2.93"
+        versionCode = 12094
+        versionName = "1.2.94"
     }
     
     val keystoreProperties = Properties()
@@ -93,11 +93,11 @@ dependencies {
     implementation(libs.androidx.core.splashscreen)
 
     implementation(compose.material3)
-    implementation("androidx.work:work-runtime-ktx:2.9.0")
-    implementation("androidx.glance:glance-appwidget:1.1.0")
-    implementation("androidx.glance:glance-material3:1.1.0")
-    implementation("androidx.swiperefreshlayout:swiperefreshlayout:1.1.0")
-    implementation("androidx.browser:browser:1.8.0")
+    implementation(libs.androidx.work.runtime.ktx)
+    implementation(libs.androidx.glance.appwidget)
+    implementation(libs.androidx.glance.material3)
+    implementation(libs.androidx.swiperefreshlayout)
+    implementation(libs.androidx.browser)
     implementation(libs.coil.compose)
     // Official Google Mobile Ads SDK dependency ready (zero active ad calls in UI)
     implementation(libs.play.services.ads)

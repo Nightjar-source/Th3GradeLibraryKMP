@@ -30,7 +30,6 @@ import androidx.compose.ui.unit.sp
 import com.Nightjar.Th3GradeLibraryKMP.theme.liquidGlass
 import com.Nightjar.Th3GradeLibraryKMP.theme.KufiReemFontFamily
 import com.Nightjar.Th3GradeLibraryKMP.theme.LocalIsLowEndDevice
-import com.Nightjar.Th3GradeLibraryKMP.theme.popInOnInitialLoad
 import com.Nightjar.Th3GradeLibraryKMP.theme.screenEntranceCascade
 import org.jetbrains.compose.resources.painterResource
 import com.Nightjar.Th3GradeLibraryKMP.generated.resources.Res
