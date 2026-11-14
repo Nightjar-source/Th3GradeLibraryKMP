@@ -247,7 +247,7 @@ fun NewsScreen(
                     ) {
                         item(key = "top_spacer", contentType = "spacer", span = { androidx.compose.foundation.lazy.grid.GridItemSpan(maxLineSpan) }) {
                             val statusBarHeight = WindowInsets.statusBars.add(WindowInsets.captionBar).asPaddingValues().calculateTopPadding()
-                            val dynamicTopPadding = if (isMedium) statusBarHeight + 64.dp else statusBarHeight + 76.dp
+                            val dynamicTopPadding = if (isMedium) statusBarHeight + 52.dp else statusBarHeight + 68.dp
                             Spacer(modifier = Modifier.height(dynamicTopPadding))
                         }
                         

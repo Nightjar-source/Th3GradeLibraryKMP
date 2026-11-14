@@ -73,7 +73,7 @@ fun ShortcutsScreen(
                 .fillMaxSize()
         ) {
             val statusBarHeight = WindowInsets.statusBars.add(WindowInsets.captionBar).asPaddingValues().calculateTopPadding()
-            val dynamicTopPadding = if (isWide) statusBarHeight + 64.dp else statusBarHeight + 76.dp
+            val dynamicTopPadding = if (isWide) statusBarHeight + 52.dp else statusBarHeight + 68.dp
 
             val isNavigatingBack = com.Nightjar.Th3GradeLibraryKMP.theme.LocalIsNavigatingBack.current
             LaunchedEffect(isNavigatingBack) {

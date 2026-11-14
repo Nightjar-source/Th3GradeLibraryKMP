@@ -61,7 +61,7 @@ fun AboutScreen(
         val isWide = screenWidthDp >= 600.dp
         
         val statusBarHeight = WindowInsets.statusBars.add(WindowInsets.captionBar).asPaddingValues().calculateTopPadding()
-        val dynamicTopPadding = if (isWide) statusBarHeight + 64.dp else statusBarHeight + 76.dp
+        val dynamicTopPadding = if (isWide) statusBarHeight + 52.dp else statusBarHeight + 68.dp
 
         Column(
             modifier = Modifier

@@ -113,7 +113,7 @@ fun LibraryScreen(
             .padding(horizontal = 16.dp)
     ) {
         val statusBarHeight = WindowInsets.statusBars.add(WindowInsets.captionBar).asPaddingValues().calculateTopPadding()
-        val dynamicTopPadding = if (isWide) statusBarHeight + 64.dp else statusBarHeight + 76.dp
+        val dynamicTopPadding = if (isWide) statusBarHeight + 52.dp else statusBarHeight + 68.dp
         Column(modifier = Modifier.fillMaxSize()) {
             if (category == null) {
                 // Home/Categories view
@@ -267,9 +267,9 @@ fun LibraryScreen(
                     val density = androidx.compose.ui.platform.LocalDensity.current
                     val screenWidthDp = with(density) { windowInfo.containerSize.width.toDp() }
                     val dynamicTopPadding = if (isWide) {
-                        statusBarHeight + 64.dp
+                        statusBarHeight + 52.dp
                     } else {
-                        statusBarHeight + 76.dp
+                        statusBarHeight + 68.dp
                     }
                     val dynamicGridColumns = remember(adaptiveConfig, isGridView) {
                         adaptiveConfig.libraryGridCells(isGridView)
