@@ -310,36 +310,43 @@ fun AppContent(
     val activeTargetId = com.Nightjar.Th3GradeLibraryKMP.ui.TransitionTargetTracker.activeTargetId
 
     val savedItems = remember(savedItemIds, isTransitionActive, isReturningFromPdf, activeTargetId) {
-        val savedBookIds = savedItemIds.map { it.split(":")[0] }.toMutableSet()
-        if ((isTransitionActive || isReturningFromPdf) && activeTargetId != null && activeTargetId.startsWith("bookmark_")) {
-            val activeBookId = activeTargetId.substringAfter("bookmark_").substringBeforeLast("_")
-            if (activeBookId.isNotEmpty()) savedBookIds.add(activeBookId)
-        }
-        (AllItems.books + AllItems.notes).filter { it.id in savedBookIds }
+        com.Nightjar.Th3GradeLibraryKMP.core.SavedItemsSelector.select(
+            savedKeys = savedItemIds.toSet(),
+            activeTargetId = activeTargetId,
+            isTransitionActive = isTransitionActive,
+            isReturningFromPdf = isReturningFromPdf
+        )
     }
     var pdfInitialPage by viewModel::pdfInitialPage
 
     // Centralized Unified Back Navigation Handler for ALL Platforms (Android, Desktop, Web, iOS)
     fun handleTopBarBack() {
-        if (showClearCacheDialog) {
-            showClearCacheDialog = false
-        } else if (isDrawerOpen) {
-            isDrawerOpen = false
-        } else if (isNewsSettingsOpen) {
-            isNewsSettingsOpen = false
-        } else if (isAppSettingsOpen) {
-            isAppSettingsOpen = false
-        } else if (selectedItem != null) {
-            isNavigatingBack = true
-            viewModel.clearSelectedItem()
-        } else if (page == "list") {
-            isNavigatingBack = true
-            navigateTo("home")
-        } else {
-            isNavigatingBack = true
-            if (!popPage()) {
+        when (com.Nightjar.Th3GradeLibraryKMP.core.BackNavigator.decide(
+            showClearCacheDialog = showClearCacheDialog,
+            isDrawerOpen = isDrawerOpen,
+            isNewsSettingsOpen = isNewsSettingsOpen,
+            isAppSettingsOpen = isAppSettingsOpen,
+            hasSelectedItem = selectedItem != null,
+            page = page,
+            canPopPage = viewModel.pageHistory.value.size > 1
+        )) {
+            com.Nightjar.Th3GradeLibraryKMP.core.BackNavigator.BackAction.CLOSE_CACHE_DIALOG -> showClearCacheDialog = false
+            com.Nightjar.Th3GradeLibraryKMP.core.BackNavigator.BackAction.CLOSE_DRAWER -> isDrawerOpen = false
+            com.Nightjar.Th3GradeLibraryKMP.core.BackNavigator.BackAction.CLOSE_NEWS_SETTINGS -> isNewsSettingsOpen = false
+            com.Nightjar.Th3GradeLibraryKMP.core.BackNavigator.BackAction.CLOSE_APP_SETTINGS -> isAppSettingsOpen = false
+            com.Nightjar.Th3GradeLibraryKMP.core.BackNavigator.BackAction.CLOSE_PDF -> {
+                isNavigatingBack = true
+                viewModel.clearSelectedItem()
+            }
+            com.Nightjar.Th3GradeLibraryKMP.core.BackNavigator.BackAction.NAVIGATE_HOME -> {
+                isNavigatingBack = true
                 navigateTo("home")
             }
+            com.Nightjar.Th3GradeLibraryKMP.core.BackNavigator.BackAction.POP_PAGE -> {
+                isNavigatingBack = true
+                if (!popPage()) navigateTo("home")
+            }
+            com.Nightjar.Th3GradeLibraryKMP.core.BackNavigator.BackAction.STAY -> { /* stay */ }
         }
     }
 
@@ -354,8 +361,7 @@ fun AppContent(
     LaunchedEffect(initialBookId, initialIsNote, initialPage, initialSearchQuery) {
         var consumed = false
         if (initialBookId != null) {
-            val target = AllItems.books.firstOrNull { it.id == initialBookId }
-                ?: AllItems.notes.firstOrNull { it.id == initialBookId }
+            val target = com.Nightjar.Th3GradeLibraryKMP.core.ItemResolver.findById(initialBookId)
             if (target != null) {
                 SyncEngine.saveSelectedCategory(if (target.isNote) "notes" else "books")
                 val list = if (target.isNote) AllItems.notes else AllItems.books
@@ -660,13 +666,8 @@ fun AppContent(
                                                 item = currentItem,
                                                 savedItemIds = savedItemIds,
                                                 onToggleBookmark = { pageIdx ->
-                                                    val key = "${currentItem.id}:$pageIdx"
-                                                    val isNowSaved = SyncEngine.toggleBookmark(key)
-                                                    if (!isNowSaved) {
-                                                        platformActionHandler.showToast("تم حذف الصفحة ${pageIdx + 1} من المحفوظات")
-                                                    } else {
-                                                        platformActionHandler.showToast("تم حفظ الصفحة ${pageIdx + 1} في المحفوظات")
-                                                    }
+                                                    val result = com.Nightjar.Th3GradeLibraryKMP.core.BookmarkActions.toggle(currentItem, pageIdx)
+                                                    platformActionHandler.showToast(result.toastMessage)
                                                 },
                                                 onClose = {
                                                     handleTopBarBack()
