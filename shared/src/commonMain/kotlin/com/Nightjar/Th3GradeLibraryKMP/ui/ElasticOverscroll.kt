@@ -15,16 +15,14 @@ import kotlinx.coroutines.flow.collectLatest
 
 /**
  * True when the platform draws its own stretch overscroll (Android 12+ / API 31+).
- * The bottom edge is left to the system there; the top edge keeps the One UI reachability pull on all versions.
+ * Currently unused — kept so call sites can opt back into system stretch if desired.
  */
 val LocalSystemStretchOverscroll = compositionLocalOf { false }
 
 /**
- * Elastic bounce/overscroll effect on vertical scrolling (custom rubber band) — One UI-style.
- *
- * Architecture (performance-safe): the nested-scroll callbacks only write a plain `FloatState`
- * synchronously; ONE single collector pushes it into the Animatable. No per-event coroutines,
- * so drag is 1:1 and release uses a fluid spring — even on low-end devices and in long lists.
+ * Elastic bounce/overscroll effect on vertical scrolling — custom rubber band (One UI behavior).
+ * Top edge AND bottom edge both use the custom stretch so the effect is guaranteed on every device
+ * (including Android 12+ where platform stretch may be suppressed by nested-scroll connections).
  */
 fun Modifier.elasticOverscroll(
     maxStretchRatio: Float = 0.32f,
@@ -33,7 +31,6 @@ fun Modifier.elasticOverscroll(
 ): Modifier = composed {
     val isLowEnd = com.Nightjar.Th3GradeLibraryKMP.theme.LocalIsLowEndDevice.current
     if (isLowEnd) return@composed this
-    val systemStretch = LocalSystemStretchOverscroll.current
 
     var componentHeight by remember { mutableStateOf(0f) }
     val overscrollOffset = remember { Animatable(0f) }
@@ -80,7 +77,6 @@ fun Modifier.elasticOverscroll(
                     if ((isPullingDown && !topEnabled) || (isPullingUp && !bottomEnabled)) {
                         return Offset.Zero
                     }
-                    if (isPullingUp && systemStretch) return Offset.Zero // Android 12+: system stretch owns the bottom edge
 
                     val maxReachability = 220f // Brings top content comfortably to mid-screen
                     val maxOffset = if (componentHeight > 0) (componentHeight * maxStretchRatio).coerceIn(200f, 320f) else 240f
@@ -92,7 +88,7 @@ fun Modifier.elasticOverscroll(
                         dragTarget.floatValue = newTarget
                         return Offset(0f, available.y)
                     } else {
-                        // Bottom edge rubber-band stretch (pre-Android 12 only)
+                        // Bottom edge rubber-band stretch
                         val progress = (kotlin.math.abs(current) / maxOffset).coerceIn(0f, 1f)
                         val resistance = 0.55f * (1f - progress * 0.75f)
                         val targetOffset = (current + available.y * resistance).coerceIn(-maxOffset, 0f)
@@ -114,8 +110,8 @@ fun Modifier.elasticOverscroll(
                     )
                     return available
                 }
-                // Bottom edge stretch rebounds back to 0 (pre-Android 12 only — Android 12+ system stretch owns it).
-                if (current < 0f && !systemStretch) {
+                // Bottom edge stretch rebounds back to 0.
+                if (current < 0f) {
                     dragTarget.floatValue = 0f
                     overscrollOffset.animateTo(
                         0f,
