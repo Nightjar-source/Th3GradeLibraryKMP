@@ -1,8 +1,6 @@
 package com.Nightjar.Th3GradeLibraryKMP.ui
 
 import androidx.compose.animation.core.*
-import androidx.compose.foundation.layout.offset
-import kotlin.math.roundToInt
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.composed
@@ -13,18 +11,20 @@ import androidx.compose.ui.input.nestedscroll.NestedScrollSource
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.unit.Velocity
-import kotlinx.coroutines.launch
+import kotlinx.coroutines.flow.collectLatest
 
 /**
  * True when the platform draws its own stretch overscroll (Android 12+ / API 31+).
- * The custom rubber-band stands aside there so the system elasticity runs without conflict.
+ * The bottom edge is left to the system there; the top edge keeps the One UI reachability pull on all versions.
  */
 val LocalSystemStretchOverscroll = compositionLocalOf { false }
 
 /**
- * Elastic bounce/overscroll effect on vertical scrolling (custom rubber band).
- * Top edge: One UI-style pull-down reachability that stays held mid-screen (restore).
- * Bottom edge: on Android 12+ the system stretch handles the bounce; pre-12 falls back to custom rubber-band.
+ * Elastic bounce/overscroll effect on vertical scrolling (custom rubber band) — One UI-style.
+ *
+ * Architecture (performance-safe): the nested-scroll callbacks only write a plain `FloatState`
+ * synchronously; ONE single collector pushes it into the Animatable. No per-event coroutines,
+ * so drag is 1:1 and release uses a fluid spring — even on low-end devices and in long lists.
  */
 fun Modifier.elasticOverscroll(
     maxStretchRatio: Float = 0.32f,
@@ -37,7 +37,14 @@ fun Modifier.elasticOverscroll(
 
     var componentHeight by remember { mutableStateOf(0f) }
     val overscrollOffset = remember { Animatable(0f) }
-    val scope = rememberCoroutineScope()
+    // Written synchronously from nestedScroll callbacks (main thread) — zero coroutine flood.
+    val dragTarget = remember { mutableFloatStateOf(0f) }
+
+    // Single collector: drag follows the finger 1:1 without spawning a coroutine per scroll event.
+    LaunchedEffect(Unit) {
+        snapshotFlow { dragTarget.floatValue }
+            .collectLatest { target -> overscrollOffset.snapTo(target) }
+    }
 
     val nestedScrollConnection = remember {
         object : NestedScrollConnection {
@@ -45,17 +52,16 @@ fun Modifier.elasticOverscroll(
                 val current = overscrollOffset.value
                 if (current != 0f && source == NestedScrollSource.UserInput) {
                     val delta = available.y
-                    // If pulled down into Reachability zone (current > 0) and user scrolls up (delta < 0),
-                    // smoothly scroll the reachability zone back up to 0 first.
+                    // Pulling up while stretched down into the reachability zone: scroll it back up first.
                     if (current > 0 && delta < 0) {
                         val newOffset = (current + delta).coerceAtLeast(0f)
-                        scope.launch { overscrollOffset.snapTo(newOffset) }
+                        dragTarget.floatValue = newOffset
                         return Offset(0f, delta)
                     }
-                    // If stretched upward at bottom edge (current < 0) and user scrolls down (delta > 0)
+                    // Pulling down while stretched upward at the bottom edge.
                     if (current < 0 && delta > 0) {
                         val newOffset = (current + delta).coerceAtMost(0f)
-                        scope.launch { overscrollOffset.snapTo(newOffset) }
+                        dragTarget.floatValue = newOffset
                         return Offset(0f, delta)
                     }
                 }
@@ -69,28 +75,28 @@ fun Modifier.elasticOverscroll(
             ): Offset {
                 if (source == NestedScrollSource.UserInput && available.y != 0f) {
                     val isPullingDown = available.y > 0 // Top edge pull (One UI Reachability)
-                    val isPullingUp = available.y < 0   // Bottom edge overscroll stretch
-                    
+                    val isPullingUp = available.y < 0   // Bottom edge stretch
+
                     if ((isPullingDown && !topEnabled) || (isPullingUp && !bottomEnabled)) {
                         return Offset.Zero
                     }
-                    
+                    if (isPullingUp && systemStretch) return Offset.Zero // Android 12+: system stretch owns the bottom edge
+
                     val maxReachability = 220f // Brings top content comfortably to mid-screen
                     val maxOffset = if (componentHeight > 0) (componentHeight * maxStretchRatio).coerceIn(200f, 320f) else 240f
                     val current = overscrollOffset.value
 
                     if (isPullingDown) {
-                        // Smoothly pull down towards mid-screen and stay there without spring rebound
+                        // Smoothly pull down toward mid-screen and keep it there without bouncing back.
                         val newTarget = (current + available.y * 0.65f).coerceIn(0f, maxOffset)
-                        scope.launch { overscrollOffset.snapTo(newTarget) }
+                        dragTarget.floatValue = newTarget
                         return Offset(0f, available.y)
                     } else {
-                        if (systemStretch) return Offset.Zero // Android 12+: system stretch owns the bottom edge — don't double it
-                        // Bottom edge rubber-band stretch
+                        // Bottom edge rubber-band stretch (pre-Android 12 only)
                         val progress = (kotlin.math.abs(current) / maxOffset).coerceIn(0f, 1f)
                         val resistance = 0.55f * (1f - progress * 0.75f)
                         val targetOffset = (current + available.y * resistance).coerceIn(-maxOffset, 0f)
-                        scope.launch { overscrollOffset.snapTo(targetOffset) }
+                        dragTarget.floatValue = targetOffset
                         return Offset(0f, available.y)
                     }
                 }
@@ -99,19 +105,18 @@ fun Modifier.elasticOverscroll(
 
             override suspend fun onPreFling(available: Velocity): Velocity {
                 val current = overscrollOffset.value
-                // When transitioning to or from PDF, reset overscroll cleanly to 0 with fluid spring
+                // When transitioning to or from PDF, reset overscroll cleanly to 0 with fluid spring.
                 if (TransitionTargetTracker.isTransitionActive) {
+                    dragTarget.floatValue = 0f
                     overscrollOffset.animateTo(
                         0f,
-                        spring(
-                            dampingRatio = 0.85f,
-                            stiffness = Spring.StiffnessMediumLow
-                        )
+                        spring(dampingRatio = 0.85f, stiffness = Spring.StiffnessMediumLow)
                     )
                     return available
                 }
                 // Bottom edge stretch rebounds back to 0 (pre-Android 12 only — Android 12+ system stretch owns it).
                 if (current < 0f && !systemStretch) {
+                    dragTarget.floatValue = 0f
                     overscrollOffset.animateTo(
                         0f,
                         spring(
@@ -121,9 +126,10 @@ fun Modifier.elasticOverscroll(
                     )
                     return available
                 }
-                // If pulled beyond max reachability at the top, gently settle at maxReachability without jumping back to 0
+                // If pulled beyond max reachability at the top, gently settle at maxReachability without jumping back to 0.
                 val maxReachability = 220f
                 if (current > maxReachability) {
+                    dragTarget.floatValue = maxReachability
                     overscrollOffset.animateTo(
                         maxReachability,
                         spring(
@@ -133,17 +139,16 @@ fun Modifier.elasticOverscroll(
                     )
                     return available
                 }
-                // One UI Reachability: remains pulled down at user's release position (ينزل ولا يرتد لأعلى)
+                // One UI Reachability: remains pulled down at the user's release position.
                 return Velocity.Zero
             }
         }
     }
 
-    // Mirror the drag position into the global tracker via a flow — not a frame-keyed LaunchedEffect,
-    // which would cancel/restart the coroutine on every single pixel of movement.
+    // Mirror drag position into the global tracker via a flow — not a frame-keyed LaunchedEffect.
     LaunchedEffect(Unit) {
-        androidx.compose.runtime.snapshotFlow { overscrollOffset.value }
-            .collect { TransitionTargetTracker.currentOverscrollY = it }
+        snapshotFlow { overscrollOffset.value }
+            .collectLatest { TransitionTargetTracker.currentOverscrollY = it }
     }
 
     this

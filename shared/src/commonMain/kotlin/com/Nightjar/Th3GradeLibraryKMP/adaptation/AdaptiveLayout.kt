@@ -31,15 +31,15 @@ object AdaptiveLayout {
 
     // ── شريط العنوان (Floating Top Bar) ───────────────────────────────────────
     /**
-     * الارتفاع المضبوط حسب متريال (Small Top App Bar = 64.dp للشاشات الكبيرة):
-     *  - ارتفاع النافذة مضغوط (landscape phone / split-screen ضيق) → 56.dp
-     *  - نوافذ كبيرة حقيقية (EXPANDED عرض + ارتفاع غير مضغوط — تابلت/حاسب) → 64.dp
-     *  - وكل ما عداه (هواتف incl. split-screen) → 48.dp
+     * الارتفاع المضبوط حسب متريال:
+     *  - الهاتف الأفقي (compact height) → 44.dp (أقل من 46)
+     *  - الهاتف العمودي العادي → 56.dp
+     *  - الشاشات الكبيرة (≥ 600dp عرض، يتضمن >700dp) → 58.dp (ذكي ولا يكبر)
      */
     fun topBarHeight(heightClass: WindowHeightSizeClass, widthClass: WindowWidthSizeClass): Dp = when {
-        isCompactHeight(heightClass) -> 56.dp
-        widthClass == WindowWidthSizeClass.EXPANDED -> 64.dp   // true tablets / desktops — M3 recommended
-        else -> 48.dp                                           // phones (incl. split-screen windows)
+        isCompactHeight(heightClass) -> 44.dp
+        widthClass == WindowWidthSizeClass.COMPACT -> 56.dp
+        else -> 58.dp
     }
 
     /** الحشوة العمودية داخل شريط العنوان العائم حسب ارتفاع النافذة. */

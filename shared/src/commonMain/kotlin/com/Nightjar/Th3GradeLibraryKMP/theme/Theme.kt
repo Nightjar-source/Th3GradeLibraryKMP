@@ -42,9 +42,6 @@ import org.jetbrains.compose.resources.Font
 import com.Nightjar.Th3GradeLibraryKMP.generated.resources.Res
 import com.Nightjar.Th3GradeLibraryKMP.generated.resources.reem_kufi_bold
 import com.Nightjar.Th3GradeLibraryKMP.generated.resources.reem_kufi_medium
-import androidx.compose.animation.animateColorAsState
-import androidx.compose.animation.core.tween
-import androidx.compose.animation.core.LinearOutSlowInEasing
 import androidx.compose.material3.ColorScheme
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.lightColorScheme
@@ -242,73 +239,6 @@ val KufiReemFontFamily: FontFamily
     )
 
 @Composable
-fun animateColorScheme(targetColorScheme: ColorScheme): ColorScheme {
-    val animationSpec = tween<Color>(durationMillis = 350, easing = LinearOutSlowInEasing)
-    
-    val primary = animateColorAsState(targetColorScheme.primary, animationSpec).value
-    val onPrimary = animateColorAsState(targetColorScheme.onPrimary, animationSpec).value
-    val primaryContainer = animateColorAsState(targetColorScheme.primaryContainer, animationSpec).value
-    val onPrimaryContainer = animateColorAsState(targetColorScheme.onPrimaryContainer, animationSpec).value
-    val inversePrimary = animateColorAsState(targetColorScheme.inversePrimary, animationSpec).value
-    val secondary = animateColorAsState(targetColorScheme.secondary, animationSpec).value
-    val onSecondary = animateColorAsState(targetColorScheme.onSecondary, animationSpec).value
-    val secondaryContainer = animateColorAsState(targetColorScheme.secondaryContainer, animationSpec).value
-    val onSecondaryContainer = animateColorAsState(targetColorScheme.onSecondaryContainer, animationSpec).value
-    val tertiary = animateColorAsState(targetColorScheme.tertiary, animationSpec).value
-    val onTertiary = animateColorAsState(targetColorScheme.onTertiary, animationSpec).value
-    val tertiaryContainer = animateColorAsState(targetColorScheme.tertiaryContainer, animationSpec).value
-    val onTertiaryContainer = animateColorAsState(targetColorScheme.onTertiaryContainer, animationSpec).value
-    val background = animateColorAsState(targetColorScheme.background, animationSpec).value
-    val onBackground = animateColorAsState(targetColorScheme.onBackground, animationSpec).value
-    val surface = animateColorAsState(targetColorScheme.surface, animationSpec).value
-    val onSurface = animateColorAsState(targetColorScheme.onSurface, animationSpec).value
-    val surfaceVariant = animateColorAsState(targetColorScheme.surfaceVariant, animationSpec).value
-    val onSurfaceVariant = animateColorAsState(targetColorScheme.onSurfaceVariant, animationSpec).value
-    val surfaceTint = animateColorAsState(targetColorScheme.surfaceTint, animationSpec).value
-    val inverseSurface = animateColorAsState(targetColorScheme.inverseSurface, animationSpec).value
-    val inverseOnSurface = animateColorAsState(targetColorScheme.inverseOnSurface, animationSpec).value
-    val error = animateColorAsState(targetColorScheme.error, animationSpec).value
-    val onError = animateColorAsState(targetColorScheme.onError, animationSpec).value
-    val errorContainer = animateColorAsState(targetColorScheme.errorContainer, animationSpec).value
-    val onErrorContainer = animateColorAsState(targetColorScheme.onErrorContainer, animationSpec).value
-    val outline = animateColorAsState(targetColorScheme.outline, animationSpec).value
-    val outlineVariant = animateColorAsState(targetColorScheme.outlineVariant, animationSpec).value
-    val scrim = animateColorAsState(targetColorScheme.scrim, animationSpec).value
-
-    return ColorScheme(
-        primary = primary,
-        onPrimary = onPrimary,
-        primaryContainer = primaryContainer,
-        onPrimaryContainer = onPrimaryContainer,
-        inversePrimary = inversePrimary,
-        secondary = secondary,
-        onSecondary = onSecondary,
-        secondaryContainer = secondaryContainer,
-        onSecondaryContainer = onSecondaryContainer,
-        tertiary = tertiary,
-        onTertiary = onTertiary,
-        tertiaryContainer = tertiaryContainer,
-        onTertiaryContainer = onTertiaryContainer,
-        background = background,
-        onBackground = onBackground,
-        surface = surface,
-        onSurface = onSurface,
-        surfaceVariant = surfaceVariant,
-        onSurfaceVariant = onSurfaceVariant,
-        surfaceTint = surfaceTint,
-        inverseSurface = inverseSurface,
-        inverseOnSurface = inverseOnSurface,
-        error = error,
-        onError = onError,
-        errorContainer = errorContainer,
-        onErrorContainer = onErrorContainer,
-        outline = outline,
-        outlineVariant = outlineVariant,
-        scrim = scrim
-    )
-}
-
-@Composable
 fun Th3GradeTheme(
     darkTheme: Boolean = isSystemInDarkTheme(),
     pureBlackMode: Boolean = false,
@@ -420,10 +350,9 @@ fun Th3GradeTheme(
         }
     }
 
-    val animatedColorScheme = animateColorScheme(colorScheme)
-
+    // Material 3 switches colors instantly — no 350ms 30-state animation storm, no stacking/lag during theme toggle.
     MaterialTheme(
-        colorScheme = animatedColorScheme,
+        colorScheme = colorScheme,
         typography = Typography(),
         content = content
     )

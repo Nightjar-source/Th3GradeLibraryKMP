@@ -166,10 +166,10 @@ fun AppSettingsModal(
                                 }
                             },
                             modifier = Modifier
-                                .size(40.dp) // 40dp touch target (M3) — never clipped
+                                .size(48.dp) // 48dp M3 touch target — never clipped
                                 .background(MaterialTheme.colorScheme.surfaceVariant, CircleShape)
                         ) {
-                            Icon(Icons.Default.Close, contentDescription = "Close", modifier = Modifier.size(20.dp))
+                            Icon(Icons.Default.Close, contentDescription = "Close", modifier = Modifier.size(24.dp))
                         }
                     }
 
@@ -452,10 +452,10 @@ fun NewsSettingsModal(
                                 }
                             },
                             modifier = Modifier
-                                .size(40.dp) // 40dp touch target (M3) — never clipped
+                                .size(48.dp) // 48dp M3 touch target — never clipped
                                 .background(MaterialTheme.colorScheme.surfaceVariant, CircleShape)
                         ) {
-                            Icon(Icons.Default.Close, contentDescription = "Close", modifier = Modifier.size(20.dp))
+                            Icon(Icons.Default.Close, contentDescription = "Close", modifier = Modifier.size(24.dp))
                         }
                     }
 
