@@ -146,17 +146,13 @@ fun NewsScreen(
     // Sync is now strictly manual via Pull-to-Refresh.
     var isNotificationWarningDismissed by remember { mutableStateOf(false) }
 
-    // Undo deletion states
-    var recentlyDeletedItem by remember { mutableStateOf<NewsItem?>(null) }
-    var recentlyDeletedIndex by remember { mutableStateOf(-1) }
-    var showUndoBanner by remember { mutableStateOf(false) }
-    
-    var bannerJob by remember { mutableStateOf<kotlinx.coroutines.Job?>(null) }
+    // Undo deletion — all delete/restore logic lives in the UI-Free Core (NewsFeedState)
+    val newsFeed = remember { com.Nightjar.Th3GradeLibraryKMP.core.NewsFeedState() }
 
-    LaunchedEffect(showUndoBanner) {
-        if (showUndoBanner) {
+    LaunchedEffect(newsFeed.showUndoBanner) {
+        if (newsFeed.showUndoBanner) {
             kotlinx.coroutines.delay(5000)
-            showUndoBanner = false
+            newsFeed.dismiss()
         }
     }
 
@@ -311,22 +307,13 @@ fun NewsScreen(
                                         .adaptiveItemEntrance(index, itemId = newsItem.id),
                                     news = newsItem,
                                     isDark = isDark,
-                                    isRead = readNewsIds.contains(newsItem.id) || (newsItem.link.isNotEmpty() && readNewsIds.contains(newsItem.link)),
+                                    isRead = newsFeed.isRead(newsItem, readNewsIds),
                                     onClick = {
-                                        SyncEngine.markNewsAsRead(newsItem.id)
-                                        if (newsItem.link.isNotEmpty()) {
-                                            SyncEngine.markNewsAsRead(newsItem.link)
-                                        }
+                                        newsFeed.markRead(newsItem)
                                         onClick(newsItem.link, newsItem.title)
                                     },
                                     onDelete = {
-                                        val delIndex = newsList.indexOf(newsItem)
-                                        if (delIndex >= 0) {
-                                            recentlyDeletedItem = newsItem
-                                            recentlyDeletedIndex = delIndex
-                                            SyncEngine.deleteNewsItem(newsItem.id)
-                                            showUndoBanner = true
-                                        }
+                                        newsFeed.deleteWithUndo(newsItem, newsList)
                                     }
                                 )
                             }
@@ -446,7 +433,7 @@ fun NewsScreen(
 
         // Undo Deletion Banner (bottom)
         androidx.compose.animation.AnimatedVisibility(
-            visible = showUndoBanner,
+            visible = newsFeed.showUndoBanner,
             enter = androidx.compose.animation.slideInVertically(initialOffsetY = { it }) + androidx.compose.animation.fadeIn(),
             exit = androidx.compose.animation.slideOutVertically(targetOffsetY = { it }) + androidx.compose.animation.fadeOut(),
             modifier = Modifier
@@ -463,7 +450,7 @@ fun NewsScreen(
                 shadowElevation = 6.dp,
                 modifier = Modifier.pointerInput(Unit) {
                     detectHorizontalDragGestures(
-                        onDragEnd = { showUndoBanner = false }
+                        onDragEnd = { newsFeed.dismiss() }
                     ) { change, _ -> change.consume() }
                 }
             ) {
@@ -481,10 +468,7 @@ fun NewsScreen(
                     )
                     TextButton(
                         onClick = {
-                            if (recentlyDeletedItem != null && recentlyDeletedIndex >= 0) {
-                                SyncEngine.restoreNewsItem(recentlyDeletedItem!!, recentlyDeletedIndex)
-                            }
-                            showUndoBanner = false
+                            newsFeed.undoRestore()
                         },
                         colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.inversePrimary)
                     ) {

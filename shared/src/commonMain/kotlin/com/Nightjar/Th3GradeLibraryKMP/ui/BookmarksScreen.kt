@@ -127,23 +127,7 @@ fun BookmarksScreen(
                 val isTransitionActive = TransitionTargetTracker.isTransitionActive
                 val isReturningFromPdf = LocalIsReturningFromPdf.current
                 val groupedPages = remember(savedPages, activeTarget, isTransitionActive, isReturningFromPdf) {
-                    val allPages = savedPages.toMutableSet()
-                    if ((isTransitionActive || isReturningFromPdf) && activeTarget != null && activeTarget.startsWith("bookmark_")) {
-                        val sub = activeTarget.removePrefix("bookmark_")
-                        val lastUnderscore = sub.lastIndexOf('_')
-                        if (lastUnderscore > 0 && lastUnderscore < sub.length - 1) {
-                            val bookId = sub.substring(0, lastUnderscore)
-                            val pageNum = sub.substring(lastUnderscore + 1)
-                            allPages.add("$bookId:$pageNum")
-                        }
-                    }
-                    allPages.mapNotNull {
-                        val parts = it.split(":")
-                        if (parts.size == 2) {
-                            parts[0] to parts[1].toIntOrNull()
-                        } else null
-                    }.filter { it.second != null }
-                    .groupBy({ it.first }, { it.second!! })
+                    com.Nightjar.Th3GradeLibraryKMP.core.BookmarksGrouper.group(savedPages, activeTarget, isTransitionActive, isReturningFromPdf)
                 }
 
                 val isNavigatingBack = LocalIsNavigatingBack.current

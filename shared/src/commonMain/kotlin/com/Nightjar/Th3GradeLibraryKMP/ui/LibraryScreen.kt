@@ -64,7 +64,6 @@ import androidx.compose.ui.draw.blur
 import com.Nightjar.Th3GradeLibraryKMP.data.BookItem
 import coil3.request.crossfade
 import coil3.request.CachePolicy
-import com.Nightjar.Th3GradeLibraryKMP.data.AllItems
 import com.Nightjar.Th3GradeLibraryKMP.theme.liquidGlass
 import com.Nightjar.Th3GradeLibraryKMP.theme.bounceClick
 import com.Nightjar.Th3GradeLibraryKMP.theme.parseHexColor
@@ -208,16 +207,10 @@ fun LibraryScreen(
                 }
                 }
             } else {
-                // Category contents list/grid
-                val allList = if (category == "books") AllItems.books else AllItems.notes
+                // Category contents list/grid — decisions live in the UI-Free Core (LibraryFilter)
+                val allList = com.Nightjar.Th3GradeLibraryKMP.core.LibraryFilter.catalogFor(category)
                 val filteredList = remember(searchQuery, category) {
-                    if (searchQuery.isBlank()) {
-                        allList
-                    } else {
-                        allList.filter {
-                            it.title.contains(searchQuery, ignoreCase = true)
-                        }
-                    }
+                    com.Nightjar.Th3GradeLibraryKMP.core.LibraryFilter.filter(allList, searchQuery)
                 }
 
                 // Uses hoisted lazyGridState
