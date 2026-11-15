@@ -24,14 +24,12 @@ data class DynamicBookItem(
     val author: String = "",
     val color_start: String = "#2563eb",
     val color_end: String = "#1d4ed8",
-    val msg_id: Long = 0,
-    val file_id: String = "",
     val file_size: Long = 0,
     val stream_url: String = "",
+    val backup_hf_url: String = "",
     val backup_github_url: String = "",
-    val backup_telegram_url: String = "",
-    val telegram_channel_url: String = "",
-    val telegram_deep_link: String = ""
+    val backup_url_3: String = "",
+    val backup_url_4: String = ""
 ) {
     fun toBookItem(): BookItem {
         return BookItem(
@@ -49,16 +47,14 @@ data class DynamicBookItem(
 
 @Serializable
 data class CloudBookMeta(
-    val msg_id: Long,
     val fallback_filename: String = "",
     val title: String = "",
-    val file_id: String? = null,
     val file_size: Long? = null,
     val stream_url: String? = null,
+    val backup_hf_url: String? = null,
     val backup_github_url: String? = null,
-    val backup_telegram_url: String? = null,
-    val telegram_channel_url: String? = null,
-    val telegram_deep_link: String? = null,
+    val backup_url_3: String? = null,
+    val backup_url_4: String? = null,
     val direct_url: String? = null,
     val cover_url: String? = null
 )
@@ -67,8 +63,6 @@ data class CloudBookMeta(
 data class CloudManifest(
     val version: Int = 1,
     val grade: String = "الثالث متوسط",
-    val channel: String = "@bookiraqi",
-    val channel_id: Long = -1001329888197L,
     val hidden_ids: List<String> = emptyList(),
     val books: Map<String, CloudBookMeta> = emptyMap(),
     val notes: Map<String, CloudBookMeta> = emptyMap(),
@@ -85,7 +79,9 @@ object CloudCatalogManager {
     
     private val httpClient = HttpClient()
 
-    // 100% Free CDNs for real-time third-party catalog updates without new APK releases
+    // Dual Edge Mirrors for 100% High Availability (Cloudflare Worker & GitHub Raw / CDN)
+    private const val CLOUDFLARE_MANIFEST_URL = 
+        "https://th3books-gateway.karrar1iq.workers.dev/manifest"
     private const val GITHUB_MANIFEST_RAW = 
         "https://raw.githubusercontent.com/Nightjar-source/Th3GradeLibraryKMP-Cloud/main/cloud_manifest.json"
     private const val JSDELIVR_MANIFEST_CDN = 
@@ -129,10 +125,15 @@ object CloudCatalogManager {
         }
     }
 
+    /**
+     * Resilient Multi-Source Synchronization:
+     * Attempts Cloudflare Edge first -> falls back to GitHub Raw -> falls back to jsDelivr CDN.
+     * Updates locally and persistently without requiring APK updates.
+     */
     suspend fun refreshManifest() {
         withContext(Dispatchers.IO) {
             try {
-                val urls = listOf(GITHUB_MANIFEST_RAW, JSDELIVR_MANIFEST_CDN, "https://th3books-gateway.karrar1iq.workers.dev/manifest")
+                val urls = listOf(CLOUDFLARE_MANIFEST_URL, GITHUB_MANIFEST_RAW, JSDELIVR_MANIFEST_CDN)
                 for (url in urls) {
                     try {
                         val response = httpClient.get(url)
@@ -148,11 +149,11 @@ object CloudCatalogManager {
                                 return@withContext
                             }
                         }
-                    } catch (e: Exception) {
-                        // Fallback to next CDN URL
+                    } catch (_: Exception) {
+                        // Fallback to next mirror
                     }
                 }
-            } catch (e: Exception) {
+            } catch (_: Exception) {
                 // Silently preserve existing cached manifest
             }
         }
@@ -166,16 +167,14 @@ object CloudCatalogManager {
         val fromList = (current.books_list + current.notes_list).firstOrNull { it.id == item.id }
         if (fromList != null) {
             return CloudBookMeta(
-                msg_id = fromList.msg_id,
                 fallback_filename = fromList.pdf_path.substringAfterLast("/"),
                 title = fromList.title,
-                file_id = fromList.file_id,
                 file_size = fromList.file_size,
                 stream_url = fromList.stream_url,
+                backup_hf_url = fromList.backup_hf_url,
                 backup_github_url = fromList.backup_github_url,
-                backup_telegram_url = fromList.backup_telegram_url,
-                telegram_channel_url = fromList.telegram_channel_url,
-                telegram_deep_link = fromList.telegram_deep_link,
+                backup_url_3 = fromList.backup_url_3,
+                backup_url_4 = fromList.backup_url_4,
                 direct_url = fromList.stream_url,
                 cover_url = fromList.cover_url
             )
@@ -183,6 +182,9 @@ object CloudCatalogManager {
         return null
     }
 
+    /**
+     * Direct link generator for external and cloud drives (e.g. Google Drive, Archive, CDNs).
+     */
     fun convertToDirectUrl(url: String): String {
         if (url.isBlank()) return ""
         if (url.contains("drive.google.com") && url.contains("/d/")) {
@@ -243,17 +245,36 @@ object CloudCatalogManager {
         return (staticItems + dynamicItems + mapItems).distinctBy { it.id }
     }
 
+    /**
+     * Resolves all available candidate stream/download URLs in priority order:
+     * 1. Primary: Official Ministry of Education / Declared stream_url
+     * 2. Secondary: Hugging Face mirror (backup_hf_url)
+     * 3. Tertiary: GitHub Releases direct mirror (backup_github_url)
+     * 4. Multi-tier: Any custom declared 3rd / 4th direct mirrors
+     */
     fun getStreamCandidateUrls(item: BookItem): List<String> {
         val meta = getMeta(item)
         val candidates = mutableListOf<String>()
 
-        // 1. Primary: Hugging Face or declared stream_url / direct_url
+        // 1. Primary: Official Ministry or stream_url / direct_url
         val primary = meta?.stream_url ?: meta?.direct_url
         if (!primary.isNullOrBlank()) {
             candidates.add(convertToDirectUrl(primary))
         }
 
-        // 2. Secondary: GitHub Releases direct backup
+        // 2. Secondary: Hugging Face dataset mirror
+        val hfBackup = meta?.backup_hf_url
+        if (!hfBackup.isNullOrBlank()) {
+            candidates.add(convertToDirectUrl(hfBackup))
+        } else {
+            val filename = meta?.fallback_filename
+            if (!filename.isNullOrBlank()) {
+                val folder = if (item.isNote) "notes" else "books"
+                candidates.add("https://huggingface.co/datasets/Larber/th3grade-books/resolve/main/$folder/$filename")
+            }
+        }
+
+        // 3. Tertiary: GitHub Releases direct backup
         val githubBackup = meta?.backup_github_url
         if (!githubBackup.isNullOrBlank()) {
             candidates.add(convertToDirectUrl(githubBackup))
@@ -263,6 +284,13 @@ object CloudCatalogManager {
                 candidates.add("https://github.com/Nightjar-source/Th3GradeLibraryKMP-Cloud/releases/download/v2.0.0-cloud/$filename")
             }
         }
+
+        // 4. Custom 3rd / 4th tier backups (Google Drive, Archive, Custom CDN)
+        val b3 = meta?.backup_url_3
+        if (!b3.isNullOrBlank()) candidates.add(convertToDirectUrl(b3))
+
+        val b4 = meta?.backup_url_4
+        if (!b4.isNullOrBlank()) candidates.add(convertToDirectUrl(b4))
 
         return candidates.distinct().filter { it.isNotBlank() && it.startsWith("http") }
     }
