@@ -19,6 +19,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.zIndex
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.foundation.gestures.detectHorizontalDragGestures
+import androidx.compose.foundation.gestures.detectVerticalDragGestures
 import androidx.compose.ui.draw.blur
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -1013,8 +1014,9 @@ fun AppContent(
                         animationSpec = spring(dampingRatio = 0.75f, stiffness = Spring.StiffnessMediumLow)
                     ) + fadeOut(animationSpec = tween(200)) + scaleOut(targetScale = 0.92f),
                     modifier = Modifier.align(if (isWide) Alignment.TopEnd else Alignment.TopCenter).zIndex(200f).then(
-                        if (LocalSharedTransitionScope.current != null) {
-                            with(LocalSharedTransitionScope.current!) {
+                        val transitionScope = LocalSharedTransitionScope.current
+                        if (transitionScope != null) {
+                            with(transitionScope) {
                                 Modifier.renderInSharedTransitionScopeOverlay(zIndexInOverlay = 50f)
                             }
                         } else Modifier
