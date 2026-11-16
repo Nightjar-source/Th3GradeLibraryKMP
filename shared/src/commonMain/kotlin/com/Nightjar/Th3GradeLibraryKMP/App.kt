@@ -562,7 +562,7 @@ fun AppContent(
                                         ) + fadeOut(animationSpec = fadeSpec)
                                     )
                                 }
-                            }
+                            },
                             entryProvider = androidx.navigation3.runtime.entryProvider {
 
 
