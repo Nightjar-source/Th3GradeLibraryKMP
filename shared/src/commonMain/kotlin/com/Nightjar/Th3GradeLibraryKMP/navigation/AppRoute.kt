@@ -1,13 +1,14 @@
 package com.Nightjar.Th3GradeLibraryKMP.navigation
 
+import androidx.navigation3.runtime.NavKey
 import kotlinx.serialization.Serializable
 
 /**
- * Modern Jetpack Navigation 3 Route definitions (October 2026 / 2027 Standard).
- * Strongly-typed immutable sealed hierarchy representing each distinct navigation destination.
+ * Navigation 3 Route definitions — official JetBrains Multiplatform Navigation 3 (2026/2027 Standard).
+ * Strongly-typed immutable sealed hierarchy implementing NavKey.
  */
 @Serializable
-sealed interface AppRoute {
+sealed interface AppRoute : NavKey {
     val routeKey: String
 
     @Serializable

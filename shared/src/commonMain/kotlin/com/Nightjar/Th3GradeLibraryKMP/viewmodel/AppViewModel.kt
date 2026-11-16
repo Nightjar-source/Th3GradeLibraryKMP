@@ -2,28 +2,46 @@ package com.Nightjar.Th3GradeLibraryKMP.viewmodel
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import androidx.navigation3.runtime.NavBackStack
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import com.Nightjar.Th3GradeLibraryKMP.data.BookItem
 import com.Nightjar.Th3GradeLibraryKMP.data.AllItems
 import com.Nightjar.Th3GradeLibraryKMP.data.AppDataStore
+import com.Nightjar.Th3GradeLibraryKMP.navigation.AppRoute
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.Job
 
 /**
- * Official Google & JetBrains Compose Multiplatform Architecture (2026/2027)
- * Handles navigation backstack, modal states, search, and selected items cleanly decoupled from UI rendering.
- * Implements State Preservation against Process Death (February 2027 Memory Standards).
+ * Official Jetpack Navigation 3 architecture (Compose Multiplatform, 2026/2027 Standard).
+ * Source of truth for navigation: [backStack] — immutable immutable [NavBackStack].
+ * [page] and [pageHistory] are derived compatibility getters used by top bar/bottom bar wiring.
  */
 class AppViewModel : ViewModel() {
 
     private val settings = AppDataStore
 
-    // ===== Navigation State (State Hoisting) =====
-    val pageHistory = mutableStateOf<List<String>>(listOf("home"))
-    var page by mutableStateOf("home")
+    // ===== Navigation 3 Official BackStack =====
+    val backStack: NavBackStack<AppRoute> = NavBackStack(AppRoute.Home)
+
+    // Derived read-only façade for legacy string-keyed wiring (top bar, bottom bar, side rail)
+    val page: String
+        get() = when (val top = backStack.lastOrNull()) {
+            is AppRoute.Home -> "home"
+            is AppRoute.List -> "list"
+            is AppRoute.News -> "news"
+            is AppRoute.Bookmarks -> "bookmarks"
+            is AppRoute.Shortcuts -> "shortcuts"
+            is AppRoute.About -> "about"
+            is AppRoute.Pdf -> "pdf"
+            else -> "home"
+        }
+
+    val pageHistory: List<String>
+        get() = backStack.map { it.routeKey }
+
     var isNavigatingBack by mutableStateOf(false)
     var isReturningFromPdf by mutableStateOf(false)
     var screenNavCounter by mutableStateOf(0)
@@ -57,13 +75,21 @@ class AppViewModel : ViewModel() {
         }
     }
 
-    /**
-     * Initializes navigation state intelligently based on whether this is a cold launch or process death recovery:
-     * - If [isProcessDeath] is true (app was killed by system in background while user was reading/navigating):
-     *   Restores the exact previous page, selected book, and reading progress.
-     * - If [isProcessDeath] is false (fresh cold launch by user after full close or swipe from recents):
-     *   Starts cleanly at the "home" main screen, clearing any transient screen state while preserving all book progress in SyncEngine.
-     */
+    private fun toRoute(page: String, category: String? = null): AppRoute =
+        when (page) {
+            "home" -> AppRoute.Home
+            "list" -> AppRoute.List(category)
+            "news" -> AppRoute.News
+            "bookmarks" -> AppRoute.Bookmarks
+            "shortcuts" -> AppRoute.Shortcuts
+            "about" -> AppRoute.About
+            "pdf" -> AppRoute.Pdf(selectedItem?.id ?: "", pdfInitialPage)
+            else -> AppRoute.Home
+        }
+
+    private fun toRouteList(keys: List<String>, category: String? = null): List<AppRoute> =
+        keys.map { toRoute(it, category) }
+
     fun initLaunchState(
         isProcessDeath: Boolean,
         initialPage: String?,
@@ -82,10 +108,10 @@ class AppViewModel : ViewModel() {
                     pdfInitialPage = com.Nightjar.Th3GradeLibraryKMP.network.SyncEngine.lastReadPages.value[target.id]
                     com.Nightjar.Th3GradeLibraryKMP.network.SyncEngine.saveSelectedCategory(if (target.isNote) "notes" else "books")
                     pdfSourcePage = "list"
-                    if (pageHistory.value.lastOrNull() != "pdf") {
-                        pageHistory.value = listOf("home", "list", "pdf")
-                    }
-                    page = "pdf"
+                    backStack.clear()
+                    backStack.add(AppRoute.Home)
+                    backStack.add(AppRoute.List())
+                    backStack.add(AppRoute.Pdf(target.id, pdfInitialPage))
                     persistState()
                 }
             }
@@ -94,7 +120,6 @@ class AppViewModel : ViewModel() {
         hasInitializedLaunchState = true
         isProcessDeathState = isProcessDeath
 
-        // Seamlessly restore active reading session if user left app in recents with a book open
         restoreState()
 
         if (initialBookId != null) {
@@ -107,13 +132,16 @@ class AppViewModel : ViewModel() {
                 pdfInitialPage = com.Nightjar.Th3GradeLibraryKMP.network.SyncEngine.lastReadPages.value[target.id]
                 com.Nightjar.Th3GradeLibraryKMP.network.SyncEngine.saveSelectedCategory(if (target.isNote) "notes" else "books")
                 pdfSourcePage = "list"
-                pageHistory.value = listOf("home", "list", "pdf")
-                page = "pdf"
+                backStack.clear()
+                backStack.add(AppRoute.Home)
+                backStack.add(AppRoute.List())
+                backStack.add(AppRoute.Pdf(target.id, pdfInitialPage))
                 persistState()
             }
         } else if (initialPage != null && initialPage != "home") {
-            pageHistory.value = listOf("home", initialPage)
-            page = initialPage
+            backStack.clear()
+            backStack.add(AppRoute.Home)
+            backStack.add(toRoute(initialPage))
             persistState()
         }
         if (!initialSearchQuery.isNullOrEmpty()) {
@@ -121,16 +149,10 @@ class AppViewModel : ViewModel() {
         }
     }
 
-    /**
-     * Legacy helper that delegates to initLaunchState(isProcessDeath = false)
-     */
     fun initDeepLink(initialPage: String?, initialSearchQuery: String?) {
         initLaunchState(isProcessDeath = false, initialPage = initialPage, initialSearchQuery = initialSearchQuery)
     }
 
-    /**
-     * Clears transient navigation state so fresh cold starts always land cleanly on the Home screen.
-     */
     private fun clearTransientNavState() {
         try {
             settings.remove("nav_saved_page")
@@ -139,9 +161,6 @@ class AppViewModel : ViewModel() {
         } catch (_: Exception) {}
     }
 
-    /**
-     * Restores state against process death (Process Death Preservation)
-     */
     private fun restoreState() {
         try {
             val savedBookId = settings.getString("nav_saved_book_id", "")
@@ -156,24 +175,24 @@ class AppViewModel : ViewModel() {
                     selectedItem = item
                     pdfInitialPage = targetPage
                     pdfSourcePage = "list"
-                    pageHistory.value = listOf("home", "list", "pdf")
-                    page = "pdf"
+                    backStack.clear()
+                    backStack.add(AppRoute.Home)
+                    backStack.add(AppRoute.List())
+                    backStack.add(AppRoute.Pdf(item.id, targetPage))
                     return
                 }
             }
 
             if (savedPage.isNotEmpty() && savedPage != "home") {
-                pageHistory.value = listOf("home", savedPage)
-                page = savedPage
+                backStack.clear()
+                backStack.add(AppRoute.Home)
+                backStack.add(toRoute(savedPage))
             }
         } catch (e: Exception) {
             // Graceful fallback to default home state
         }
     }
 
-    /**
-     * Persists active navigation state to Multiplatform Settings (instant small footprint <100 bytes)
-     */
     private fun persistState() {
         try {
             settings.putString("nav_saved_page", page)
@@ -192,9 +211,6 @@ class AppViewModel : ViewModel() {
         }
     }
 
-    /**
-     * Updates current PDF page during reading
-     */
     fun updatePdfPage(currentPage: Int) {
         if (currentPage > 0) {
             pdfInitialPage = currentPage
@@ -205,19 +221,16 @@ class AppViewModel : ViewModel() {
     }
 
     /**
-     * Pops top page from navigation backstack immutably (Immutable Safe Navigation)
+     * Pops the top page from the Navigation 3 backstack (Immutable Safe Navigation).
      */
     fun popPage(): Boolean {
         isNavigatingBack = true
-        val current = pageHistory.value
-        val wasOnPdf = current.lastOrNull() == "pdf"
+        val wasOnPdf = page == "pdf"
         if (wasOnPdf) {
             isReturningFromPdf = true
         }
-        if (current.size > 1) {
-            val updated = current.dropLast(1)
-            pageHistory.value = updated
-            page = updated.last()
+        val removed = backStack.removeLastOrNull()
+        if (removed != null && backStack.isNotEmpty()) {
             if (!wasOnPdf) {
                 screenNavCounter++
             }
@@ -242,7 +255,7 @@ class AppViewModel : ViewModel() {
     }
 
     /**
-     * Navigates to a new page
+     * Navigates to a new page (Navigation 3 push onto the backstack).
      */
     fun navigateTo(newPage: String) {
         isNavigatingBack = false
@@ -253,16 +266,20 @@ class AppViewModel : ViewModel() {
         isNewsSettingsOpen = false
         if (newPage == "home") {
             if (page != "home") screenNavCounter++
-            pageHistory.value = listOf("home")
-            page = "home"
+            backStack.clear()
+            backStack.add(AppRoute.Home)
         } else {
-            val current = pageHistory.value
-            if (newPage != current.lastOrNull()) {
+            val currentTop = page
+            if (newPage != currentTop) {
                 if (newPage != "pdf") {
                     screenNavCounter++
                 }
-                pageHistory.value = current.filter { it != newPage } + newPage
-                page = newPage
+                // Remove any existing occurrence to keep a flat single-table backstack shape
+                val existing = backStack.indexOfFirst { it.routeKey == newPage }
+                if (existing >= 0) {
+                    backStack.removeAt(existing)
+                }
+                backStack.add(toRoute(newPage))
             }
         }
         persistState()

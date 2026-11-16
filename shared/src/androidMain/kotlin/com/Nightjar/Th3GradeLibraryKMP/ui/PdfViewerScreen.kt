@@ -145,6 +145,7 @@ actual fun PdfViewerScreen(
         }
     }
 
+    var controlsVisible by androidx.compose.runtime.mutableStateOf(true)
     var isCurrentPageTopLight by remember { mutableStateOf(!isAppDark) }
     var isCurrentPageBottomLight by remember { mutableStateOf(!isAppDark) }
     val pageLuminanceMap = remember { mutableStateMapOf<Int, Pair<Boolean, Boolean>>() }
@@ -618,7 +619,7 @@ actual fun PdfViewerScreen(
 
                     // Completely Floating Top control bar
                     AnimatedVisibility(
-                        visible = !isZoomed,
+                        visible = !isZoomed && controlsVisible,
                         enter = fadeIn() + slideInVertically { -it },
                         exit = fadeOut() + slideOutVertically { -it },
                         modifier = Modifier.align(Alignment.TopCenter)
@@ -653,6 +654,20 @@ actual fun PdfViewerScreen(
 
                             // Toolbar actions
                             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                // "Immersive / Hidden controls" toggle — hides everything (title bar, save, rotate, page selector, ads)
+                                IconButton(
+                                    onClick = { controlsVisible = !controlsVisible },
+                                    modifier = Modifier
+                                        .clip(CircleShape)
+                                        .background(if (!controlsVisible) MaterialTheme.colorScheme.secondary else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.8f))
+                                ) {
+                                    Icon(
+                                        imageVector = if (controlsVisible) androidx.compose.material.icons.Icons.Default.VisibilityOff else androidx.compose.material.icons.Icons.Default.Visibility,
+                                        contentDescription = if (controlsVisible) "Hide controls" else "Show controls",
+                                        tint = if (controlsVisible) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.onSecondary
+                                    )
+                                }
+
                                 val isPageSaved = isSaved(pagerState.currentPage)
                                 IconButton(
                                     onClick = { onToggleSave(pagerState.currentPage) },
@@ -705,7 +720,7 @@ actual fun PdfViewerScreen(
                 
                     // Floating Page Indicator capsule at bottom center
                     AnimatedVisibility(
-                        visible = !isZoomed,
+                        visible = !isZoomed && controlsVisible,
                         enter = fadeIn() + slideInVertically { it },
                         exit = fadeOut() + slideOutVertically { it },
                         modifier = Modifier.align(Alignment.BottomCenter)
