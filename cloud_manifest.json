@@ -1,278 +1,8 @@
 {
-  "version": 1,
+  "version": 2,
   "grade": "الثالث متوسط",
-  "books": {
-    "b1": {
-      "fallback_filename": "ajtmaa.pdf",
-      "title": "كتاب الاجتماعيات",
-      "stream_url": "https://manahj.edu.iq/upload/upfile/ar/1781.pdf",
-      "backup_github_url": "https://github.com/Nightjar-source/Th3GradeLibraryKMP-Cloud/releases/download/v2.0.0-cloud/ajtmaa.pdf",
-      "backup_hf_url": "https://huggingface.co/datasets/Larber/th3grade-books/resolve/main/books/ajtmaa.pdf"
-    },
-    "b2": {
-      "fallback_filename": "ahya.pdf",
-      "title": "كتاب الاحياء",
-      "stream_url": "https://manahj.edu.iq/upload/upfile/ar/1782.pdf",
-      "backup_github_url": "https://github.com/Nightjar-source/Th3GradeLibraryKMP-Cloud/releases/download/v2.0.0-cloud/ahya.pdf",
-      "backup_hf_url": "https://huggingface.co/datasets/Larber/th3grade-books/resolve/main/books/ahya.pdf"
-    },
-    "b3": {
-      "fallback_filename": "englishactivity.pdf",
-      "title": "كتاب الانكليزي (النشاط)",
-      "stream_url": "https://huggingface.co/datasets/Larber/th3grade-books/resolve/main/books/englishactivity.pdf",
-      "backup_github_url": "https://github.com/Nightjar-source/Th3GradeLibraryKMP-Cloud/releases/download/v2.0.0-cloud/englishactivity.pdf"
-    },
-    "b4": {
-      "fallback_filename": "english.pdf",
-      "title": "كتاب الانكليزي (الطالب)",
-      "stream_url": "https://huggingface.co/datasets/Larber/th3grade-books/resolve/main/books/english.pdf",
-      "backup_github_url": "https://github.com/Nightjar-source/Th3GradeLibraryKMP-Cloud/releases/download/v2.0.0-cloud/english.pdf"
-    },
-    "b5": {
-      "fallback_filename": "isalmic.pdf",
-      "title": "كتاب الإسلامية",
-      "stream_url": "https://manahj.edu.iq/upload/upfile/ar/1787.pdf",
-      "backup_github_url": "https://github.com/Nightjar-source/Th3GradeLibraryKMP-Cloud/releases/download/v2.0.0-cloud/isalmic.pdf",
-      "backup_hf_url": "https://huggingface.co/datasets/Larber/th3grade-books/resolve/main/books/isalmic.pdf"
-    },
-    "b6": {
-      "fallback_filename": "reata.pdf",
-      "title": "كتاب الرياضيات",
-      "stream_url": "https://manahj.edu.iq/upload/upfile/ar/1785.pdf",
-      "backup_github_url": "https://github.com/Nightjar-source/Th3GradeLibraryKMP-Cloud/releases/download/v2.0.0-cloud/reata.pdf",
-      "backup_hf_url": "https://huggingface.co/datasets/Larber/th3grade-books/resolve/main/books/reata.pdf"
-    },
-    "b7": {
-      "fallback_filename": "fuzyaaa.pdf",
-      "title": "كتاب الفيزياء",
-      "stream_url": "https://manahj.edu.iq/upload/upfile/ar/1786.pdf",
-      "backup_github_url": "https://github.com/Nightjar-source/Th3GradeLibraryKMP-Cloud/releases/download/v2.0.0-cloud/fuzyaaa.pdf",
-      "backup_hf_url": "https://huggingface.co/datasets/Larber/th3grade-books/resolve/main/books/fuzyaaa.pdf"
-    },
-    "b8": {
-      "fallback_filename": "kimya.pdf",
-      "title": "كتاب الكيمياء",
-      "stream_url": "https://manahj.edu.iq/upload/upfile/ar/1788.pdf",
-      "backup_github_url": "https://github.com/Nightjar-source/Th3GradeLibraryKMP-Cloud/releases/download/v2.0.0-cloud/kimya.pdf",
-      "backup_hf_url": "https://huggingface.co/datasets/Larber/th3grade-books/resolve/main/books/kimya.pdf"
-    },
-    "b9": {
-      "fallback_filename": "rabi1.pdf",
-      "title": "كتاب اللغة العربية جزء1",
-      "stream_url": "https://manahj.edu.iq/upload/upfile/ar/1783.pdf",
-      "backup_github_url": "https://github.com/Nightjar-source/Th3GradeLibraryKMP-Cloud/releases/download/v2.0.0-cloud/rabi1.pdf",
-      "backup_hf_url": "https://huggingface.co/datasets/Larber/th3grade-books/resolve/main/books/rabi1.pdf"
-    },
-    "b10": {
-      "fallback_filename": "2arab.pdf",
-      "title": "كتاب اللغة العربية2",
-      "stream_url": "https://manahj.edu.iq/upload/upfile/ar/1784.pdf",
-      "backup_github_url": "https://github.com/Nightjar-source/Th3GradeLibraryKMP-Cloud/releases/download/v2.0.0-cloud/2arab.pdf",
-      "backup_hf_url": "https://huggingface.co/datasets/Larber/th3grade-books/resolve/main/books/2arab.pdf"
-    }
-  },
-  "notes": {
-    "n1": {
-      "fallback_filename": "enalaaaa.pdf",
-      "title": "املاء الانكليزي",
-      "stream_url": "https://huggingface.co/datasets/Larber/th3grade-books/resolve/main/notes/enalaaaa.pdf",
-      "backup_github_url": "https://github.com/Nightjar-source/Th3GradeLibraryKMP-Cloud/releases/download/v2.0.0-cloud/enalaaaa.pdf"
-    },
-    "n2": {
-      "fallback_filename": "ajtma.pdf",
-      "title": "ملزمة اجتماعيات - عباس العامري",
-      "stream_url": "https://huggingface.co/datasets/Larber/th3grade-books/resolve/main/notes/ajtma.pdf",
-      "backup_github_url": "https://github.com/Nightjar-source/Th3GradeLibraryKMP-Cloud/releases/download/v2.0.0-cloud/ajtma.pdf"
-    },
-    "n3": {
-      "fallback_filename": "ah.pdf",
-      "title": "ملزمة أحياء قديمة - احمد الجاف",
-      "stream_url": "https://huggingface.co/datasets/Larber/th3grade-books/resolve/main/notes/ah.pdf",
-      "backup_github_url": "https://github.com/Nightjar-source/Th3GradeLibraryKMP-Cloud/releases/download/v2.0.0-cloud/ah.pdf"
-    },
-    "n4": {
-      "fallback_filename": "ajtm.pdf",
-      "title": "ملزمة اجتماعيات - إيمان الصالحي",
-      "stream_url": "https://huggingface.co/datasets/Larber/th3grade-books/resolve/main/notes/ajtm.pdf",
-      "backup_github_url": "https://github.com/Nightjar-source/Th3GradeLibraryKMP-Cloud/releases/download/v2.0.0-cloud/ajtm.pdf"
-    },
-    "n5": {
-      "fallback_filename": "arabiraval.pdf",
-      "title": "ملزمة عربي - رفل الزبيدي",
-      "stream_url": "https://huggingface.co/datasets/Larber/th3grade-books/resolve/main/notes/arabiraval.pdf",
-      "backup_github_url": "https://github.com/Nightjar-source/Th3GradeLibraryKMP-Cloud/releases/download/v2.0.0-cloud/arabiraval.pdf"
-    },
-    "n6": {
-      "fallback_filename": "arabihish.pdf",
-      "title": "ملزمة عربي - هشام المعموري",
-      "stream_url": "https://huggingface.co/datasets/Larber/th3grade-books/resolve/main/notes/arabihish.pdf",
-      "backup_github_url": "https://github.com/Nightjar-source/Th3GradeLibraryKMP-Cloud/releases/download/v2.0.0-cloud/arabihish.pdf"
-    },
-    "n7": {
-      "fallback_filename": "asm.pdf",
-      "title": "ملزمة اسلامية - ساجد العكيلي",
-      "stream_url": "https://huggingface.co/datasets/Larber/th3grade-books/resolve/main/notes/asm.pdf",
-      "backup_github_url": "https://github.com/Nightjar-source/Th3GradeLibraryKMP-Cloud/releases/download/v2.0.0-cloud/asm.pdf"
-    },
-    "n8": {
-      "fallback_filename": "aiiiaslaim.pdf",
-      "title": "النموذجية بالاسلامية - على الزاملي",
-      "stream_url": "https://huggingface.co/datasets/Larber/th3grade-books/resolve/main/notes/aiiiaslaim.pdf",
-      "backup_github_url": "https://github.com/Nightjar-source/Th3GradeLibraryKMP-Cloud/releases/download/v2.0.0-cloud/aiiiaslaim.pdf"
-    },
-    "n9": {
-      "fallback_filename": "ennnnnnnnn.pdf",
-      "title": "ملزمة تعاريف واسقاطات الانكليزي",
-      "stream_url": "https://huggingface.co/datasets/Larber/th3grade-books/resolve/main/notes/ennnnnnnnn.pdf",
-      "backup_github_url": "https://github.com/Nightjar-source/Th3GradeLibraryKMP-Cloud/releases/download/v2.0.0-cloud/ennnnnnnnn.pdf"
-    },
-    "n10": {
-      "fallback_filename": "end.pdf",
-      "title": "ملزمة انكليزي - علي الجبوري",
-      "stream_url": "https://huggingface.co/datasets/Larber/th3grade-books/resolve/main/notes/end.pdf",
-      "backup_github_url": "https://github.com/Nightjar-source/Th3GradeLibraryKMP-Cloud/releases/download/v2.0.0-cloud/end.pdf"
-    },
-    "n11": {
-      "fallback_filename": "ennnnnnndkdll.pdf",
-      "title": "وزاريات قواعد الانكليزي",
-      "stream_url": "https://huggingface.co/datasets/Larber/th3grade-books/resolve/main/notes/ennnnnnndkdll.pdf",
-      "backup_github_url": "https://github.com/Nightjar-source/Th3GradeLibraryKMP-Cloud/releases/download/v2.0.0-cloud/ennnnnnndkdll.pdf"
-    },
-    "n12": {
-      "fallback_filename": "ettttttt.pdf",
-      "title": "ملزمة قطع الانكليزي - علي الجبوري",
-      "stream_url": "https://huggingface.co/datasets/Larber/th3grade-books/resolve/main/notes/ettttttt.pdf",
-      "backup_github_url": "https://github.com/Nightjar-source/Th3GradeLibraryKMP-Cloud/releases/download/v2.0.0-cloud/ettttttt.pdf"
-    },
-    "n13": {
-      "fallback_filename": "fizyaaaa.pdf",
-      "title": "ملزمة فيزياء - علي الذهبي",
-      "stream_url": "https://huggingface.co/datasets/Larber/th3grade-books/resolve/main/notes/fizyaaaa.pdf",
-      "backup_github_url": "https://github.com/Nightjar-source/Th3GradeLibraryKMP-Cloud/releases/download/v2.0.0-cloud/fizyaaaa.pdf"
-    },
-    "n14": {
-      "fallback_filename": "ffffffffff.pdf",
-      "title": "ملزمة فيزياء - دانيار الجاف",
-      "stream_url": "https://huggingface.co/datasets/Larber/th3grade-books/resolve/main/notes/ffffffffff.pdf",
-      "backup_github_url": "https://github.com/Nightjar-source/Th3GradeLibraryKMP-Cloud/releases/download/v2.0.0-cloud/ffffffffff.pdf"
-    },
-    "n15": {
-      "fallback_filename": "ffflflfkfkfkdkkd.pdf",
-      "title": "ملزمة فيزياء - علي السوداني",
-      "stream_url": "https://huggingface.co/datasets/Larber/th3grade-books/resolve/main/notes/ffflflfkfkfkdkkd.pdf",
-      "backup_github_url": "https://github.com/Nightjar-source/Th3GradeLibraryKMP-Cloud/releases/download/v2.0.0-cloud/ffflflfkfkfkdkkd.pdf"
-    },
-    "n16": {
-      "fallback_filename": "marab1.pdf",
-      "title": "ملزمة العربي جزء 1 - قاسم مرتضى",
-      "stream_url": "https://huggingface.co/datasets/Larber/th3grade-books/resolve/main/notes/marab1.pdf",
-      "backup_github_url": "https://github.com/Nightjar-source/Th3GradeLibraryKMP-Cloud/releases/download/v2.0.0-cloud/marab1.pdf"
-    },
-    "n17": {
-      "fallback_filename": "rivvvvvv2.pdf",
-      "title": "ملزمة العربي جزء 2 - قاسم مرتضى",
-      "stream_url": "https://huggingface.co/datasets/Larber/th3grade-books/resolve/main/notes/rivvvvvv2.pdf",
-      "backup_github_url": "https://github.com/Nightjar-source/Th3GradeLibraryKMP-Cloud/releases/download/v2.0.0-cloud/rivvvvvv2.pdf"
-    },
-    "n18": {
-      "fallback_filename": "mathlkdkdkdkdkd.pdf",
-      "title": "الذهبية في الرياضيات",
-      "stream_url": "https://huggingface.co/datasets/Larber/th3grade-books/resolve/main/notes/mathlkdkdkdkdkd.pdf",
-      "backup_github_url": "https://github.com/Nightjar-source/Th3GradeLibraryKMP-Cloud/releases/download/v2.0.0-cloud/mathlkdkdkdkdkd.pdf"
-    },
-    "n19": {
-      "fallback_filename": "mathsa.pdf",
-      "title": "ملزمة رياضيات 1 - علي صادق",
-      "stream_url": "https://huggingface.co/datasets/Larber/th3grade-books/resolve/main/notes/mathsa.pdf",
-      "backup_github_url": "https://github.com/Nightjar-source/Th3GradeLibraryKMP-Cloud/releases/download/v2.0.0-cloud/mathsa.pdf"
-    },
-    "n20": {
-      "fallback_filename": "mam2.pdf",
-      "title": "ملزمة رياضيات 2 - علي صادق",
-      "stream_url": "https://huggingface.co/datasets/Larber/th3grade-books/resolve/main/notes/mam2.pdf",
-      "backup_github_url": "https://github.com/Nightjar-source/Th3GradeLibraryKMP-Cloud/releases/download/v2.0.0-cloud/mam2.pdf"
-    },
-    "n21": {
-      "fallback_filename": "ennndndndnndnd.pdf",
-      "title": "ملزمة قصص الانكليزي",
-      "stream_url": "https://huggingface.co/datasets/Larber/th3grade-books/resolve/main/notes/ennndndndnndnd.pdf",
-      "backup_github_url": "https://github.com/Nightjar-source/Th3GradeLibraryKMP-Cloud/releases/download/v2.0.0-cloud/ennndndndnndnd.pdf"
-    },
-    "n22": {
-      "fallback_filename": "miss2023.pdf",
-      "title": "ملزمة الاسلامية 2027 سندس حارس",
-      "stream_url": "https://huggingface.co/datasets/Larber/th3grade-books/resolve/main/notes/miss2023.pdf",
-      "backup_github_url": "https://github.com/Nightjar-source/Th3GradeLibraryKMP-Cloud/releases/download/v2.0.0-cloud/miss2023.pdf"
-    },
-    "n23": {
-      "fallback_filename": "enwwwwww.pdf",
-      "title": "ملزمة معاكسات الانكليزي",
-      "stream_url": "https://huggingface.co/datasets/Larber/th3grade-books/resolve/main/notes/enwwwwww.pdf",
-      "backup_github_url": "https://github.com/Nightjar-source/Th3GradeLibraryKMP-Cloud/releases/download/v2.0.0-cloud/enwwwwww.pdf"
-    },
-    "n24": {
-      "fallback_filename": "kkkkksksksksksks.pdf",
-      "title": "ملزمة كيمياء دانيار الجاف",
-      "stream_url": "https://huggingface.co/datasets/Larber/th3grade-books/resolve/main/notes/kkkkksksksksksks.pdf",
-      "backup_github_url": "https://github.com/Nightjar-source/Th3GradeLibraryKMP-Cloud/releases/download/v2.0.0-cloud/kkkkksksksksksks.pdf"
-    },
-    "n25": {
-      "fallback_filename": "kkkkkkkkkk.pdf",
-      "title": "ملزمة الكيمياء - حسين حمزة",
-      "stream_url": "https://huggingface.co/datasets/Larber/th3grade-books/resolve/main/notes/kkkkkkkkkk.pdf",
-      "backup_github_url": "https://github.com/Nightjar-source/Th3GradeLibraryKMP-Cloud/releases/download/v2.0.0-cloud/kkkkkkkkkk.pdf"
-    },
-    "n26": {
-      "fallback_filename": "kiiii.pdf",
-      "title": "ملزمة كيمياء - هاشم الغرباوي",
-      "stream_url": "https://huggingface.co/datasets/Larber/th3grade-books/resolve/main/notes/kiiii.pdf",
-      "backup_github_url": "https://github.com/Nightjar-source/Th3GradeLibraryKMP-Cloud/releases/download/v2.0.0-cloud/kiiii.pdf"
-    },
-    "n27": {
-      "fallback_filename": "kimmamama.pdf",
-      "title": "ملزمة كيمياء - مهند السوداني",
-      "stream_url": "https://huggingface.co/datasets/Larber/th3grade-books/resolve/main/notes/kimmamama.pdf",
-      "backup_github_url": "https://github.com/Nightjar-source/Th3GradeLibraryKMP-Cloud/releases/download/v2.0.0-cloud/kimmamama.pdf"
-    },
-    "n28": {
-      "fallback_filename": "marrahiied.pdf",
-      "title": "ملزمة رياضيات ثالث متوسط1-- رشيد عبدالله",
-      "stream_url": "https://huggingface.co/datasets/Larber/th3grade-books/resolve/main/notes/marrahiied.pdf",
-      "backup_github_url": "https://github.com/Nightjar-source/Th3GradeLibraryKMP-Cloud/releases/download/v2.0.0-cloud/marrahiied.pdf"
-    },
-    "n29": {
-      "fallback_filename": "marrahiied2.pdf",
-      "title": "ملزمة رياضيات ثالث متوسط2- رشيد عبدالله",
-      "stream_url": "https://huggingface.co/datasets/Larber/th3grade-books/resolve/main/notes/marrahiied2.pdf",
-      "backup_github_url": "https://github.com/Nightjar-source/Th3GradeLibraryKMP-Cloud/releases/download/v2.0.0-cloud/marrahiied2.pdf"
-    },
-    "n30": {
-      "fallback_filename": "ayajaaa.pdf",
-      "title": "ملزمة الاحياء جعفر محمد 2027",
-      "stream_url": "https://huggingface.co/datasets/Larber/th3grade-books/resolve/main/notes/ayajaaa.pdf",
-      "backup_github_url": "https://github.com/Nightjar-source/Th3GradeLibraryKMP-Cloud/releases/download/v2.0.0-cloud/ayajaaa.pdf"
-    },
-    "n31": {
-      "fallback_filename": "mathkhal.pdf",
-      "title": "ملزمة الرياضيات 1--- خالد وليد 2027",
-      "stream_url": "https://huggingface.co/datasets/Larber/th3grade-books/resolve/main/notes/mathkhal.pdf",
-      "backup_github_url": "https://github.com/Nightjar-source/Th3GradeLibraryKMP-Cloud/releases/download/v2.0.0-cloud/mathkhal.pdf"
-    },
-    "n32": {
-      "fallback_filename": "mathkhal2.pdf",
-      "title": "ملزمة الرياضيات 2--- خالد وليد 2027",
-      "stream_url": "https://huggingface.co/datasets/Larber/th3grade-books/resolve/main/notes/mathkhal2.pdf",
-      "backup_github_url": "https://github.com/Nightjar-source/Th3GradeLibraryKMP-Cloud/releases/download/v2.0.0-cloud/mathkhal2.pdf"
-    },
-    "n_ahya_6": {
-      "fallback_filename": "ahya_6_drive.pdf",
-      "title": "ملزمة احياء السادس (تجريبي Google Drive)",
-      "stream_url": "https://drive.usercontent.google.com/download?id=1EIYbJzYkBrJgqljuSZD1S4yGa3BmyA06&export=download",
-      "backup_github_url": "https://drive.usercontent.google.com/download?id=1EIYbJzYkBrJgqljuSZD1S4yGa3BmyA06&export=download",
-      "cover_url": ""
-    }
-  },
-  "books_list": [
+  "hidden_ids": [],
+  "books": [
     {
       "id": "b1",
       "title": "كتاب الاجتماعيات",
@@ -284,7 +14,8 @@
       "color_start": "#f59e0b",
       "color_end": "#d97706",
       "stream_url": "https://manahj.edu.iq/upload/upfile/ar/1781.pdf",
-      "backup_github_url": "https://huggingface.co/datasets/Larber/th3grade-books/resolve/main/books/ajtmaa.pdf"
+      "backup_hf_url": "https://huggingface.co/datasets/Larber/th3grade-books/resolve/main/books/ajtmaa.pdf",
+      "backup_github_url": "https://github.com/Nightjar-source/Th3GradeLibraryKMP-Cloud/releases/download/v2.0.0-cloud/ajtmaa.pdf"
     },
     {
       "id": "b2",
@@ -297,7 +28,8 @@
       "color_start": "#10b981",
       "color_end": "#059669",
       "stream_url": "https://manahj.edu.iq/upload/upfile/ar/1782.pdf",
-      "backup_github_url": "https://huggingface.co/datasets/Larber/th3grade-books/resolve/main/books/ahya.pdf"
+      "backup_hf_url": "https://huggingface.co/datasets/Larber/th3grade-books/resolve/main/books/ahya.pdf",
+      "backup_github_url": "https://github.com/Nightjar-source/Th3GradeLibraryKMP-Cloud/releases/download/v2.0.0-cloud/ahya.pdf"
     },
     {
       "id": "b3",
@@ -310,6 +42,7 @@
       "color_start": "#3b82f6",
       "color_end": "#1d4ed8",
       "stream_url": "https://huggingface.co/datasets/Larber/th3grade-books/resolve/main/books/englishactivity.pdf",
+      "backup_hf_url": "",
       "backup_github_url": "https://github.com/Nightjar-source/Th3GradeLibraryKMP-Cloud/releases/download/v2.0.0-cloud/englishactivity.pdf"
     },
     {
@@ -323,6 +56,7 @@
       "color_start": "#6366f1",
       "color_end": "#4338ca",
       "stream_url": "https://huggingface.co/datasets/Larber/th3grade-books/resolve/main/books/english.pdf",
+      "backup_hf_url": "",
       "backup_github_url": "https://github.com/Nightjar-source/Th3GradeLibraryKMP-Cloud/releases/download/v2.0.0-cloud/english.pdf"
     },
     {
@@ -336,7 +70,8 @@
       "color_start": "#059669",
       "color_end": "#047857",
       "stream_url": "https://manahj.edu.iq/upload/upfile/ar/1787.pdf",
-      "backup_github_url": "https://huggingface.co/datasets/Larber/th3grade-books/resolve/main/books/isalmic.pdf"
+      "backup_hf_url": "https://huggingface.co/datasets/Larber/th3grade-books/resolve/main/books/isalmic.pdf",
+      "backup_github_url": "https://github.com/Nightjar-source/Th3GradeLibraryKMP-Cloud/releases/download/v2.0.0-cloud/isalmic.pdf"
     },
     {
       "id": "b6",
@@ -349,7 +84,8 @@
       "color_start": "#2563eb",
       "color_end": "#1d4ed8",
       "stream_url": "https://manahj.edu.iq/upload/upfile/ar/1785.pdf",
-      "backup_github_url": "https://huggingface.co/datasets/Larber/th3grade-books/resolve/main/books/reata.pdf"
+      "backup_hf_url": "https://huggingface.co/datasets/Larber/th3grade-books/resolve/main/books/reata.pdf",
+      "backup_github_url": "https://github.com/Nightjar-source/Th3GradeLibraryKMP-Cloud/releases/download/v2.0.0-cloud/reata.pdf"
     },
     {
       "id": "b7",
@@ -362,7 +98,8 @@
       "color_start": "#8b5cf6",
       "color_end": "#6d28d9",
       "stream_url": "https://manahj.edu.iq/upload/upfile/ar/1786.pdf",
-      "backup_github_url": "https://huggingface.co/datasets/Larber/th3grade-books/resolve/main/books/fuzyaaa.pdf"
+      "backup_hf_url": "https://huggingface.co/datasets/Larber/th3grade-books/resolve/main/books/fuzyaaa.pdf",
+      "backup_github_url": "https://github.com/Nightjar-source/Th3GradeLibraryKMP-Cloud/releases/download/v2.0.0-cloud/fuzyaaa.pdf"
     },
     {
       "id": "b8",
@@ -375,7 +112,8 @@
       "color_start": "#06b6d4",
       "color_end": "#0891b2",
       "stream_url": "https://manahj.edu.iq/upload/upfile/ar/1788.pdf",
-      "backup_github_url": "https://huggingface.co/datasets/Larber/th3grade-books/resolve/main/books/kimya.pdf"
+      "backup_hf_url": "https://huggingface.co/datasets/Larber/th3grade-books/resolve/main/books/kimya.pdf",
+      "backup_github_url": "https://github.com/Nightjar-source/Th3GradeLibraryKMP-Cloud/releases/download/v2.0.0-cloud/kimya.pdf"
     },
     {
       "id": "b9",
@@ -388,7 +126,8 @@
       "color_start": "#f43f5e",
       "color_end": "#e11d48",
       "stream_url": "https://manahj.edu.iq/upload/upfile/ar/1783.pdf",
-      "backup_github_url": "https://huggingface.co/datasets/Larber/th3grade-books/resolve/main/books/rabi1.pdf"
+      "backup_hf_url": "https://huggingface.co/datasets/Larber/th3grade-books/resolve/main/books/rabi1.pdf",
+      "backup_github_url": "https://github.com/Nightjar-source/Th3GradeLibraryKMP-Cloud/releases/download/v2.0.0-cloud/rabi1.pdf"
     },
     {
       "id": "b10",
@@ -401,10 +140,11 @@
       "color_start": "#ec4899",
       "color_end": "#be185d",
       "stream_url": "https://manahj.edu.iq/upload/upfile/ar/1784.pdf",
-      "backup_github_url": "https://huggingface.co/datasets/Larber/th3grade-books/resolve/main/books/2arab.pdf"
+      "backup_hf_url": "https://huggingface.co/datasets/Larber/th3grade-books/resolve/main/books/2arab.pdf",
+      "backup_github_url": "https://github.com/Nightjar-source/Th3GradeLibraryKMP-Cloud/releases/download/v2.0.0-cloud/2arab.pdf"
     }
   ],
-  "notes_list": [
+  "notes": [
     {
       "id": "n1",
       "title": "املاء الانكليزي",
@@ -416,6 +156,7 @@
       "color_start": "#6366f1",
       "color_end": "#3b82f6",
       "stream_url": "https://huggingface.co/datasets/Larber/th3grade-books/resolve/main/notes/enalaaaa.pdf",
+      "backup_hf_url": "",
       "backup_github_url": "https://github.com/Nightjar-source/Th3GradeLibraryKMP-Cloud/releases/download/v2.0.0-cloud/enalaaaa.pdf"
     },
     {
@@ -429,6 +170,7 @@
       "color_start": "#f59e0b",
       "color_end": "#d97706",
       "stream_url": "https://huggingface.co/datasets/Larber/th3grade-books/resolve/main/notes/ajtma.pdf",
+      "backup_hf_url": "",
       "backup_github_url": "https://github.com/Nightjar-source/Th3GradeLibraryKMP-Cloud/releases/download/v2.0.0-cloud/ajtma.pdf"
     },
     {
@@ -442,6 +184,7 @@
       "color_start": "#10b981",
       "color_end": "#059669",
       "stream_url": "https://huggingface.co/datasets/Larber/th3grade-books/resolve/main/notes/ah.pdf",
+      "backup_hf_url": "",
       "backup_github_url": "https://github.com/Nightjar-source/Th3GradeLibraryKMP-Cloud/releases/download/v2.0.0-cloud/ah.pdf"
     },
     {
@@ -455,6 +198,7 @@
       "color_start": "#f59e0b",
       "color_end": "#d97706",
       "stream_url": "https://huggingface.co/datasets/Larber/th3grade-books/resolve/main/notes/ajtm.pdf",
+      "backup_hf_url": "",
       "backup_github_url": "https://github.com/Nightjar-source/Th3GradeLibraryKMP-Cloud/releases/download/v2.0.0-cloud/ajtm.pdf"
     },
     {
@@ -468,6 +212,7 @@
       "color_start": "#f43f5e",
       "color_end": "#e11d48",
       "stream_url": "https://huggingface.co/datasets/Larber/th3grade-books/resolve/main/notes/arabiraval.pdf",
+      "backup_hf_url": "",
       "backup_github_url": "https://github.com/Nightjar-source/Th3GradeLibraryKMP-Cloud/releases/download/v2.0.0-cloud/arabiraval.pdf"
     },
     {
@@ -481,6 +226,7 @@
       "color_start": "#ec4899",
       "color_end": "#be185d",
       "stream_url": "https://huggingface.co/datasets/Larber/th3grade-books/resolve/main/notes/arabihish.pdf",
+      "backup_hf_url": "",
       "backup_github_url": "https://github.com/Nightjar-source/Th3GradeLibraryKMP-Cloud/releases/download/v2.0.0-cloud/arabihish.pdf"
     },
     {
@@ -494,6 +240,7 @@
       "color_start": "#059669",
       "color_end": "#047857",
       "stream_url": "https://huggingface.co/datasets/Larber/th3grade-books/resolve/main/notes/asm.pdf",
+      "backup_hf_url": "",
       "backup_github_url": "https://github.com/Nightjar-source/Th3GradeLibraryKMP-Cloud/releases/download/v2.0.0-cloud/asm.pdf"
     },
     {
@@ -507,6 +254,7 @@
       "color_start": "#10b981",
       "color_end": "#059669",
       "stream_url": "https://huggingface.co/datasets/Larber/th3grade-books/resolve/main/notes/aiiiaslaim.pdf",
+      "backup_hf_url": "",
       "backup_github_url": "https://github.com/Nightjar-source/Th3GradeLibraryKMP-Cloud/releases/download/v2.0.0-cloud/aiiiaslaim.pdf"
     },
     {
@@ -520,6 +268,7 @@
       "color_start": "#3b82f6",
       "color_end": "#1d4ed8",
       "stream_url": "https://huggingface.co/datasets/Larber/th3grade-books/resolve/main/notes/ennnnnnnnn.pdf",
+      "backup_hf_url": "",
       "backup_github_url": "https://github.com/Nightjar-source/Th3GradeLibraryKMP-Cloud/releases/download/v2.0.0-cloud/ennnnnnnnn.pdf"
     },
     {
@@ -533,6 +282,7 @@
       "color_start": "#6366f1",
       "color_end": "#4338ca",
       "stream_url": "https://huggingface.co/datasets/Larber/th3grade-books/resolve/main/notes/end.pdf",
+      "backup_hf_url": "",
       "backup_github_url": "https://github.com/Nightjar-source/Th3GradeLibraryKMP-Cloud/releases/download/v2.0.0-cloud/end.pdf"
     },
     {
@@ -546,6 +296,7 @@
       "color_start": "#3b82f6",
       "color_end": "#1d4ed8",
       "stream_url": "https://huggingface.co/datasets/Larber/th3grade-books/resolve/main/notes/ennnnnnndkdll.pdf",
+      "backup_hf_url": "",
       "backup_github_url": "https://github.com/Nightjar-source/Th3GradeLibraryKMP-Cloud/releases/download/v2.0.0-cloud/ennnnnnndkdll.pdf"
     },
     {
@@ -559,6 +310,7 @@
       "color_start": "#3b82f6",
       "color_end": "#1d4ed8",
       "stream_url": "https://huggingface.co/datasets/Larber/th3grade-books/resolve/main/notes/ettttttt.pdf",
+      "backup_hf_url": "",
       "backup_github_url": "https://github.com/Nightjar-source/Th3GradeLibraryKMP-Cloud/releases/download/v2.0.0-cloud/ettttttt.pdf"
     },
     {
@@ -572,6 +324,7 @@
       "color_start": "#8b5cf6",
       "color_end": "#6d28d9",
       "stream_url": "https://huggingface.co/datasets/Larber/th3grade-books/resolve/main/notes/fizyaaaa.pdf",
+      "backup_hf_url": "",
       "backup_github_url": "https://github.com/Nightjar-source/Th3GradeLibraryKMP-Cloud/releases/download/v2.0.0-cloud/fizyaaaa.pdf"
     },
     {
@@ -585,6 +338,7 @@
       "color_start": "#8b5cf6",
       "color_end": "#6d28d9",
       "stream_url": "https://huggingface.co/datasets/Larber/th3grade-books/resolve/main/notes/ffffffffff.pdf",
+      "backup_hf_url": "",
       "backup_github_url": "https://github.com/Nightjar-source/Th3GradeLibraryKMP-Cloud/releases/download/v2.0.0-cloud/ffffffffff.pdf"
     },
     {
@@ -598,6 +352,7 @@
       "color_start": "#8b5cf6",
       "color_end": "#6d28d9",
       "stream_url": "https://huggingface.co/datasets/Larber/th3grade-books/resolve/main/notes/ffflflfkfkfkdkkd.pdf",
+      "backup_hf_url": "",
       "backup_github_url": "https://github.com/Nightjar-source/Th3GradeLibraryKMP-Cloud/releases/download/v2.0.0-cloud/ffflflfkfkfkdkkd.pdf"
     },
     {
@@ -611,6 +366,7 @@
       "color_start": "#f43f5e",
       "color_end": "#e11d48",
       "stream_url": "https://huggingface.co/datasets/Larber/th3grade-books/resolve/main/notes/marab1.pdf",
+      "backup_hf_url": "",
       "backup_github_url": "https://github.com/Nightjar-source/Th3GradeLibraryKMP-Cloud/releases/download/v2.0.0-cloud/marab1.pdf"
     },
     {
@@ -624,6 +380,7 @@
       "color_start": "#ec4899",
       "color_end": "#be185d",
       "stream_url": "https://huggingface.co/datasets/Larber/th3grade-books/resolve/main/notes/rivvvvvv2.pdf",
+      "backup_hf_url": "",
       "backup_github_url": "https://github.com/Nightjar-source/Th3GradeLibraryKMP-Cloud/releases/download/v2.0.0-cloud/rivvvvvv2.pdf"
     },
     {
@@ -637,6 +394,7 @@
       "color_start": "#2563eb",
       "color_end": "#1d4ed8",
       "stream_url": "https://huggingface.co/datasets/Larber/th3grade-books/resolve/main/notes/mathlkdkdkdkdkd.pdf",
+      "backup_hf_url": "",
       "backup_github_url": "https://github.com/Nightjar-source/Th3GradeLibraryKMP-Cloud/releases/download/v2.0.0-cloud/mathlkdkdkdkdkd.pdf"
     },
     {
@@ -650,6 +408,7 @@
       "color_start": "#2563eb",
       "color_end": "#1d4ed8",
       "stream_url": "https://huggingface.co/datasets/Larber/th3grade-books/resolve/main/notes/mathsa.pdf",
+      "backup_hf_url": "",
       "backup_github_url": "https://github.com/Nightjar-source/Th3GradeLibraryKMP-Cloud/releases/download/v2.0.0-cloud/mathsa.pdf"
     },
     {
@@ -663,6 +422,7 @@
       "color_start": "#2563eb",
       "color_end": "#1d4ed8",
       "stream_url": "https://huggingface.co/datasets/Larber/th3grade-books/resolve/main/notes/mam2.pdf",
+      "backup_hf_url": "",
       "backup_github_url": "https://github.com/Nightjar-source/Th3GradeLibraryKMP-Cloud/releases/download/v2.0.0-cloud/mam2.pdf"
     },
     {
@@ -676,6 +436,7 @@
       "color_start": "#3b82f6",
       "color_end": "#1d4ed8",
       "stream_url": "https://huggingface.co/datasets/Larber/th3grade-books/resolve/main/notes/ennndndndnndnd.pdf",
+      "backup_hf_url": "",
       "backup_github_url": "https://github.com/Nightjar-source/Th3GradeLibraryKMP-Cloud/releases/download/v2.0.0-cloud/ennndndndnndnd.pdf"
     },
     {
@@ -689,6 +450,7 @@
       "color_start": "#059669",
       "color_end": "#047857",
       "stream_url": "https://huggingface.co/datasets/Larber/th3grade-books/resolve/main/notes/miss2023.pdf",
+      "backup_hf_url": "",
       "backup_github_url": "https://github.com/Nightjar-source/Th3GradeLibraryKMP-Cloud/releases/download/v2.0.0-cloud/miss2023.pdf"
     },
     {
@@ -702,6 +464,7 @@
       "color_start": "#3b82f6",
       "color_end": "#1d4ed8",
       "stream_url": "https://huggingface.co/datasets/Larber/th3grade-books/resolve/main/notes/enwwwwww.pdf",
+      "backup_hf_url": "",
       "backup_github_url": "https://github.com/Nightjar-source/Th3GradeLibraryKMP-Cloud/releases/download/v2.0.0-cloud/enwwwwww.pdf"
     },
     {
@@ -715,6 +478,7 @@
       "color_start": "#06b6d4",
       "color_end": "#0891b2",
       "stream_url": "https://huggingface.co/datasets/Larber/th3grade-books/resolve/main/notes/kkkkksksksksksks.pdf",
+      "backup_hf_url": "",
       "backup_github_url": "https://github.com/Nightjar-source/Th3GradeLibraryKMP-Cloud/releases/download/v2.0.0-cloud/kkkkksksksksksks.pdf"
     },
     {
@@ -728,6 +492,7 @@
       "color_start": "#06b6d4",
       "color_end": "#0891b2",
       "stream_url": "https://huggingface.co/datasets/Larber/th3grade-books/resolve/main/notes/kkkkkkkkkk.pdf",
+      "backup_hf_url": "",
       "backup_github_url": "https://github.com/Nightjar-source/Th3GradeLibraryKMP-Cloud/releases/download/v2.0.0-cloud/kkkkkkkkkk.pdf"
     },
     {
@@ -741,6 +506,7 @@
       "color_start": "#06b6d4",
       "color_end": "#0891b2",
       "stream_url": "https://huggingface.co/datasets/Larber/th3grade-books/resolve/main/notes/kiiii.pdf",
+      "backup_hf_url": "",
       "backup_github_url": "https://github.com/Nightjar-source/Th3GradeLibraryKMP-Cloud/releases/download/v2.0.0-cloud/kiiii.pdf"
     },
     {
@@ -754,6 +520,7 @@
       "color_start": "#06b6d4",
       "color_end": "#0891b2",
       "stream_url": "https://huggingface.co/datasets/Larber/th3grade-books/resolve/main/notes/kimmamama.pdf",
+      "backup_hf_url": "",
       "backup_github_url": "https://github.com/Nightjar-source/Th3GradeLibraryKMP-Cloud/releases/download/v2.0.0-cloud/kimmamama.pdf"
     },
     {
@@ -767,6 +534,7 @@
       "color_start": "#2563eb",
       "color_end": "#1d4ed8",
       "stream_url": "https://huggingface.co/datasets/Larber/th3grade-books/resolve/main/notes/marrahiied.pdf",
+      "backup_hf_url": "",
       "backup_github_url": "https://github.com/Nightjar-source/Th3GradeLibraryKMP-Cloud/releases/download/v2.0.0-cloud/marrahiied.pdf"
     },
     {
@@ -780,6 +548,7 @@
       "color_start": "#2563eb",
       "color_end": "#1d4ed8",
       "stream_url": "https://huggingface.co/datasets/Larber/th3grade-books/resolve/main/notes/marrahiied2.pdf",
+      "backup_hf_url": "",
       "backup_github_url": "https://github.com/Nightjar-source/Th3GradeLibraryKMP-Cloud/releases/download/v2.0.0-cloud/marrahiied2.pdf"
     },
     {
@@ -793,6 +562,7 @@
       "color_start": "#10b981",
       "color_end": "#059669",
       "stream_url": "https://huggingface.co/datasets/Larber/th3grade-books/resolve/main/notes/ayajaaa.pdf",
+      "backup_hf_url": "",
       "backup_github_url": "https://github.com/Nightjar-source/Th3GradeLibraryKMP-Cloud/releases/download/v2.0.0-cloud/ayajaaa.pdf"
     },
     {
@@ -806,6 +576,7 @@
       "color_start": "#2563eb",
       "color_end": "#1d4ed8",
       "stream_url": "https://huggingface.co/datasets/Larber/th3grade-books/resolve/main/notes/mathkhal.pdf",
+      "backup_hf_url": "",
       "backup_github_url": "https://github.com/Nightjar-source/Th3GradeLibraryKMP-Cloud/releases/download/v2.0.0-cloud/mathkhal.pdf"
     },
     {
@@ -819,6 +590,7 @@
       "color_start": "#2563eb",
       "color_end": "#1d4ed8",
       "stream_url": "https://huggingface.co/datasets/Larber/th3grade-books/resolve/main/notes/mathkhal2.pdf",
+      "backup_hf_url": "",
       "backup_github_url": "https://github.com/Nightjar-source/Th3GradeLibraryKMP-Cloud/releases/download/v2.0.0-cloud/mathkhal2.pdf"
     },
     {
@@ -832,6 +604,7 @@
       "color_start": "#059669",
       "color_end": "#047857",
       "stream_url": "https://drive.usercontent.google.com/download?id=1EIYbJzYkBrJgqljuSZD1S4yGa3BmyA06&export=download",
+      "backup_hf_url": "",
       "backup_github_url": "https://drive.usercontent.google.com/download?id=1EIYbJzYkBrJgqljuSZD1S4yGa3BmyA06&export=download"
     }
   ]

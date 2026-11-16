@@ -1001,20 +1001,20 @@ fun AppContent(
                     }
                 }
 
-                // --- Floating Search Bar (Aligned inside the Main Content Area) ---
+                // --- Floating Search Bar (Aligned under search button in Wide screens, or centered in Compact) ---
                 androidx.compose.animation.AnimatedVisibility(
                     visible = !showOnboarding && page == "list" && isSearchOpen,
                     enter = slideInVertically(
                         initialOffsetY = { -it / 2 },
                         animationSpec = spring(dampingRatio = 0.75f, stiffness = Spring.StiffnessLow)
-                    ) + fadeIn(animationSpec = tween(300)),
+                    ) + fadeIn(animationSpec = tween(300)) + scaleIn(initialScale = 0.92f),
                     exit = slideOutVertically(
                         targetOffsetY = { -it / 2 },
                         animationSpec = spring(dampingRatio = 0.75f, stiffness = Spring.StiffnessMediumLow)
-                    ) + fadeOut(animationSpec = tween(200)),
-                    modifier = Modifier.align(Alignment.TopCenter).zIndex(200f).then(
+                    ) + fadeOut(animationSpec = tween(200)) + scaleOut(targetScale = 0.92f),
+                    modifier = Modifier.align(if (isWide) Alignment.TopEnd else Alignment.TopCenter).zIndex(200f).then(
                         if (LocalSharedTransitionScope.current != null) {
-                            with(LocalSharedTransitionScope.current!!) {
+                            with(LocalSharedTransitionScope.current!) {
                                 Modifier.renderInSharedTransitionScopeOverlay(zIndexInOverlay = 50f)
                             }
                         } else Modifier
@@ -1054,14 +1054,14 @@ fun AppContent(
                             .windowInsetsPadding(WindowInsets.safeDrawing.only(WindowInsetsSides.Horizontal))
                             .padding(
                                 top = calculatedTopPadding,
-                                start = 16.dp,
-                                end = if (isWide) 96.dp else 16.dp
+                                start = if (isWide) 16.dp else 16.dp,
+                                end = if (isWide) 16.dp else 16.dp
                             ),
-                        contentAlignment = Alignment.TopCenter
+                        contentAlignment = if (isWide) Alignment.TopEnd else Alignment.TopCenter
                     ) {
                         Row(
                             modifier = Modifier
-                                .widthIn(max = 608.dp)
+                                .widthIn(max = if (isWide) 420.dp else 608.dp)
                                 .fillMaxWidth()
                                 .defaultMinSize(minHeight = searchBarHeight)
                                 .wrapContentHeight()
