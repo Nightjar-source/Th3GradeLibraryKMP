@@ -116,6 +116,7 @@ actual fun PdfViewerScreen(
     var isDownloading by remember(item) { mutableStateOf(false) }
     var orientation by remember(appSettings.pdfScrollDirection) { mutableStateOf(appSettings.pdfScrollDirection) }
     var isZoomed by remember(item) { mutableStateOf(false) }
+    var isFullscreenMode by remember(item) { mutableStateOf(false) }
 
     // Find and cast Activity context to toggle system status bars
     val activity = remember(context) {
@@ -154,7 +155,7 @@ actual fun PdfViewerScreen(
         }
     }
 
-    LaunchedEffect(isZoomed, isCurrentPageTopLight, isCurrentPageBottomLight, activity) {
+    LaunchedEffect(isZoomed, isFullscreenMode, isCurrentPageTopLight, isCurrentPageBottomLight, activity) {
         activity?.let { act ->
             val window = act.window
             window.statusBarColor = android.graphics.Color.TRANSPARENT
@@ -169,11 +170,11 @@ actual fun PdfViewerScreen(
             controller.isAppearanceLightStatusBars = isCurrentPageTopLight
             controller.isAppearanceLightNavigationBars = isCurrentPageBottomLight
 
-            if (isZoomed) {
+            if (isZoomed || isFullscreenMode) {
                 controller.systemBarsBehavior = androidx.core.view.WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
-                controller.hide(WindowInsetsCompat.Type.statusBars())
+                controller.hide(WindowInsetsCompat.Type.systemBars())
             } else {
-                controller.show(WindowInsetsCompat.Type.statusBars())
+                controller.show(WindowInsetsCompat.Type.systemBars())
             }
         }
     }
@@ -584,7 +585,17 @@ actual fun PdfViewerScreen(
                             }
                     ) {
                         // Render page content
-                        Box(modifier = Modifier.fillMaxSize()) {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .pointerInput(Unit) {
+                                    detectTapGestures(
+                                        onTap = {
+                                            isFullscreenMode = !isFullscreenMode
+                                        }
+                                    )
+                                }
+                        ) {
                             if (orientation == "vertical") {
                                 VerticalPager(
                                     state = pagerState,
@@ -665,7 +676,7 @@ actual fun PdfViewerScreen(
 
                     // Completely Floating Top control bar
                     AnimatedVisibility(
-                        visible = !isZoomed,
+                        visible = !isZoomed && !isFullscreenMode,
                         enter = fadeIn() + slideInVertically { -it },
                         exit = fadeOut() + slideOutVertically { -it },
                         modifier = Modifier.align(Alignment.TopCenter)
@@ -721,6 +732,19 @@ actual fun PdfViewerScreen(
                                 }
 
                                 IconButton(
+                                    onClick = { isFullscreenMode = !isFullscreenMode },
+                                    modifier = Modifier
+                                        .clip(CircleShape)
+                                        .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.8f))
+                                ) {
+                                    Icon(
+                                        imageVector = if (isFullscreenMode) Icons.Default.FullscreenExit else Icons.Default.Fullscreen,
+                                        contentDescription = "Toggle Fullscreen",
+                                        tint = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                }
+
+                                IconButton(
                                     onClick = {
                                         val newOrientation = if (orientation == "vertical") "horizontal" else "vertical"
                                         orientation = newOrientation
@@ -752,7 +776,7 @@ actual fun PdfViewerScreen(
                 
                     // Floating Page Indicator capsule at bottom center
                     AnimatedVisibility(
-                        visible = !isZoomed,
+                        visible = !isZoomed && !isFullscreenMode,
                         enter = fadeIn() + slideInVertically { it },
                         exit = fadeOut() + slideOutVertically { it },
                         modifier = Modifier.align(Alignment.BottomCenter)

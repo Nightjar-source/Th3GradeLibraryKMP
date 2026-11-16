@@ -174,7 +174,8 @@ object NotificationHelper {
         if (displayCount > 1) {
             val inboxStyle = NotificationCompat.InboxStyle()
                 .setBigContentTitle(mainTitle)
-            titles.take(6).forEach { title ->
+                .setSummaryText("$displayCount أخبار دراسية جديدة")
+            titles.take(10).forEach { title ->
                 inboxStyle.addLine("• $title")
             }
             builder.setStyle(inboxStyle)
