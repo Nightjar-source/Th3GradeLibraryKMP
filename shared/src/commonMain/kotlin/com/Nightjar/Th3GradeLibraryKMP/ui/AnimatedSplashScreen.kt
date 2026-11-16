@@ -83,9 +83,10 @@ fun AnimatedSplashScreen(onAnimationFinished: () -> Unit) {
 
     LaunchedEffect(Unit) {
         startAnimation = true
-        delay(1550)
+        // Fast splash: ~600ms total (brief entrance, snappy exit) instead of the old 1550+250ms.
+        delay(420)
         isExiting = true
-        delay(250) // Allow exit animation to complete smoothly
+        delay(180)
         onAnimationFinished()
     }
 

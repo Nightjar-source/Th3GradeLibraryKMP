@@ -29,8 +29,8 @@ fun Modifier.elasticOverscroll(
     topEnabled: Boolean = true,
     bottomEnabled: Boolean = true
 ): Modifier = composed {
-    val isLowEnd = com.Nightjar.Th3GradeLibraryKMP.theme.LocalIsLowEndDevice.current
-    if (isLowEnd) return@composed this
+    // Elastic stretch runs on every device: a single snapshot collector keeps it 1:1 and jank-free.
+    val systemStretch = LocalSystemStretchOverscroll.current
 
     var componentHeight by remember { mutableStateOf(0f) }
     val overscrollOffset = remember { Animatable(0f) }
@@ -77,6 +77,8 @@ fun Modifier.elasticOverscroll(
                     if ((isPullingDown && !topEnabled) || (isPullingUp && !bottomEnabled)) {
                         return Offset.Zero
                     }
+                    // Android 12+ draws its own bottom stretch — let it through (no custom "plastic" fight).
+                    if (isPullingUp && systemStretch) return Offset.Zero
 
                     val maxReachability = 220f // Brings top content comfortably to mid-screen
                     val maxOffset = if (componentHeight > 0) (componentHeight * maxStretchRatio).coerceIn(200f, 320f) else 240f
@@ -110,8 +112,8 @@ fun Modifier.elasticOverscroll(
                     )
                     return available
                 }
-                // Bottom edge stretch rebounds back to 0.
-                if (current < 0f) {
+                // Bottom edge stretch rebounds back to 0 (only where the system does not own it).
+                if (current < 0f && !systemStretch) {
                     dragTarget.floatValue = 0f
                     overscrollOffset.animateTo(
                         0f,

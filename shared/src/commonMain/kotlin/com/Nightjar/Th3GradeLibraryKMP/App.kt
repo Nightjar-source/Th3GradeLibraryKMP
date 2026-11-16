@@ -39,8 +39,6 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.navigation3.runtime.entryProvider
-import androidx.navigation3.ui.NavDisplay
 import androidx.compose.animation.ExperimentalSharedTransitionApi
 import androidx.compose.animation.SharedTransitionLayout
 import androidx.compose.animation.SharedTransitionScope
@@ -514,334 +512,172 @@ fun AppContent(
                             .zIndex(10f)
                     ) {
                         val screenEntranceSeenMap = remember { mutableMapOf<String, androidx.compose.runtime.snapshots.SnapshotStateMap<String, Boolean>>() }
-                        androidx.navigation3.ui.NavDisplay(
-                            backStack = viewModel.backStack,
+                        val saveableStateHolder = androidx.compose.runtime.saveable.rememberSaveableStateHolder()
+                        androidx.compose.animation.AnimatedContent(
+                            targetState = page,
                             modifier = Modifier.fillMaxSize(),
-                            onBack = { },
                             transitionSpec = {
-                                val targetKey = targetState.key as? com.Nightjar.Th3GradeLibraryKMP.navigation.AppRoute
-                                val initialKey = initialState.key as? com.Nightjar.Th3GradeLibraryKMP.navigation.AppRoute
-                                val isToPdf = targetKey is com.Nightjar.Th3GradeLibraryKMP.navigation.AppRoute.Pdf
-                                val isFromPdf = initialKey is com.Nightjar.Th3GradeLibraryKMP.navigation.AppRoute.Pdf
-
+                                val isToPdf = targetState == "pdf"
+                                val isFromPdf = initialState == "pdf"
                                 if (isToPdf) {
                                     (fadeIn(animationSpec = tween(durationMillis = 140, easing = androidx.compose.animation.core.FastOutSlowInEasing))).togetherWith(
                                         fadeOut(animationSpec = tween(durationMillis = 140, easing = androidx.compose.animation.core.FastOutSlowInEasing))
-                                    ).apply {
-                                        targetContentZIndex = 50f
-                                    }
+                                    ).apply { targetContentZIndex = 50f }
                                 } else if (isFromPdf) {
-                                    (fadeIn(animationSpec = tween(durationMillis = 150, delayMillis = 0, easing = androidx.compose.animation.core.FastOutSlowInEasing))).togetherWith(
-                                        fadeOut(animationSpec = tween(durationMillis = 150, delayMillis = 0, easing = androidx.compose.animation.core.FastOutSlowInEasing))
-                                    ).apply {
-                                        targetContentZIndex = -1f
-                                    }
+                                    (fadeIn(animationSpec = tween(durationMillis = 150, easing = androidx.compose.animation.core.FastOutSlowInEasing))).togetherWith(
+                                        fadeOut(animationSpec = tween(durationMillis = 150, easing = androidx.compose.animation.core.FastOutSlowInEasing))
+                                    ).apply { targetContentZIndex = -1f }
                                 } else {
                                     val pageOrder = listOf("home", "list", "news", "bookmarks", "shortcuts", "about")
-                                    val initialIndex = pageOrder.indexOf(initialKey?.routeKey).takeIf { it >= 0 } ?: 0
-                                    val targetIndex = pageOrder.indexOf(targetKey?.routeKey).takeIf { it >= 0 } ?: 0
-
+                                    val initialIndex = pageOrder.indexOf(initialState).takeIf { it >= 0 } ?: 0
+                                    val targetIndex = pageOrder.indexOf(targetState).takeIf { it >= 0 } ?: 0
                                     val fluidEasing = androidx.compose.animation.core.CubicBezierEasing(0.16f, 1f, 0.3f, 1f)
-                                    val slideSpec = androidx.compose.animation.core.tween<androidx.compose.ui.unit.IntOffset>(
-                                        durationMillis = 350,
-                                        easing = fluidEasing
-                                    )
-                                    val fadeSpec = androidx.compose.animation.core.tween<Float>(
-                                        durationMillis = 260,
-                                        easing = androidx.compose.animation.core.FastOutSlowInEasing
-                                    )
-                                    val direction = if (isNavigatingBack || targetIndex < initialIndex) 1 else -1 // RTL: Forward is -1 (from left), Backward is 1 (from right)
-
-                                    (slideInHorizontally(
-                                        initialOffsetX = { fullWidth -> fullWidth * direction },
-                                        animationSpec = slideSpec
-                                    ) + fadeIn(animationSpec = fadeSpec)).togetherWith(
-                                        slideOutHorizontally(
-                                            targetOffsetX = { fullWidth -> -fullWidth * direction },
-                                            animationSpec = slideSpec
-                                        ) + fadeOut(animationSpec = fadeSpec)
+                                    val slideSpec = androidx.compose.animation.core.tween<androidx.compose.ui.unit.IntOffset>(durationMillis = 350, easing = fluidEasing)
+                                    val fadeSpec = androidx.compose.animation.core.tween<Float>(durationMillis = 260, easing = androidx.compose.animation.core.FastOutSlowInEasing)
+                                    val direction = if (isNavigatingBack || targetIndex < initialIndex) 1 else -1
+                                    (slideInHorizontally(initialOffsetX = { fullWidth -> fullWidth * direction }, animationSpec = slideSpec) + fadeIn(animationSpec = fadeSpec)).togetherWith(
+                                        slideOutHorizontally(targetOffsetX = { fullWidth -> -fullWidth * direction }, animationSpec = slideSpec) + fadeOut(animationSpec = fadeSpec)
                                     )
                                 }
                             },
-                            entryProvider = androidx.navigation3.runtime.entryProvider {
-
-
-                            entry<com.Nightjar.Th3GradeLibraryKMP.navigation.AppRoute.Home> {
-                                val targetPage = "home"
-                                val seenKeysForScreen = remember(targetPage, screenNavCounter) {
-                                    screenEntranceSeenMap.getOrPut("home_${screenNavCounter}") { androidx.compose.runtime.mutableStateMapOf() }
-                                }
-                                pageEntryLocals(
-                                    isNavigatingBack = isNavigatingBack,
-                                    seenKeysForScreen = seenKeysForScreen,
-                                    screenEntranceKey = "home_${screenNavCounter}",
-                                    isReturningFromPdf = isReturningFromPdf
-                                ) {
-                                    val pageContentPadding = PaddingValues(
-                                        end = if (isWide) 90.dp else 0.dp
-                                    )
-                                    val innerHorizontalInsets = WindowInsets.safeDrawing.only(WindowInsetsSides.Horizontal)
-                                    Box(
-                                        modifier = Modifier
-                                            .fillMaxSize()
-                                            .windowInsetsPadding(innerHorizontalInsets)
-                                            .padding(pageContentPadding),
-                                        contentAlignment = Alignment.TopCenter
-                                    ) {
-                                        RenderHomeDestination(
-                                            isGridView = isGridView,
-                                            searchQuery = searchQuery,
-                                            onSearchQueryChange = { searchQuery = it },
-                                            onNavigateToCategory = {
-                                                SyncEngine.saveSelectedCategory(it)
-                                                navigateTo("list")
-                                            },
-                                            onNavigateToPdf = {
-                                                viewModel.selectItem(it, SyncEngine.lastReadPages.value[it.id])
-                                            },
-                                            isDark = isDark,
-                                            onToggleViewMode = { SyncEngine.saveGridView(!isGridView) },
-                                            isSearchOpen = isSearchOpen,
-                                            onToggleSearch = { isSearchOpen = !isSearchOpen },
-                                            onVoiceSearchTrigger = {
-                                                platformActionHandler.showToast("جاري الاستماع للبحث الصوتي...")
-                                            },
-                                            bottomPadding = listBottomPadding,
-                                            onScrollableStateChanged = { canCurrentPageScroll = it },
-                                            scrollState = libraryHomeScrollState
-                                        )
-                                    }
+                            label = "PageContent"
+                        ) { targetPage ->
+                            val currentTransition = this@AnimatedContent.transition
+                            LaunchedEffect(currentTransition.currentState, currentTransition.targetState, targetPage) {
+                                if (currentTransition.currentState == currentTransition.targetState && page != "pdf") {
+                                    com.Nightjar.Th3GradeLibraryKMP.ui.TransitionTargetTracker.isTransitionActive = false
+                                    com.Nightjar.Th3GradeLibraryKMP.ui.TransitionTargetTracker.activeTargetId = null
                                 }
                             }
-                            entry<com.Nightjar.Th3GradeLibraryKMP.navigation.AppRoute.List> { route ->
-                                val targetPage = "list"
+                            val pageContentPadding = PaddingValues(
+                                end = if (isWide && targetPage in listOf("home", "list", "news", "bookmarks", "shortcuts", "about")) 90.dp else 0.dp
+                            )
+                            val innerHorizontalInsets = if (targetPage != "pdf") WindowInsets.safeDrawing.only(WindowInsetsSides.Horizontal) else WindowInsets(0, 0, 0, 0)
+                            Box(
+                                modifier = Modifier.fillMaxSize().windowInsetsPadding(innerHorizontalInsets).padding(pageContentPadding),
+                                contentAlignment = Alignment.TopCenter
+                            ) {
                                 val seenKeysForScreen = remember(targetPage, screenNavCounter) {
-                                    screenEntranceSeenMap.getOrPut("list_${screenNavCounter}") { androidx.compose.runtime.mutableStateMapOf() }
+                                    screenEntranceSeenMap.getOrPut("${targetPage}_$screenNavCounter") { androidx.compose.runtime.mutableStateMapOf() }
                                 }
-                                pageEntryLocals(
-                                    isNavigatingBack = isNavigatingBack,
-                                    seenKeysForScreen = seenKeysForScreen,
-                                    screenEntranceKey = "list_${screenNavCounter}",
-                                    isReturningFromPdf = isReturningFromPdf
+                                CompositionLocalProvider(
+                                    LocalAnimatedVisibilityScope provides this@AnimatedContent,
+                                    com.Nightjar.Th3GradeLibraryKMP.theme.LocalIsNavigatingBack provides isNavigatingBack,
+                                    com.Nightjar.Th3GradeLibraryKMP.theme.LocalSeenEntranceItems provides seenKeysForScreen,
+                                    com.Nightjar.Th3GradeLibraryKMP.theme.LocalScreenEntranceKey provides "${targetPage}_$screenNavCounter",
+                                    com.Nightjar.Th3GradeLibraryKMP.theme.LocalIsReturningFromPdf provides isReturningFromPdf
                                 ) {
-                                    val pageContentPadding = PaddingValues(
-                                        end = if (isWide) 90.dp else 0.dp
-                                    )
-                                    val innerHorizontalInsets = WindowInsets.safeDrawing.only(WindowInsetsSides.Horizontal)
-                                    Box(
-                                        modifier = Modifier
-                                            .fillMaxSize()
-                                            .windowInsetsPadding(innerHorizontalInsets)
-                                            .padding(pageContentPadding),
-                                        contentAlignment = Alignment.TopCenter
-                                    ) {
-                                        RenderListDestination(
-                                            category = route.category ?: "books",
-                                            isGridView = isGridView,
-                                            searchQuery = searchQuery,
-                                            onSearchQueryChange = { searchQuery = it },
-                                            onNavigateToCategory = {
-                                                SyncEngine.saveSelectedCategory(it)
-                                                navigateTo("list")
-                                            },
-                                            onNavigateToPdf = {
-                                                viewModel.selectItem(it, SyncEngine.lastReadPages.value[it.id])
-                                            },
-                                            isDark = isDark,
-                                            onToggleViewMode = { SyncEngine.saveGridView(!isGridView) },
-                                            isSearchOpen = isSearchOpen,
-                                            onToggleSearch = { isSearchOpen = !isSearchOpen },
-                                            onVoiceSearchTrigger = {
-                                                platformActionHandler.showToast("جاري الاستماع للبحث الصوتي...")
-                                            },
-                                            bottomPadding = listBottomPadding,
-                                            onScrollableStateChanged = { canCurrentPageScroll = it },
-                                            lazyGridState = if (selectedCategory == "books") libraryBooksLazyGridState else libraryNotesLazyGridState
-                                        )
-                                    }
-                                }
-                            }
-                            entry<com.Nightjar.Th3GradeLibraryKMP.navigation.AppRoute.News> {
-                                val targetPage = "news"
-                                val seenKeysForScreen = remember(targetPage, screenNavCounter) {
-                                    screenEntranceSeenMap.getOrPut("news_${screenNavCounter}") { androidx.compose.runtime.mutableStateMapOf() }
-                                }
-                                pageEntryLocals(
-                                    isNavigatingBack = isNavigatingBack,
-                                    seenKeysForScreen = seenKeysForScreen,
-                                    screenEntranceKey = "news_${screenNavCounter}",
-                                    isReturningFromPdf = isReturningFromPdf
-                                ) {
-                                    val pageContentPadding = PaddingValues(
-                                        end = if (isWide) 90.dp else 0.dp
-                                    )
-                                    val innerHorizontalInsets = WindowInsets.safeDrawing.only(WindowInsetsSides.Horizontal)
-                                    Box(
-                                        modifier = Modifier
-                                            .fillMaxSize()
-                                            .windowInsetsPadding(innerHorizontalInsets)
-                                            .padding(pageContentPadding),
-                                        contentAlignment = Alignment.TopCenter
-                                    ) {
-                                        RenderNewsDestination(
-                                            onOpenSettings = { isNewsSettingsOpen = true },
-                                            onItemClick = { url, _ ->
-                                                platformActionHandler.openCustomTab(url, appSettings.primaryColor)
-                                            },
-                                            isDark = isDark,
-                                            bottomPadding = listBottomPadding,
-                                            onScrollableStateChanged = { canCurrentPageScroll = it },
-                                            lazyGridState = newsLazyGridState
-                                        )
-                                    }
-                                }
-                            }
-                            entry<com.Nightjar.Th3GradeLibraryKMP.navigation.AppRoute.Bookmarks> {
-                                val targetPage = "bookmarks"
-                                val seenKeysForScreen = remember(targetPage, screenNavCounter) {
-                                    screenEntranceSeenMap.getOrPut("bookmarks_${screenNavCounter}") { androidx.compose.runtime.mutableStateMapOf() }
-                                }
-                                pageEntryLocals(
-                                    isNavigatingBack = isNavigatingBack,
-                                    seenKeysForScreen = seenKeysForScreen,
-                                    screenEntranceKey = "bookmarks_${screenNavCounter}",
-                                    isReturningFromPdf = isReturningFromPdf
-                                ) {
-                                    val pageContentPadding = PaddingValues(
-                                        end = if (isWide) 90.dp else 0.dp
-                                    )
-                                    val innerHorizontalInsets = WindowInsets.safeDrawing.only(WindowInsetsSides.Horizontal)
-                                    Box(
-                                        modifier = Modifier
-                                            .fillMaxSize()
-                                            .windowInsetsPadding(innerHorizontalInsets)
-                                            .padding(pageContentPadding),
-                                        contentAlignment = Alignment.TopCenter
-                                    ) {
-                                        RenderBookmarksDestination(
-                                            savedItems = savedItems,
-                                            savedItemIds = savedItemIds,
-                                            isTransitionActive = isTransitionActive,
-                                            isReturningFromPdf = isReturningFromPdf,
-                                            activeTargetId = activeTargetId,
-                                            isDark = isDark,
-                                            onNavigateToPdf = { item, pageIdx ->
-                                                viewModel.selectItem(item, pageIdx, fromBookmarks = true)
-                                            },
-                                            bottomPadding = listBottomPadding,
-                                            onScrollableStateChanged = { canCurrentPageScroll = it },
-                                            lazyGridState = bookmarksLazyGridState
-                                        )
-                                    }
-                                }
-                            }
-                            entry<com.Nightjar.Th3GradeLibraryKMP.navigation.AppRoute.Shortcuts> {
-                                val targetPage = "shortcuts"
-                                val seenKeysForScreen = remember(targetPage, screenNavCounter) {
-                                    screenEntranceSeenMap.getOrPut("shortcuts_${screenNavCounter}") { androidx.compose.runtime.mutableStateMapOf() }
-                                }
-                                pageEntryLocals(
-                                    isNavigatingBack = isNavigatingBack,
-                                    seenKeysForScreen = seenKeysForScreen,
-                                    screenEntranceKey = "shortcuts_${screenNavCounter}",
-                                    isReturningFromPdf = isReturningFromPdf
-                                ) {
-                                    val pageContentPadding = PaddingValues(
-                                        end = if (isWide) 90.dp else 0.dp
-                                    )
-                                    val innerHorizontalInsets = WindowInsets.safeDrawing.only(WindowInsetsSides.Horizontal)
-                                    Box(
-                                        modifier = Modifier
-                                            .fillMaxSize()
-                                            .windowInsetsPadding(innerHorizontalInsets)
-                                            .padding(pageContentPadding),
-                                        contentAlignment = Alignment.TopCenter
-                                    ) {
-                                        RenderShortcutsDestination(
-                                            platformActionHandler = platformActionHandler,
-                                            isDark = isDark,
-                                            bottomPadding = listBottomPadding,
-                                            onScrollableStateChanged = { canCurrentPageScroll = it },
-                                            lazyGridState = shortcutsLazyGridState
-                                        )
-                                    }
-                                }
-                            }
-                            entry<com.Nightjar.Th3GradeLibraryKMP.navigation.AppRoute.About> {
-                                val targetPage = "about"
-                                val seenKeysForScreen = remember(targetPage, screenNavCounter) {
-                                    screenEntranceSeenMap.getOrPut("about_${screenNavCounter}") { androidx.compose.runtime.mutableStateMapOf() }
-                                }
-                                pageEntryLocals(
-                                    isNavigatingBack = isNavigatingBack,
-                                    seenKeysForScreen = seenKeysForScreen,
-                                    screenEntranceKey = "about_${screenNavCounter}",
-                                    isReturningFromPdf = isReturningFromPdf
-                                ) {
-                                    val pageContentPadding = PaddingValues(
-                                        end = if (isWide) 90.dp else 0.dp
-                                    )
-                                    val innerHorizontalInsets = WindowInsets.safeDrawing.only(WindowInsetsSides.Horizontal)
-                                    Box(
-                                        modifier = Modifier
-                                            .fillMaxSize()
-                                            .windowInsetsPadding(innerHorizontalInsets)
-                                            .padding(pageContentPadding),
-                                        contentAlignment = Alignment.TopCenter
-                                    ) {
-                                        RenderAboutDestination(
-                                            onOpenUrl = { url ->
-                                                platformActionHandler.showToast("تحويل إلى تليغرام...")
-                                                platformActionHandler.openUrl(url)
-                                            },
-                                            isDark = isDark,
-                                            bottomPadding = listBottomPadding,
-                                            onScrollableStateChanged = { canCurrentPageScroll = it },
-                                            scrollState = aboutScrollState
-                                        )
-                                    }
-                                }
-                            }
-                            entry<com.Nightjar.Th3GradeLibraryKMP.navigation.AppRoute.Pdf> { route ->
-                                val seenKeysForScreen = remember("pdf", screenNavCounter) {
-                                    screenEntranceSeenMap.getOrPut("pdf_${screenNavCounter}") { androidx.compose.runtime.mutableStateMapOf() }
-                                }
-                                pageEntryLocals(
-                                    isNavigatingBack = isNavigatingBack,
-                                    seenKeysForScreen = seenKeysForScreen,
-                                    screenEntranceKey = "pdf_${screenNavCounter}",
-                                    isReturningFromPdf = isReturningFromPdf
-                                ) {
-                                    val currentItem = selectedItem
-                                    if (currentItem != null) {
-                                        Box(
-                                            modifier = Modifier
-                                                .fillMaxSize()
-                                                .windowInsetsPadding(WindowInsets(0, 0, 0, 0))
-                                                .padding(0.dp),
-                                            contentAlignment = Alignment.TopCenter
-                                        ) {
-                                            RenderPdfDestination(
-                                                item = currentItem,
-                                                savedItemIds = savedItemIds,
-                                                onToggleBookmark = { pageIdx ->
-                                                    val result = com.Nightjar.Th3GradeLibraryKMP.core.BookmarkActions.toggle(currentItem, pageIdx)
-                                                    platformActionHandler.showToast(result.toastMessage)
+                                    saveableStateHolder.SaveableStateProvider(targetPage) {
+                                        when (targetPage) {
+                                            "home" -> RenderHomeDestination(
+                                                isGridView = isGridView,
+                                                searchQuery = searchQuery,
+                                                onSearchQueryChange = { searchQuery = it },
+                                                onNavigateToCategory = {
+                                                    SyncEngine.saveSelectedCategory(it)
+                                                    navigateTo("list")
                                                 },
-                                                onClose = {
-                                                    handleTopBarBack()
+                                                onNavigateToPdf = {
+                                                    viewModel.selectItem(it, SyncEngine.lastReadPages.value[it.id])
                                                 },
-                                                initialPage = route.initialPage,
                                                 isDark = isDark,
-                                                isFromBookmarks = route.fromBookmarks,
-                                                sourcePage = route.sourcePage
+                                                onToggleViewMode = { SyncEngine.saveGridView(!isGridView) },
+                                                isSearchOpen = isSearchOpen,
+                                                onToggleSearch = { isSearchOpen = !isSearchOpen },
+                                                onVoiceSearchTrigger = {
+                                                    platformActionHandler.showToast("جاري الاستماع للبحث الصوتي...")
+                                                },
+                                                bottomPadding = listBottomPadding,
+                                                onScrollableStateChanged = { canCurrentPageScroll = it },
+                                                scrollState = libraryHomeScrollState
                                             )
+                                            "list" -> RenderListDestination(
+                                                category = selectedCategory ?: "books",
+                                                isGridView = isGridView,
+                                                searchQuery = searchQuery,
+                                                onSearchQueryChange = { searchQuery = it },
+                                                onNavigateToCategory = {
+                                                    SyncEngine.saveSelectedCategory(it)
+                                                    navigateTo("list")
+                                                },
+                                                onNavigateToPdf = {
+                                                    viewModel.selectItem(it, SyncEngine.lastReadPages.value[it.id])
+                                                },
+                                                isDark = isDark,
+                                                onToggleViewMode = { SyncEngine.saveGridView(!isGridView) },
+                                                isSearchOpen = isSearchOpen,
+                                                onToggleSearch = { isSearchOpen = !isSearchOpen },
+                                                onVoiceSearchTrigger = {
+                                                    platformActionHandler.showToast("جاري الاستماع للبحث الصوتي...")
+                                                },
+                                                bottomPadding = listBottomPadding,
+                                                onScrollableStateChanged = { canCurrentPageScroll = it },
+                                                lazyGridState = if (selectedCategory == "books") libraryBooksLazyGridState else libraryNotesLazyGridState
+                                            )
+                                            "news" -> RenderNewsDestination(
+                                                onOpenSettings = { isNewsSettingsOpen = true },
+                                                onItemClick = { url, _ ->
+                                                    platformActionHandler.openCustomTab(url, appSettings.primaryColor)
+                                                },
+                                                isDark = isDark,
+                                                bottomPadding = listBottomPadding,
+                                                onScrollableStateChanged = { canCurrentPageScroll = it },
+                                                lazyGridState = newsLazyGridState
+                                            )
+                                            "bookmarks" -> RenderBookmarksDestination(
+                                                savedItems = savedItems,
+                                                savedItemIds = savedItemIds,
+                                                isTransitionActive = isTransitionActive,
+                                                isReturningFromPdf = isReturningFromPdf,
+                                                activeTargetId = activeTargetId,
+                                                isDark = isDark,
+                                                onNavigateToPdf = { item, pageIdx ->
+                                                    viewModel.selectItem(item, pageIdx, fromBookmarks = true)
+                                                },
+                                                bottomPadding = listBottomPadding,
+                                                onScrollableStateChanged = { canCurrentPageScroll = it },
+                                                lazyGridState = bookmarksLazyGridState
+                                            )
+                                            "shortcuts" -> RenderShortcutsDestination(
+                                                platformActionHandler = platformActionHandler,
+                                                isDark = isDark,
+                                                bottomPadding = listBottomPadding,
+                                                onScrollableStateChanged = { canCurrentPageScroll = it },
+                                                lazyGridState = shortcutsLazyGridState
+                                            )
+                                            "about" -> RenderAboutDestination(
+                                                onOpenUrl = { url ->
+                                                    platformActionHandler.showToast("تحويل إلى تليغرام...")
+                                                    platformActionHandler.openUrl(url)
+                                                },
+                                                isDark = isDark,
+                                                bottomPadding = listBottomPadding,
+                                                onScrollableStateChanged = { canCurrentPageScroll = it },
+                                                scrollState = aboutScrollState
+                                            )
+                                            "pdf" -> {
+                                                val currentItem = selectedItem
+                                                if (currentItem != null) {
+                                                    RenderPdfDestination(
+                                                        item = currentItem,
+                                                        savedItemIds = savedItemIds,
+                                                        onToggleBookmark = { pageIdx ->
+                                                            val result = com.Nightjar.Th3GradeLibraryKMP.core.BookmarkActions.toggle(currentItem, pageIdx)
+                                                            platformActionHandler.showToast(result.toastMessage)
+                                                        },
+                                                        onClose = { handleTopBarBack() },
+                                                        initialPage = pdfInitialPage,
+                                                        isDark = isDark,
+                                                        isFromBookmarks = viewModel.isFromBookmarks,
+                                                        sourcePage = viewModel.pdfSourcePage
+                                                    )
+                                                }
+                                            }
                                         }
                                     }
                                 }
                             }
                         }
-                        )
                     }
                 }
                 }
