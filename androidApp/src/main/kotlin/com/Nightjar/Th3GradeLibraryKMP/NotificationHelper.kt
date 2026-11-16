@@ -159,9 +159,10 @@ object NotificationHelper {
         val targetChannelId = if (withSound) CHANNEL_SOUND_ID else CHANNEL_SILENT_ID
         val soundUri = if (withSound) getCustomSoundUri(context) else null
 
-        // Unified Notification: Only headline and thumbnail for single news, or bundled list for multiple
+        // Unified Notification: When multiple news exist, headline of the newest item is ALWAYS the main title
         val displayCount = if (count > 0) count else titles.size
-        val mainTitle = if (displayCount == 1) titles.first() else "مكتبة الثالث متوسط: تم نشر $displayCount أخبار جديدة"
+        val firstNewsTitle = titles.firstOrNull() ?: "خبر دراسي جديد"
+        val mainTitle = firstNewsTitle
 
         val builder = NotificationCompat.Builder(context, targetChannelId)
             .setSmallIcon(R.drawable.ic_notification)

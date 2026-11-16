@@ -738,7 +738,7 @@ actual fun PdfViewerScreen(
                                         .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.8f))
                                 ) {
                                     Icon(
-                                        imageVector = if (isFullscreenMode) Icons.Default.FullscreenExit else Icons.Default.Fullscreen,
+                                        imageVector = if (isFullscreenMode) Icons.Default.CloseFullscreen else Icons.Default.OpenInFull,
                                         contentDescription = "Toggle Fullscreen",
                                         tint = MaterialTheme.colorScheme.onSurfaceVariant
                                     )
