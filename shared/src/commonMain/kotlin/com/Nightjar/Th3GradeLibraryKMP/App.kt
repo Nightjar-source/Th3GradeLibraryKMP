@@ -40,7 +40,6 @@ import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation3.runtime.entryProvider
-import androidx.navigation3.runtime.entry
 import androidx.navigation3.ui.NavDisplay
 import androidx.compose.animation.ExperimentalSharedTransitionApi
 import androidx.compose.animation.SharedTransitionLayout
@@ -197,7 +196,6 @@ fun AppContent(
     val appSettings by SyncEngine.appSettings.collectAsState()
     val toastMessage by ToastManager.toastMessage.collectAsState()
     val scope = rememberCoroutineScope()
-    val saveableStateHolder = androidx.compose.runtime.saveable.rememberSaveableStateHolder()
 
     
     // Hoisted scroll/list states for preserving positions across navigation
@@ -519,6 +517,7 @@ fun AppContent(
                         androidx.navigation3.ui.NavDisplay(
                             backStack = viewModel.backStack,
                             modifier = Modifier.fillMaxSize(),
+                            onBack = { },
                             transitionSpec = {
                                 val targetKey = targetState.key as? com.Nightjar.Th3GradeLibraryKMP.navigation.AppRoute
                                 val initialKey = initialState.key as? com.Nightjar.Th3GradeLibraryKMP.navigation.AppRoute
@@ -538,7 +537,7 @@ fun AppContent(
                                         targetContentZIndex = -1f
                                     }
                                 } else {
-                                    val pageOrder = listOf("", "list", "news", "bookmarks", "shortcuts", "about")
+                                    val pageOrder = listOf("home", "list", "news", "bookmarks", "shortcuts", "about")
                                     val initialIndex = pageOrder.indexOf(initialKey?.routeKey).takeIf { it >= 0 } ?: 0
                                     val targetIndex = pageOrder.indexOf(targetKey?.routeKey).takeIf { it >= 0 } ?: 0
 
@@ -841,8 +840,10 @@ fun AppContent(
                                     }
                                 }
                             }
+                        }
                         )
                     }
+                }
                 }
 
                 // --- Floating App Bar (Always visible except PDF, WebView, and Onboarding) ---
