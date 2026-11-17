@@ -82,6 +82,7 @@ fun NotificationDetailScreen(
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
+                    .widthIn(max = 680.dp)
                     .then(sharedCardModifier)
                     .padding(horizontal = 20.dp),
                 verticalArrangement = Arrangement.spacedBy(16.dp)
@@ -242,13 +243,15 @@ fun NotificationDetailScreen(
                 if (allActionUrls.isNotEmpty()) {
                     Column(
                         modifier = Modifier.fillMaxWidth(),
-                        verticalArrangement = Arrangement.spacedBy(10.dp)
+                        verticalArrangement = Arrangement.spacedBy(10.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally
                     ) {
                         allActionUrls.forEachIndexed { idx, url ->
                             val buttonTitle = if (allActionUrls.size == 1) "فتح الرابط المرفق" else "فتح الرابط المرفق #${idx + 1}"
                             Button(
                                 onClick = { onOpenLink(url) },
                                 modifier = Modifier
+                                    .widthIn(max = 380.dp)
                                     .fillMaxWidth()
                                     .height(54.dp),
                                 shape = RoundedCornerShape(16.dp),
@@ -282,6 +285,7 @@ fun NotificationDetailScreen(
         val screenWidthDp = with(density) { windowInfo.containerSize.width.toDp() }
         val isWide = screenWidthDp >= 600.dp
         val topBarHeight = if (isWide) 40.dp else 48.dp
+        val topBarPaddingV = if (isWide) 4.dp else 6.dp
 
         Box(
             modifier = Modifier
@@ -289,50 +293,55 @@ fun NotificationDetailScreen(
                 .fillMaxWidth()
                 .windowInsetsPadding(WindowInsets.statusBars.add(WindowInsets.captionBar))
                 .windowInsetsPadding(WindowInsets.safeDrawing.only(WindowInsetsSides.Horizontal))
-                .padding(horizontal = 16.dp, vertical = if (isWide) 4.dp else 6.dp),
+                .padding(
+                    start = 16.dp,
+                    end = if (isWide) 96.dp else 16.dp,
+                    top = topBarPaddingV,
+                    bottom = topBarPaddingV
+                ),
             contentAlignment = Alignment.Center
         ) {
             Row(
-                modifier = Modifier
-                    .widthIn(max = 608.dp)
-                    .fillMaxWidth(),
+                modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
-                // Circular Island: Back Button
-                Box(
-                    modifier = Modifier
-                        .size(topBarHeight)
-                        .liquidGlass(isDark, borderRadius = topBarHeight / 2, alpha = 0.95f)
-                        .clip(CircleShape)
-                        .clickable(onClick = onBack),
-                    contentAlignment = Alignment.Center
+                // Circular Island: Back Button & Title Pill aligned with app's standard Top Bar
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    Icon(
-                        imageVector = androidx.compose.material.icons.Icons.Default.ChevronRight,
-                        contentDescription = "رجوع",
-                        tint = MaterialTheme.colorScheme.onSurface,
-                        modifier = Modifier.size(24.dp)
-                    )
-                }
+                    Box(
+                        modifier = Modifier
+                            .size(topBarHeight)
+                            .liquidGlass(isDark, borderRadius = topBarHeight / 2, alpha = 0.95f)
+                            .clip(CircleShape)
+                            .clickable(onClick = onBack),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = androidx.compose.material.icons.Icons.Default.ChevronRight,
+                            contentDescription = "رجوع",
+                            tint = MaterialTheme.colorScheme.onSurface,
+                            modifier = Modifier.size(24.dp)
+                        )
+                    }
 
-                // Oval Island: Screen Title
-                Box(
-                    modifier = Modifier
-                        .height(topBarHeight)
-                        .liquidGlass(isDark, borderRadius = topBarHeight / 2, alpha = 0.95f)
-                        .padding(horizontal = 20.dp),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Text(
-                        text = "تفاصيل الإشعار",
-                        style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
-                        color = MaterialTheme.colorScheme.onSurface
-                    )
+                    // Oval Island: Screen Title
+                    Box(
+                        modifier = Modifier
+                            .height(topBarHeight)
+                            .liquidGlass(isDark, borderRadius = topBarHeight / 2, alpha = 0.95f)
+                            .padding(horizontal = 20.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            text = "تفاصيل الإشعار",
+                            style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
+                    }
                 }
-
-                // Spacer balance
-                Spacer(modifier = Modifier.size(topBarHeight))
             }
         }
     }

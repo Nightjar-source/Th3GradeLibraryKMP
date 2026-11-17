@@ -662,14 +662,16 @@ fun AppContent(
                                         onOpenSettings = { isNewsSettingsOpen = true },
                                         onItemClick = { url, title ->
                                             val matched = SyncEngine.newsList.value.firstOrNull { it.link == url || it.title == title }
+                                            val hasWebUrl = url.isNotBlank() && (url.startsWith("http://") || url.startsWith("https://"))
                                             val isAnnouncement = matched?.isDeveloperAnnouncement == true ||
-                                                    url.isBlank() ||
+                                                    (matched?.isAnnouncement == true && !hasWebUrl) ||
                                                     url.startsWith("dev_") ||
                                                     url.startsWith("admin_") ||
-                                                    url.startsWith("app://") ||
-                                                    (!url.startsWith("http://") && !url.startsWith("https://"))
+                                                    url.startsWith("app://")
 
-                                            if (isAnnouncement && matched != null) {
+                                            if (hasWebUrl && !isAnnouncement) {
+                                                platformActionHandler.openCustomTab(url, appSettings.primaryColor)
+                                            } else if (isAnnouncement && matched != null) {
                                                 // In-app administrative notice / rich card
                                                 activeNotificationItem = matched
                                                 navigateTo("notification_detail")

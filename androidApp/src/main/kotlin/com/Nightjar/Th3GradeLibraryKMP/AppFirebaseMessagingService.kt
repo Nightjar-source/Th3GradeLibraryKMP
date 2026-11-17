@@ -177,6 +177,10 @@ class AppFirebaseMessagingService : FirebaseMessagingService() {
             } else {
                 showMicroThumbnailNotification(title, content, link, imageUrl, isNews = true)
             }
+        } else {
+            // Schedule one-time delayed delivery for the end of the quiet window
+            val remainingMs = intervalMs - (now - lastNotif)
+            NewsBatchDeliveryWorker.scheduleDelivery(this, remainingMs)
         }
     }
 
@@ -194,9 +198,14 @@ class AppFirebaseMessagingService : FirebaseMessagingService() {
             val formattedDate = SyncEngine.formatNewsDate(pubDate)
 
             // Strict temporal & link boundary check:
-            // A news item is only a duplicate if both its ID/link AND its pubDate match the cached item.
+            // A news item is only a duplicate if its ID/link/title AND its pubDate match the cached item.
             // If the same link/article was updated with a new publication timestamp, it is treated as a fresh update!
-            val existingItem = existingList.find { it.id == id || (link.isNotEmpty() && it.link == link) }
+            val normLink = SyncEngine.normalizeUrl(link)
+            val existingItem = existingList.find {
+                it.id == id ||
+                (normLink.isNotEmpty() && SyncEngine.normalizeUrl(it.link) == normLink) ||
+                (title.isNotBlank() && it.title == title)
+            }
             val isDuplicate = existingItem != null && (pubDate.isEmpty() || existingItem.pubDate == pubDate)
 
             if (!isDuplicate) {
@@ -213,7 +222,7 @@ class AppFirebaseMessagingService : FirebaseMessagingService() {
                     pubDate = pubDate,
                     imageUrl = imageUrl.ifEmpty { null },
                     formattedDate = formattedDate,
-                    isAnnouncement = isAnnouncement || (content.length > 120 && !link.contains("feedburner.com"))
+                    isAnnouncement = isAnnouncement
                 )
                 existingList.add(0, newItem)
                 AppDataStore.putString("app_news_cache", json.encodeToString(existingList.take(60)))
@@ -301,16 +310,22 @@ class AppFirebaseMessagingService : FirebaseMessagingService() {
             if (!NotificationManagerCompat.from(this).areNotificationsEnabled()) return
         }
 
-        val soundEnabled = SyncEngine.appSettings.value.notificationSound || !isNews
+        val soundEnabled = if (isNews) SyncEngine.appSettings.value.notificationSound else true
         val channelId = if (soundEnabled) CHANNEL_SOUND_ID else CHANNEL_SILENT_ID
         val soundUri = if (soundEnabled) Uri.parse("android.resource://$packageName/" + R.raw.custom_sound) else null
 
         val intent = Intent(this, MainActivity::class.java).apply {
             flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
-            if (isNews && link.startsWith("http")) {
-                // News topic / type=news: opens directly in the browser / CustomTab
-                putExtra("open_browser_url", link)
-                data = Uri.parse(link)
+            if (isNews) {
+                if (link.startsWith("http")) {
+                    // News topic / type=news: opens directly in the browser / CustomTab
+                    putExtra("open_browser_url", link)
+                    data = Uri.parse(link)
+                } else {
+                    // News topic without direct web link: opens News screen
+                    putExtra("page", "news")
+                    data = Uri.parse("th3books://library?page=news")
+                }
             } else {
                 // General announcement: opens in app NotificationDetailScreen
                 data = Uri.parse(if (link.isNotEmpty()) "th3books://library?page=notification_detail&link=" + Uri.encode(link) else "th3books://library?page=notification_detail")

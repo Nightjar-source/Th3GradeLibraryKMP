@@ -7,6 +7,7 @@
  * 3. Developer Announcement API (/developer-announcement)
  * 4. Scheduled Cron Handler (every 10m) for FCM v1 Push Notifications
  *    According to guide: الوكيل/إشعارات_فايربيس_السحابية.md
+ * 5. Dynamic Sliding Marker via Cloudflare KV (TH3BOOKS_KV) - Zero data bloating.
  */
 
 // Retrieve credentials dynamically from Cloudflare Encrypted Secrets (Settings -> Variables and Secrets)
@@ -19,6 +20,9 @@ const FIREBASE_PROJECT_ID = typeof globalThis.FIREBASE_PROJECT_ID !== "undefined
 const FIREBASE_CLIENT_EMAIL = typeof globalThis.FIREBASE_CLIENT_EMAIL !== "undefined" && globalThis.FIREBASE_CLIENT_EMAIL ? globalThis.FIREBASE_CLIENT_EMAIL : "firebase-adminsdk-fbsvc@kariqth3booksexemptioncalc.iam.gserviceaccount.com";
 const FIREBASE_PRIVATE_KEY = typeof globalThis.FIREBASE_PRIVATE_KEY !== "undefined" && globalThis.FIREBASE_PRIVATE_KEY ? globalThis.FIREBASE_PRIVATE_KEY : "";
 
+// KV Namespace binding
+const KV = typeof globalThis.TH3BOOKS_KV !== "undefined" && globalThis.TH3BOOKS_KV ? globalThis.TH3BOOKS_KV : null;
+
 // Current Active Developer Announcement
 const ACTIVE_ANNOUNCEMENT = null; // Disabled - cleaned from feed
 const _DISABLED_ANNOUNCEMENT = {
@@ -29,7 +33,7 @@ const _DISABLED_ANNOUNCEMENT = {
   pubDate: "Sun, 01 Nov 2026 14:00:00 +0300"
 };
 
-// In-memory & Dynamic Edge Cache tracker for last sent notification GUID (Slides dynamically like Top_Link)
+// In-memory fallback tracker
 let lastNotifiedGuid = "";
 
 function cleanHtmlEntities(str) {
@@ -53,33 +57,54 @@ function cleanHtmlEntities(str) {
     .trim();
 }
 
+function extractFirstOriginalImage(itemContent, descRaw) {
+  let match = itemContent.match(/<enclosure[^>]*url="([^"]*)"/i);
+  if (!match) {
+    match = itemContent.match(/<media:content[^>]*url="([^"]*)"/i);
+  }
+  if (!match && descRaw) {
+    const unescapedDesc = descRaw
+      .replace(/&quot;/g, '"')
+      .replace(/&amp;/g, '&')
+      .replace(/&lt;/g, '<')
+      .replace(/&gt;/g, '>');
+    match = unescapedDesc.match(/<img[^>]+src=["']([^"']+)["']/i);
+  }
+  if (!match) return "";
+  let imgUrl = match[1].trim().replace(/&amp;/g, '&');
+  
+  // Transform Blogger thumbnail sizes to full-resolution /s1600/
+  imgUrl = imgUrl.replace(/\/(s(72-c|160|200|320|400|640|800)|w\d+-h\d+[^/]*)\//i, '/s1600/');
+  return imgUrl;
+}
 
+/**
+ * Dynamic Sliding Watermark in Cloudflare KV:
+ * Stores only ONE single dynamic pointer ("dynamic_sliding_marker").
+ * With each sync, the previous marker is overwritten by the latest link+pubDate.
+ * Zero database accumulation, zero bloat.
+ */
 async function getLastNotifiedGuid() {
   try {
-    const cache = caches.default;
-    const cacheKey = new Request("https://th3books-gateway.karrar1iq.workers.dev/internal/dynamic-sliding-marker");
-    const response = await cache.match(cacheKey);
-    if (response) {
-      const val = (await response.text()).trim();
-      if (val) return val;
+    if (KV) {
+      const val = await KV.get("dynamic_sliding_marker");
+      if (val && val.trim()) return val.trim();
     }
-  } catch (e) {}
+  } catch (e) {
+    console.error("KV read error:", e);
+  }
   return lastNotifiedGuid;
 }
 
 async function setLastNotifiedGuid(guid) {
   lastNotifiedGuid = guid;
   try {
-    const cache = caches.default;
-    const cacheKey = new Request("https://th3books-gateway.karrar1iq.workers.dev/internal/dynamic-sliding-marker");
-    const response = new Response(guid, {
-      headers: {
-        "Content-Type": "text/plain",
-        "Cache-Control": "public, max-age=86400"
-      }
-    });
-    await cache.put(cacheKey, response);
-  } catch (e) {}
+    if (KV) {
+      await KV.put("dynamic_sliding_marker", guid);
+    }
+  } catch (e) {
+    console.error("KV write error:", e);
+  }
 }
 
 addEventListener('fetch', event => {
@@ -111,7 +136,8 @@ async function handleRequest(request, event) {
     return new Response(JSON.stringify({
       status: "ok",
       service: "th3books-gateway",
-      version: "2.1.4-cloud",
+      version: "2.3.6-cloud",
+      hasKV: !!KV,
       developerAnnouncement: ACTIVE_ANNOUNCEMENT?.title || null,
       timestamp: new Date().toISOString()
     }), {
@@ -167,7 +193,7 @@ async function handleRequest(request, event) {
       try {
         const fetchResp = await fetch(RSS_FEED_URL, {
           headers: {
-            "User-Agent": "Mozilla/5.0 (compatible; Th3GradeLibraryCloud/2.1)",
+            "User-Agent": "Mozilla/5.0 (compatible; Th3GradeLibraryCloud/2.3)",
             "Accept": "application/rss+xml, application/xml, text/xml, */*"
           }
         });
@@ -218,15 +244,17 @@ async function handleRequest(request, event) {
     });
   }
 
-    // 5. Test Trigger FCM Endpoint (POST /trigger-push)
-  if (path === "/send-test-push" || (path === "/trigger-push" && request.method === "POST")) {
+  // 5. Test Trigger FCM Endpoint (POST /trigger-push)
+  if (path === "/send-test-push") {
     const pushResult = await sendFcmNotification({
       title: "وزارة التربية: إعلان نتائج الدور الثالث للصف الثالث متوسط",
       body: "أعلنت وزارة التربية رسمياً قبل قليل نتائج الامتحانات الوزارية لطلبة الثالث متوسط 2026/2027 عبر الرابط المباشر.",
       imageUrl: "https://images.unsplash.com/photo-1546410531-bb4caa6b424d?w=800&auto=format&fit=crop&q=80",
       data: {
+        type: "news",
         title: "وزارة التربية: إعلان نتائج الدور الثالث للصف الثالث متوسط",
         link: "https://t.me/bookiraqi",
+        click_url: "https://t.me/bookiraqi",
         image_url: "https://images.unsplash.com/photo-1546410531-bb4caa6b424d?w=800&auto=format&fit=crop&q=80",
         pubDate: new Date().toUTCString(),
         content: "أعلنت وزارة التربية رسمياً قبل قليل نتائج الامتحانات الوزارية لطلبة الثالث متوسط 2026/2027 عبر الرابط المباشر.",
@@ -237,6 +265,7 @@ async function handleRequest(request, event) {
       headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*" }
     });
   }
+
   if (path === "/trigger-push" && request.method === "POST") {
     const result = await handleScheduledEvent(true);
     return new Response(JSON.stringify(result), {
@@ -254,7 +283,7 @@ async function handleRequest(request, event) {
 async function handleScheduledEvent(force = false) {
   try {
     const feedResp = await fetch(RSS_FEED_URL, {
-      headers: { "User-Agent": "Th3Books-Edge-Bot/2.2.9 (Android KMP Cloud)" }
+      headers: { "User-Agent": "Th3Books-Edge-Bot/2.3.6 (Android KMP Cloud)" }
     });
     if (!feedResp.ok) return { error: "Failed to fetch RSS feed" };
 
@@ -270,17 +299,15 @@ async function handleScheduledEvent(force = false) {
       const linkMatch = itemContent.match(/<link>(?:<!\[CDATA\[)?([\s\S]*?)(?:\]\]>)?<\/link>/i);
       const pubDateMatch = itemContent.match(/<pubDate>(?:<!\[CDATA\[)?([\s\S]*?)(?:\]\]>)?<\/pubDate>/i);
       const descMatch = itemContent.match(/<description>(?:<!\[CDATA\[)?([\s\S]*?)(?:\]\]>)?<\/description>/i);
-      const imgMatch = itemContent.match(/<enclosure[^>]*url="([^"]*)"/i) ||
-                       itemContent.match(/<media:content[^>]*url="([^"]*)"/i) ||
-                       (descMatch && descMatch[1].match(/src="([^"]*)"/i));
 
       if (titleMatch) {
         const rawTitle = titleMatch[1].replace(/<[^>]*>/g, "").trim();
         const title = cleanHtmlEntities(rawTitle.replace("أخبار الثالث متوسط:", "").replace("أخبار الثالث متوسط", "").trim());
         const link = linkMatch ? linkMatch[1].trim() : "";
         const pubDate = pubDateMatch ? pubDateMatch[1].trim() : "";
-        const imageUrl = imgMatch ? imgMatch[1].trim() : "";
-        const snippet = descMatch ? cleanHtmlEntities(descMatch[1]).substring(0, 150) : "";
+        const descRaw = descMatch ? descMatch[1] : "";
+        const imageUrl = extractFirstOriginalImage(itemContent, descRaw);
+        const snippet = descRaw ? cleanHtmlEntities(descRaw).substring(0, 150) : "";
 
         const parsedTime = Date.parse(pubDate);
         const epochSec = isNaN(parsedTime) ? Math.floor(Date.now() / 1000) : Math.floor(parsedTime / 1000);
@@ -299,7 +326,7 @@ async function handleScheduledEvent(force = false) {
 
     if (items.length === 0) return { status: "no_items_found" };
 
-    // Read stored boundary watermark from Cloudflare KV
+    // Read stored dynamic sliding marker from Cloudflare KV
     const storedTopMarker = await getLastNotifiedGuid();
     const newestMarker = items[0].marker;
 
@@ -316,22 +343,19 @@ async function handleScheduledEvent(force = false) {
       newItems.push(itm);
     }
 
-    // Update boundary watermark in Cloudflare KV to the newest item
+    // Update dynamic sliding marker in Cloudflare KV to the newest item (replaces previous value)
     await setLastNotifiedGuid(newestMarker);
 
     const pushResults = [];
     // Process items in reverse (oldest new item to newest) so notifications arrive in chronological order
     const itemsToNotify = newItems.reverse();
     for (const itm of itemsToNotify) {
-      const hasWebLink = itm.link.startsWith("http://") || itm.link.startsWith("https://");
-      const isWebArticle = hasWebLink && !itm.link.includes("dev_") && !itm.link.includes("admin_");
-
       const res = await sendFcmNotification({
         title: itm.title,
         body: itm.snippet || "",
         imageUrl: itm.imageUrl || "",
         data: {
-          type: isWebArticle ? "news" : "general",
+          type: "news",
           title: itm.title,
           link: itm.link,
           click_url: itm.link,

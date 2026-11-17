@@ -339,6 +339,18 @@ object SyncEngine {
         _lastFetchedCount.value = -1
     }
 
+    fun normalizeUrl(url: String?): String {
+        if (url.isNullOrBlank()) return ""
+        var clean = url.trim()
+        clean = clean.replace(Regex("^https?://", RegexOption.IGNORE_CASE), "")
+        clean = clean.replace(Regex("^www\\.", RegexOption.IGNORE_CASE), "")
+        val qIdx = clean.indexOf('?')
+        if (qIdx != -1) clean = clean.substring(0, qIdx)
+        val hIdx = clean.indexOf('#')
+        if (hIdx != -1) clean = clean.substring(0, hIdx)
+        return clean.trimEnd('/')
+    }
+
     fun cleanHtmlEntities(raw: String): String {
         if (raw.isBlank()) return ""
         return raw
@@ -450,14 +462,17 @@ object SyncEngine {
                 val pubDate = item.pubDate ?: ""
                 val cleanTitle = cleanHtmlEntities(item.title ?: "")
                 val cleanSnippet = cleanHtmlEntities(item.description ?: "")
+                val link = item.link ?: ""
+                val id = if (link.isNotBlank()) link else (item.guid ?: ("news_" + cleanTitle.hashCode()))
                 NewsItem(
-                    id = item.guid ?: item.link ?: "",
+                    id = id,
                     title = cleanTitle,
-                    link = item.link ?: "",
+                    link = link,
                     contentSnippet = cleanSnippet,
                     pubDate = pubDate,
                     imageUrl = item.image ?: extractImageFromContent(item.content ?: item.description ?: ""),
-                    formattedDate = formatNewsDate(pubDate)
+                    formattedDate = formatNewsDate(pubDate),
+                    isAnnouncement = false
                 )
             }
             
@@ -511,7 +526,12 @@ object SyncEngine {
 
                     // Filter to find TRULY new or updated items
                     val trulyNewOrUpdated = collectedItems.filter { fetchedItem ->
-                        val localItem = _newsList.value.find { it.id == fetchedItem.id }
+                        val normFetched = normalizeUrl(fetchedItem.link)
+                        val localItem = _newsList.value.find {
+                            it.id == fetchedItem.id ||
+                            (normFetched.isNotEmpty() && normalizeUrl(it.link) == normFetched) ||
+                            (it.title.isNotBlank() && fetchedItem.title.isNotBlank() && it.title == fetchedItem.title)
+                        }
                         // New if not in local DB. Updated if in local DB but time changed.
                         localItem == null || localItem.pubDate != fetchedItem.pubDate
                     }
@@ -554,8 +574,11 @@ object SyncEngine {
                         }
                     }
 
-                    // Merge new items on top, de-duplicate by id
-                    val combined = (newUniqueItems + _newsList.value).distinctBy { it.id }
+                    // Merge new items on top, de-duplicate by normalized key
+                    val combined = (newUniqueItems + _newsList.value).distinctBy {
+                        val norm = normalizeUrl(it.link)
+                        if (norm.isNotEmpty()) norm else (it.title.ifBlank { it.id })
+                    }
 
                     // Apply cache-clear limit (date-based cap)
                     val cacheClear = _appSettings.value.cacheClearInterval
