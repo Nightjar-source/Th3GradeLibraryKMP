@@ -24,7 +24,8 @@ private val Context.dataStore: DataStore<Preferences> by preferencesDataStore(
     produceMigrations = { context ->
         listOf(
             SharedPreferencesMigration(context, "${context.packageName}_preferences"),
-            SharedPreferencesMigration(context, "AppPrefs")
+            SharedPreferencesMigration(context, "AppPrefs"),
+            SharedPreferencesMigration(context, "admob_prefs")
         )
     }
 )
@@ -49,6 +50,8 @@ actual object AppDataStore {
                 sp.all.forEach { (k, v) -> if (v != null) cache[k] = v }
                 val appPrefs = ctx.getSharedPreferences("AppPrefs", Context.MODE_PRIVATE)
                 appPrefs.all.forEach { (k, v) -> if (v != null) cache[k] = v }
+                val adPrefs = ctx.getSharedPreferences("admob_prefs", Context.MODE_PRIVATE)
+                adPrefs.all.forEach { (k, v) -> if (v != null) cache[k] = v }
             }
         } catch (_: Throwable) {}
 

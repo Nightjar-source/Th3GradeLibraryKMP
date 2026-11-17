@@ -37,7 +37,6 @@ object AdMobHelper {
     const val TEST_BANNER_AD_UNIT_ID = "ca-app-pub-3940256099942544/6300978111"
     const val TEST_INTERSTITIAL_AD_UNIT_ID = "ca-app-pub-3940256099942544/1033173712"
 
-    private const val PREFS_NAME = "admob_prefs"
     private const val KEY_INTERSTITIAL_OPEN_COUNTER = "interstitial_reader_open_counter"
     private const val INTERSTITIAL_EVERY_N_OPENS = 4
 
@@ -80,9 +79,9 @@ object AdMobHelper {
      * is only actually shown on every 4th open (persisted across sessions).
      */
     fun showInterstitial(activity: Activity, onDismiss: () -> Unit = {}) {
-        val prefs = activity.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
-        val opens = prefs.getInt(KEY_INTERSTITIAL_OPEN_COUNTER, 0) + 1
-        prefs.edit().putInt(KEY_INTERSTITIAL_OPEN_COUNTER, opens).apply()
+        // Jetpack DataStore (Compose-First, non-blocking) via AppDataStore seeded cache
+        val opens = com.Nightjar.Th3GradeLibraryKMP.data.AppDataStore.getInt(KEY_INTERSTITIAL_OPEN_COUNTER, 0) + 1
+        com.Nightjar.Th3GradeLibraryKMP.data.AppDataStore.putInt(KEY_INTERSTITIAL_OPEN_COUNTER, opens)
         if (opens % INTERSTITIAL_EVERY_N_OPENS != 0) {
             // Not the 4th time: skip the ad entirely this session.
             onDismiss()

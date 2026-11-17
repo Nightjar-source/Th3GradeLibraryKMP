@@ -15,7 +15,6 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.horizontalScroll
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.border
@@ -134,7 +133,6 @@ fun AppSettingsModal(
 
     if (isOpen) {
         val sheetState = androidx.compose.material3.rememberModalBottomSheetState(skipPartiallyExpanded = true)
-        val dismissScope = androidx.compose.runtime.rememberCoroutineScope()
         androidx.compose.material3.ModalBottomSheet(
             onDismissRequest = onClose,
             sheetState = sheetState,
@@ -159,17 +157,10 @@ fun AppSettingsModal(
                             color = MaterialTheme.colorScheme.onSurface
                         )
                         IconButton(
-                            onClick = {
-                                dismissScope.launch {
-                                    sheetState.hide()
-                                    onClose()
-                                }
-                            },
-                            modifier = Modifier
-                                .size(48.dp) // 48dp M3 touch target — never clipped
-                                .background(MaterialTheme.colorScheme.surfaceVariant, CircleShape)
+                            onClick = { onClose() },
+                            modifier = Modifier.size(40.dp)
                         ) {
-                            Icon(Icons.Default.Close, contentDescription = "Close", modifier = Modifier.size(24.dp))
+                            Icon(Icons.Default.Close, contentDescription = "Close", modifier = Modifier.size(20.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant)
                         }
                     }
 
@@ -417,7 +408,6 @@ fun NewsSettingsModal(
 
     if (isOpen) {
         val sheetState = androidx.compose.material3.rememberModalBottomSheetState(skipPartiallyExpanded = true)
-        val dismissScope = androidx.compose.runtime.rememberCoroutineScope()
         androidx.compose.material3.ModalBottomSheet(
             onDismissRequest = onClose,
             sheetState = sheetState,
@@ -445,17 +435,10 @@ fun NewsSettingsModal(
                             color = MaterialTheme.colorScheme.onSurface
                         )
                         IconButton(
-                            onClick = {
-                                dismissScope.launch {
-                                    sheetState.hide()
-                                    onClose()
-                                }
-                            },
-                            modifier = Modifier
-                                .size(48.dp) // 48dp M3 touch target — never clipped
-                                .background(MaterialTheme.colorScheme.surfaceVariant, CircleShape)
+                            onClick = { onClose() },
+                            modifier = Modifier.size(40.dp)
                         ) {
-                            Icon(Icons.Default.Close, contentDescription = "Close", modifier = Modifier.size(24.dp))
+                            Icon(Icons.Default.Close, contentDescription = "Close", modifier = Modifier.size(20.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant)
                         }
                     }
 
