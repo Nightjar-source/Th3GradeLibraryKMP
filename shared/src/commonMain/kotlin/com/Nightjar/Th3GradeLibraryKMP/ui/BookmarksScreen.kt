@@ -175,7 +175,7 @@ fun BookmarksScreen(
                     columns = dynamicBookmarkColumns,
                     modifier = Modifier
                         .fillMaxWidth()
-                        .weight(1f)
+                        .weight(1f),
                     verticalArrangement = Arrangement.spacedBy(16.dp),
                     horizontalArrangement = Arrangement.spacedBy(16.dp),
                     contentPadding = PaddingValues(top = dynamicTopPadding, bottom = bottomPadding)

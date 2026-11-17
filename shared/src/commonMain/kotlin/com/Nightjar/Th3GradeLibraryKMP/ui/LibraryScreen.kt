@@ -267,7 +267,7 @@ fun LibraryScreen(
                     columns = dynamicGridColumns,
                     modifier = Modifier
                         .weight(1f)
-                        .fillMaxWidth()
+                        .fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(16.dp, Alignment.CenterHorizontally),
                     verticalArrangement = Arrangement.spacedBy(if (isGridView) 16.dp else 12.dp),
                     contentPadding = PaddingValues(
