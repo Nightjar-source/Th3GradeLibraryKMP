@@ -17,6 +17,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.rememberOverscrollEffect
 import androidx.compose.foundation.border
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
@@ -142,10 +143,12 @@ fun AppSettingsModal(
             contentWindowInsets = { androidx.compose.foundation.layout.WindowInsets(0, 0, 0, 0) }, // edge-to-edge: zero offset
             sheetMaxWidth = 480.dp // Responsive capsule for tablets/DeX
         ) {
+                val appSettingsOverscroll = rememberOverscrollEffect()
                 Column(
                     modifier = Modifier
-                        .verticalScroll(rememberScrollState())
-                        .padding(top = 4.dp, start = 20.dp, end = 20.dp) // Compact padding
+                        .windowInsetsPadding(androidx.compose.foundation.layout.WindowInsets.safeDrawing.only(androidx.compose.foundation.layout.WindowInsetsSides.Top))
+                        .verticalScroll(rememberScrollState(), overscrollEffect = appSettingsOverscroll)
+                        .padding(top = 12.dp, start = 20.dp, end = 20.dp) // Compact padding + safe top
                 ) {
                     Row(
                         modifier = Modifier.fillMaxWidth(),
@@ -234,8 +237,14 @@ fun AppSettingsModal(
                     // Pure White Mode (Light only)
                     AnimatedVisibility(
                         visible = isLightThemeActive,
-                        enter = expandVertically(animationSpec = spring(dampingRatio = 0.72f, stiffness = 380f), clip = false),
-                        exit = shrinkVertically(animationSpec = spring(dampingRatio = 0.72f, stiffness = 380f), clip = false)
+                        enter = slideInVertically(
+                            initialOffsetY = { it / 6 },
+                            animationSpec = spring(dampingRatio = 0.85f, stiffness = 320f)
+                        ) + fadeIn(animationSpec = spring(dampingRatio = 0.85f, stiffness = 320f)),
+                        exit = slideOutVertically(
+                            targetOffsetY = { it / 6 },
+                            animationSpec = spring(dampingRatio = 0.85f, stiffness = 320f)
+                        ) + fadeOut(animationSpec = spring(dampingRatio = 0.85f, stiffness = 320f))
                     ) {
                         Column {
                             Text("الوضع الأبيض الصافي", fontWeight = FontWeight.Bold, fontSize = 13.sp, color = MaterialTheme.colorScheme.primary, modifier = Modifier.padding(horizontal = 20.dp))
@@ -272,8 +281,14 @@ fun AppSettingsModal(
                     // Pure Black Mode (Dark only)
                     AnimatedVisibility(
                         visible = isDarkThemeActive,
-                        enter = expandVertically(animationSpec = spring(dampingRatio = 0.72f, stiffness = 380f), clip = false),
-                        exit = shrinkVertically(animationSpec = spring(dampingRatio = 0.72f, stiffness = 380f), clip = false)
+                        enter = slideInVertically(
+                            initialOffsetY = { it / 6 },
+                            animationSpec = spring(dampingRatio = 0.85f, stiffness = 320f)
+                        ) + fadeIn(animationSpec = spring(dampingRatio = 0.85f, stiffness = 320f)),
+                        exit = slideOutVertically(
+                            targetOffsetY = { it / 6 },
+                            animationSpec = spring(dampingRatio = 0.85f, stiffness = 320f)
+                        ) + fadeOut(animationSpec = spring(dampingRatio = 0.85f, stiffness = 320f))
                     ) {
                         Column {
                             Text("الوضع الأسود النقي", fontWeight = FontWeight.Bold, fontSize = 13.sp, color = MaterialTheme.colorScheme.primary, modifier = Modifier.padding(horizontal = 20.dp))
@@ -339,14 +354,14 @@ fun AppSettingsModal(
                     // Manual color options
                     AnimatedVisibility(
                         visible = !settings.useMaterialYou,
-                        enter = expandVertically(
-                            animationSpec = spring(dampingRatio = 0.72f, stiffness = 380f),
-                            clip = false
-                        ),
-                        exit = shrinkVertically(
-                            animationSpec = spring(dampingRatio = 0.72f, stiffness = 380f),
-                            clip = false
-                        )
+                        enter = slideInVertically(
+                            initialOffsetY = { it / 6 },
+                            animationSpec = spring(dampingRatio = 0.85f, stiffness = 320f)
+                        ) + fadeIn(animationSpec = spring(dampingRatio = 0.85f, stiffness = 320f)),
+                        exit = slideOutVertically(
+                            targetOffsetY = { it / 6 },
+                            animationSpec = spring(dampingRatio = 0.85f, stiffness = 320f)
+                        ) + fadeOut(animationSpec = spring(dampingRatio = 0.85f, stiffness = 320f))
                     ) {
                         Column {
                             Text("اختر لونك المفضل يدوياً:", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(horizontal = 20.dp))
@@ -419,11 +434,13 @@ fun NewsSettingsModal(
             contentWindowInsets = { androidx.compose.foundation.layout.WindowInsets(0, 0, 0, 0) }, // edge-to-edge: zero offset
             sheetMaxWidth = 480.dp // Responsive capsule for tablets/DeX
         ) {
+                val newsSettingsOverscroll = rememberOverscrollEffect()
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .verticalScroll(rememberScrollState())
-                        .padding(top = 4.dp)
+                        .windowInsetsPadding(androidx.compose.foundation.layout.WindowInsets.safeDrawing.only(androidx.compose.foundation.layout.WindowInsetsSides.Top))
+                        .verticalScroll(rememberScrollState(), overscrollEffect = newsSettingsOverscroll)
+                        .padding(top = 12.dp)
                 ) {
                     Row(
                         modifier = Modifier
@@ -464,8 +481,8 @@ fun NewsSettingsModal(
 
                     AnimatedVisibility(
                         visible = !batteryStateIgnored || !autoRevokeIgnored,
-                        enter = expandVertically(animationSpec = spring(dampingRatio = 0.72f, stiffness = 380f), clip = false),
-                        exit = shrinkVertically(animationSpec = spring(dampingRatio = 0.72f, stiffness = 380f), clip = false)
+                        enter = slideInVertically(initialOffsetY = { it / 8 }, animationSpec = spring(dampingRatio = 0.85f, stiffness = 320f)) + fadeIn(animationSpec = spring(dampingRatio = 0.85f, stiffness = 320f)),
+                        exit = slideOutVertically(targetOffsetY = { it / 8 }, animationSpec = spring(dampingRatio = 0.85f, stiffness = 320f)) + fadeOut(animationSpec = spring(dampingRatio = 0.85f, stiffness = 320f))
                     ) {
                         Card(
                             modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp),
@@ -496,8 +513,8 @@ fun NewsSettingsModal(
                                 
                                 AnimatedVisibility(
                                     visible = !batteryStateIgnored,
-                                    enter = expandVertically(animationSpec = spring(dampingRatio = 0.72f, stiffness = 380f), clip = false),
-                                    exit = shrinkVertically(animationSpec = spring(dampingRatio = 0.72f, stiffness = 380f), clip = false)
+                                    enter = slideInVertically(initialOffsetY = { it / 8 }, animationSpec = spring(dampingRatio = 0.85f, stiffness = 320f)) + fadeIn(animationSpec = spring(dampingRatio = 0.85f, stiffness = 320f)),
+                                    exit = slideOutVertically(targetOffsetY = { it / 8 }, animationSpec = spring(dampingRatio = 0.85f, stiffness = 320f)) + fadeOut(animationSpec = spring(dampingRatio = 0.85f, stiffness = 320f))
                                 ) {
                                     // تخطي الخمول
                                     Row(
@@ -526,8 +543,8 @@ fun NewsSettingsModal(
                                 
                                 AnimatedVisibility(
                                     visible = !batteryStateIgnored && !autoRevokeIgnored,
-                                    enter = expandVertically(animationSpec = spring(dampingRatio = 0.72f, stiffness = 380f), clip = false),
-                                    exit = shrinkVertically(animationSpec = spring(dampingRatio = 0.72f, stiffness = 380f), clip = false)
+                                    enter = slideInVertically(initialOffsetY = { it / 8 }, animationSpec = spring(dampingRatio = 0.85f, stiffness = 320f)) + fadeIn(animationSpec = spring(dampingRatio = 0.85f, stiffness = 320f)),
+                                    exit = slideOutVertically(targetOffsetY = { it / 8 }, animationSpec = spring(dampingRatio = 0.85f, stiffness = 320f)) + fadeOut(animationSpec = spring(dampingRatio = 0.85f, stiffness = 320f))
                                 ) {
                                     Column {
                                         Spacer(modifier = Modifier.height(8.dp))
@@ -538,8 +555,8 @@ fun NewsSettingsModal(
                                 
                                 AnimatedVisibility(
                                     visible = !autoRevokeIgnored,
-                                    enter = expandVertically(animationSpec = spring(dampingRatio = 0.72f, stiffness = 380f), clip = false),
-                                    exit = shrinkVertically(animationSpec = spring(dampingRatio = 0.72f, stiffness = 380f), clip = false)
+                                    enter = slideInVertically(initialOffsetY = { it / 8 }, animationSpec = spring(dampingRatio = 0.85f, stiffness = 320f)) + fadeIn(animationSpec = spring(dampingRatio = 0.85f, stiffness = 320f)),
+                                    exit = slideOutVertically(targetOffsetY = { it / 8 }, animationSpec = spring(dampingRatio = 0.85f, stiffness = 320f)) + fadeOut(animationSpec = spring(dampingRatio = 0.85f, stiffness = 320f))
                                 ) {
                                     // منع السبات
                                     Row(

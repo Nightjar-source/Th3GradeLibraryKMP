@@ -176,7 +176,6 @@ fun BookmarksScreen(
                     modifier = Modifier
                         .fillMaxWidth()
                         .weight(1f)
-                        .elasticOverscroll(),
                     verticalArrangement = Arrangement.spacedBy(16.dp),
                     horizontalArrangement = Arrangement.spacedBy(16.dp),
                     contentPadding = PaddingValues(top = dynamicTopPadding, bottom = bottomPadding)

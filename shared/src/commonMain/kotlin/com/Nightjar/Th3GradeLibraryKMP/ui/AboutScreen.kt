@@ -71,7 +71,6 @@ fun AboutScreen(
                 .fillMaxSize()
                 .widthIn(max = 800.dp)
                 .padding(horizontal = 16.dp)
-                .elasticOverscroll()
                 .verticalScroll(scrollState),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
