@@ -296,6 +296,7 @@ async function handleScheduledEvent(force = false) {
     while ((match = itemRegex.exec(xml)) !== null) {
       const itemContent = match[1];
       const titleMatch = itemContent.match(/<title>(?:<!\[CDATA\[)?([\s\S]*?)(?:\]\]>)?<\/title>/i);
+      const origLinkMatch = itemContent.match(/<feedburner:origLink>(?:<!\[CDATA\[)?([\s\S]*?)(?:\]\]>)?<\/feedburner:origLink>/i);
       const linkMatch = itemContent.match(/<link>(?:<!\[CDATA\[)?([\s\S]*?)(?:\]\]>)?<\/link>/i);
       const pubDateMatch = itemContent.match(/<pubDate>(?:<!\[CDATA\[)?([\s\S]*?)(?:\]\]>)?<\/pubDate>/i);
       const descMatch = itemContent.match(/<description>(?:<!\[CDATA\[)?([\s\S]*?)(?:\]\]>)?<\/description>/i);
@@ -303,7 +304,8 @@ async function handleScheduledEvent(force = false) {
       if (titleMatch) {
         const rawTitle = titleMatch[1].replace(/<[^>]*>/g, "").trim();
         const title = cleanHtmlEntities(rawTitle.replace("أخبار الثالث متوسط:", "").replace("أخبار الثالث متوسط", "").trim());
-        const link = linkMatch ? linkMatch[1].trim() : "";
+        const rawLink = origLinkMatch ? origLinkMatch[1].trim() : (linkMatch ? linkMatch[1].trim() : "");
+        const link = rawLink;
         const pubDate = pubDateMatch ? pubDateMatch[1].trim() : "";
         const descRaw = descMatch ? descMatch[1] : "";
         const imageUrl = extractFirstOriginalImage(itemContent, descRaw);

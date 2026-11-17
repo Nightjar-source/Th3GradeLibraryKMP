@@ -816,8 +816,8 @@ fun AppContent(
                                 ) {
                                     androidx.compose.animation.AnimatedVisibility(
                                         visible = (page != "home"),
-                                        enter = fadeIn(tween(220)) + scaleIn(initialScale = 0.75f, animationSpec = tween(220)),
-                                        exit = fadeOut(tween(200)) + scaleOut(targetScale = 0.75f, animationSpec = tween(200))
+                                        enter = fadeIn(tween(240, easing = FastOutSlowInEasing)) + scaleIn(initialScale = 0.72f, animationSpec = spring(dampingRatio = 0.78f, stiffness = Spring.StiffnessMediumLow)),
+                                        exit = fadeOut(tween(180, easing = FastOutSlowInEasing)) + scaleOut(targetScale = 0.72f, animationSpec = spring(dampingRatio = 0.82f, stiffness = Spring.StiffnessMediumLow))
                                     ) {
                                         IconButton(
                                             onClick = {
@@ -835,8 +835,8 @@ fun AppContent(
 
                                     androidx.compose.animation.AnimatedVisibility(
                                         visible = (page == "home"),
-                                        enter = fadeIn(tween(220)) + scaleIn(initialScale = 0.75f, animationSpec = tween(220)),
-                                        exit = fadeOut(tween(200)) + scaleOut(targetScale = 0.75f, animationSpec = tween(200))
+                                        enter = fadeIn(tween(240, easing = FastOutSlowInEasing)) + scaleIn(initialScale = 0.72f, animationSpec = spring(dampingRatio = 0.78f, stiffness = Spring.StiffnessMediumLow)),
+                                        exit = fadeOut(tween(180, easing = FastOutSlowInEasing)) + scaleOut(targetScale = 0.72f, animationSpec = spring(dampingRatio = 0.82f, stiffness = Spring.StiffnessMediumLow))
                                     ) {
                                         Box(
                                             modifier = Modifier
@@ -885,8 +885,8 @@ fun AppContent(
                                     AnimatedContent(
                                         targetState = savedTitle,
                                         transitionSpec = {
-                                            (slideInVertically { height -> height / 2 } + fadeIn(tween(220)))
-                                                .togetherWith(slideOutVertically { height -> -height / 2 } + fadeOut(tween(220)))
+                                            (slideInVertically(animationSpec = spring(dampingRatio = 0.78f, stiffness = Spring.StiffnessMediumLow)) { height -> height / 2 } + fadeIn(tween(220, easing = FastOutSlowInEasing)))
+                                                .togetherWith(slideOutVertically(animationSpec = spring(dampingRatio = 0.78f, stiffness = Spring.StiffnessMediumLow)) { height -> -height / 2 } + fadeOut(tween(180, easing = FastOutSlowInEasing)))
                                         },
                                         label = "titleTransition"
                                     ) { targetTitle ->
@@ -911,8 +911,8 @@ fun AppContent(
                                 AnimatedContent(
                                     targetState = page,
                                     transitionSpec = {
-                                        (scaleIn(initialScale = 0.8f, animationSpec = spring(dampingRatio = 0.72f, stiffness = 260f)) + fadeIn(tween(220)))
-                                            .togetherWith(scaleOut(targetScale = 0.8f, animationSpec = tween(180)) + fadeOut(tween(180)))
+                                        (scaleIn(initialScale = 0.72f, animationSpec = spring(dampingRatio = 0.76f, stiffness = Spring.StiffnessMediumLow)) + fadeIn(tween(240, easing = FastOutSlowInEasing)))
+                                            .togetherWith(scaleOut(targetScale = 0.72f, animationSpec = spring(dampingRatio = 0.82f, stiffness = Spring.StiffnessMediumLow)) + fadeOut(tween(180, easing = FastOutSlowInEasing)))
                                             .using(SizeTransform(clip = false))
                                     },
                                     label = "topBarActions"
@@ -936,7 +936,8 @@ fun AppContent(
                                                     androidx.compose.animation.AnimatedContent(
                                                         targetState = isGridView,
                                                         transitionSpec = {
-                                                            (fadeIn(tween(200)) + scaleIn(initialScale = 0.8f)).togetherWith(fadeOut(tween(160)) + scaleOut(targetScale = 0.8f))
+                                                            (fadeIn(tween(220, easing = FastOutSlowInEasing)) + scaleIn(initialScale = 0.72f, animationSpec = spring(dampingRatio = 0.76f, stiffness = Spring.StiffnessMediumLow)))
+                                                                .togetherWith(fadeOut(tween(180, easing = FastOutSlowInEasing)) + scaleOut(targetScale = 0.72f, animationSpec = spring(dampingRatio = 0.82f, stiffness = Spring.StiffnessMediumLow)))
                                                         },
                                                         label = "gridToggle"
                                                     ) { isGrid ->
@@ -963,7 +964,8 @@ fun AppContent(
                                                     androidx.compose.animation.AnimatedContent(
                                                         targetState = isSearchOpen,
                                                         transitionSpec = {
-                                                            (fadeIn(tween(200)) + scaleIn(initialScale = 0.8f)).togetherWith(fadeOut(tween(160)) + scaleOut(targetScale = 0.8f))
+                                                            (fadeIn(tween(220, easing = FastOutSlowInEasing)) + scaleIn(initialScale = 0.72f, animationSpec = spring(dampingRatio = 0.76f, stiffness = Spring.StiffnessMediumLow)))
+                                                                .togetherWith(fadeOut(tween(180, easing = FastOutSlowInEasing)) + scaleOut(targetScale = 0.72f, animationSpec = spring(dampingRatio = 0.82f, stiffness = Spring.StiffnessMediumLow)))
                                                         },
                                                         label = "searchToggle"
                                                     ) { isOpen ->

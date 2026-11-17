@@ -106,18 +106,12 @@ class AppFirebaseMessagingService : FirebaseMessagingService() {
         // 1. Silent Local Cache Update (Smart Watermark deduplication)
         // Ensure ALL items (including test notifications) are always saved to cache and displayed in News cards!
         val fromTopic = remoteMessage.from ?: ""
-        val isNewsTopic = fromTopic.endsWith("/news") || data["type"] == "news" || data["channel"] == "news"
-        val isKarTopic = fromTopic.endsWith("/kar") || fromTopic.endsWith("/announcements")
-        val isGeneralOrAdmin = data["type"] == "general" ||
-                               data["type"] == "announcement" || 
-                               data["type"] == "admin" || 
-                               data["type"] == "kar" || 
-                               data["channel"] == "kar" ||
-                               data.containsKey("kar") ||
-                               data.containsKey("target_screen") ||
-                               isKarTopic ||
-                               (!isNewsTopic && data["type"] != "news")
-        val isAnnouncement = isGeneralOrAdmin && !isNewsTopic
+        // STRICT CONDITION:
+        // News MUST originate from topic "news" (/topics/news) AND have data["type"] == "news".
+        // ALL OTHER NOTIFICATIONS are strictly treated as administrative announcements!
+        val isStrictNews = (fromTopic.endsWith("/news") || fromTopic == "news" || fromTopic.contains("/topics/news")) && data["type"] == "news"
+        val isNews = isStrictNews
+        val isAnnouncement = !isStrictNews
 
         val isNewItem = saveToCache(title, link, imageUrl, pubDate, content, isAnnouncement)
 
