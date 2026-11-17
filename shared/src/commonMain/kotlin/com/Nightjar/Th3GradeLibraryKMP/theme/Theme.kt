@@ -73,13 +73,14 @@ val LocalIsReturningFromPdf = compositionLocalOf { false }
 fun Modifier.liquidGlass(
     isDark: Boolean,
     borderRadius: Dp = 24.dp,
-    alpha: Float = 0.95f // Increased to hide content underneath
+    alpha: Float = 0.85f // Liquid glass transparency across all devices
 ): Modifier = composed {
     val isLowEnd = LocalIsLowEndDevice.current
+    val effectiveAlpha = if (isLowEnd) 0.90f else alpha
     val bg = if (isDark) {
-        Color(0xFF1E293B).copy(alpha = if (isLowEnd) 1.0f else alpha) // Slate 800 (Solid for low end)
+        Color(0xFF1E293B).copy(alpha = effectiveAlpha)
     } else {
-        MaterialTheme.colorScheme.surfaceVariant.copy(alpha = if (isLowEnd) 1.0f else alpha)
+        MaterialTheme.colorScheme.surfaceVariant.copy(alpha = effectiveAlpha)
     }
     
     if (isLowEnd) {

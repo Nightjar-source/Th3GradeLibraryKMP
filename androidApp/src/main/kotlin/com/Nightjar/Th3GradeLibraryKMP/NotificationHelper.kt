@@ -172,11 +172,21 @@ object NotificationHelper {
             .setContentIntent(openIntent)
             .setAutoCancel(true)
 
+        if (!withSound) {
+            builder.setSilent(true)
+            builder.setSound(null)
+            builder.setVibrate(null)
+        } else {
+            builder.setSound(soundUri)
+            builder.setVibrate(longArrayOf(0, 250, 150, 250))
+        }
+
         if (displayCount > 1) {
             val inboxStyle = NotificationCompat.InboxStyle()
                 .setBigContentTitle(mainTitle)
                 .setSummaryText("$displayCount أخبار دراسية جديدة")
-            titles.take(10).forEach { title ->
+            // Show all consecutive news items without restricting to an arbitrary limit
+            titles.forEach { title ->
                 inboxStyle.addLine("• $title")
             }
             builder.setStyle(inboxStyle)

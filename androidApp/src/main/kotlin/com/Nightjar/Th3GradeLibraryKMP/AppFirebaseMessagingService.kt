@@ -343,6 +343,15 @@ class AppFirebaseMessagingService : FirebaseMessagingService() {
             .setContentIntent(pendingIntent)
             .setGroup(GROUP_KEY)
 
+        if (!soundEnabled && isNews) {
+            notificationBuilder.setSilent(true)
+            notificationBuilder.setSound(null)
+            notificationBuilder.setVibrate(null)
+        } else if (soundUri != null) {
+            notificationBuilder.setSound(soundUri)
+            notificationBuilder.setVibrate(longArrayOf(0, 250, 150, 250))
+        }
+
         // Ensure full headline text wraps nicely without truncation (BigTextStyle on single notifications)
         if (cleanContent.isNotBlank()) {
             notificationBuilder.setContentText(cleanContent)
