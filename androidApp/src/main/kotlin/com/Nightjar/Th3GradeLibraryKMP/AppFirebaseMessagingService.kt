@@ -219,6 +219,9 @@ class AppFirebaseMessagingService : FirebaseMessagingService() {
                 AppDataStore.putString("app_news_cache", json.encodeToString(existingList.take(60)))
                 AppDataStore.putString("Top_Link", link.ifEmpty { id })
                 if (pubDate.isNotEmpty()) AppDataStore.putString("Top_Time", pubDate)
+                val now = System.currentTimeMillis()
+                AppDataStore.putLong("last_cloud_fcm_heartbeat", now)
+                SyncEngine.saveSettings(SyncEngine.appSettings.value.copy(lastSync = now))
                 SyncEngine.reloadFromPersistence()
                 true
             } else {

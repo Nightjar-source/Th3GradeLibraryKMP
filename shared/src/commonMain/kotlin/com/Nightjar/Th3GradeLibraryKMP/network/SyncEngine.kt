@@ -390,7 +390,9 @@ object SyncEngine {
         if (_syncing.value) return@withContext 0 // Sync Lock: exit immediately if a sync is already in progress
         val now = ClockSystem.currentTimeMillis()
         val lastSync = _appSettings.value.lastSync
-        val timeSinceSync = now - lastSync
+        val lastFcm = AppDataStore.getLong("last_cloud_fcm_heartbeat", 0L)
+        val mostRecentTouch = maxOf(lastSync, lastFcm)
+        val timeSinceSync = now - mostRecentTouch
 
         val intervalMs = when (_appSettings.value.syncInterval) {
             "on_open" -> 0L
