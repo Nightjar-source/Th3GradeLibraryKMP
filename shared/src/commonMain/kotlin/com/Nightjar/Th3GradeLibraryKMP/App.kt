@@ -1003,6 +1003,13 @@ fun AppContent(
                 }
 
                 // --- Floating Search Bar (Aligned under search button in Wide screens, or centered in Compact) ---
+                val searchTransitionScope = LocalSharedTransitionScope.current
+                val searchOverlayModifier = if (searchTransitionScope != null) {
+                    with(searchTransitionScope) {
+                        Modifier.renderInSharedTransitionScopeOverlay(zIndexInOverlay = 50f)
+                    }
+                } else Modifier
+
                 androidx.compose.animation.AnimatedVisibility(
                     visible = !showOnboarding && page == "list" && isSearchOpen,
                     enter = slideInVertically(
@@ -1013,14 +1020,7 @@ fun AppContent(
                         targetOffsetY = { -it / 2 },
                         animationSpec = spring(dampingRatio = 0.75f, stiffness = Spring.StiffnessMediumLow)
                     ) + fadeOut(animationSpec = tween(200)) + scaleOut(targetScale = 0.92f),
-                    modifier = Modifier.align(if (isWide) Alignment.TopEnd else Alignment.TopCenter).zIndex(200f).then(
-                        val transitionScope = LocalSharedTransitionScope.current
-                        if (transitionScope != null) {
-                            with(transitionScope) {
-                                Modifier.renderInSharedTransitionScopeOverlay(zIndexInOverlay = 50f)
-                            }
-                        } else Modifier
-                    )
+                    modifier = Modifier.align(if (isWide) Alignment.TopEnd else Alignment.TopCenter).zIndex(200f).then(searchOverlayModifier)
                 ) {
                     val searchBarHeight = if (isWide) 44.dp else 52.dp
                     val statusBarHeight = WindowInsets.statusBars.add(WindowInsets.captionBar).asPaddingValues().calculateTopPadding()

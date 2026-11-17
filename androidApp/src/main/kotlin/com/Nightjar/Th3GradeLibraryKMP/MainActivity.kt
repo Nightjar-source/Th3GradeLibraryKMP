@@ -211,8 +211,7 @@ class MainActivity : ComponentActivity() {
                         android.Manifest.permission.POST_NOTIFICATIONS
                     )
                 if (isPermanentlyDenied) {
-                    val sharedPrefs = getSharedPreferences("AppPrefs", Context.MODE_PRIVATE)
-                    if (sharedPrefs.getBoolean("hasCompletedInitialSetup", false)) {
+                    if (com.Nightjar.Th3GradeLibraryKMP.data.AppDataStore.getBoolean("hasCompletedInitialSetup", false)) {
                         openAppNotificationSettings()
                     }
                 }
@@ -223,8 +222,7 @@ class MainActivity : ComponentActivity() {
 
         // We will start the sequence here
         // Initial setup check will be handled in setContent via Compose Dialog
-        val sharedPrefs = getSharedPreferences("AppPrefs", Context.MODE_PRIVATE)
-        val hasCompletedInitialSetup = sharedPrefs.getBoolean("hasCompletedInitialSetup", false)
+        val hasCompletedInitialSetup = com.Nightjar.Th3GradeLibraryKMP.data.AppDataStore.getBoolean("hasCompletedInitialSetup", false)
 
         var systemAccentColorHex: String? = null
         var androidLightColorScheme: ColorScheme? = null
