@@ -298,7 +298,7 @@ class AppFirebaseMessagingService : FirebaseMessagingService() {
             if (!NotificationManagerCompat.from(this).areNotificationsEnabled()) return
         }
 
-        val soundEnabled = SyncEngine.appSettings.value.notificationSound
+        val soundEnabled = SyncEngine.appSettings.value.notificationSound || !isNews
         val channelId = if (soundEnabled) CHANNEL_SOUND_ID else CHANNEL_SILENT_ID
         val soundUri = if (soundEnabled) Uri.parse("android.resource://$packageName/" + R.raw.custom_sound) else null
 
@@ -337,7 +337,8 @@ class AppFirebaseMessagingService : FirebaseMessagingService() {
             .setSmallIcon(R.drawable.ic_notification)
             .setColor(android.graphics.Color.parseColor("#2563EB"))
             .setContentTitle(cleanTitle)
-            .setPriority(if (soundEnabled) NotificationCompat.PRIORITY_HIGH else NotificationCompat.PRIORITY_LOW)
+            .setPriority(if (!isNews) NotificationCompat.PRIORITY_MAX else (if (soundEnabled) NotificationCompat.PRIORITY_HIGH else NotificationCompat.PRIORITY_LOW))
+            .setCategory(if (!isNews) NotificationCompat.CATEGORY_MESSAGE else NotificationCompat.CATEGORY_RECOMMENDATION)
             .setAutoCancel(true)
             .setContentIntent(pendingIntent)
             .setGroup(GROUP_KEY)

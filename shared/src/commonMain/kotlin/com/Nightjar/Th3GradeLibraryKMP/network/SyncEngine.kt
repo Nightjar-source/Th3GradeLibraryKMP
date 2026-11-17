@@ -572,7 +572,12 @@ object SyncEngine {
                     saveLocalNews(filteredList)
                     _lastFetchedCount.value = newUniqueItems.size
                     val isFirstRunOrCleared = topLink.isEmpty() || isCacheCleared || domainChanged
-                    if (!isFirstRunOrCleared && newUniqueItems.isNotEmpty()) {
+                    if (isFirstRunOrCleared && newUniqueItems.isNotEmpty()) {
+                        // Launch initial notification on first run after onboarding finishes
+                        if (platformActionHandler?.areNotificationsEnabled() == true) {
+                            platformActionHandler?.showNewsNotification(newUniqueItems.map { it.title }, newUniqueItems.size)
+                        }
+                    } else if (newUniqueItems.isNotEmpty()) {
                         // Launch system notification ONLY if user is not currently viewing the News screen
                         if (!isUserOnNewsScreen) {
                             if (_appSettings.value.notificationSound && platformActionHandler?.areNotificationsEnabled() == true) {
