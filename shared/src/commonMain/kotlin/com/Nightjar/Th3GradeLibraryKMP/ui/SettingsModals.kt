@@ -138,6 +138,8 @@ fun AppSettingsModal(
             sheetState = sheetState,
             dragHandle = null,
             containerColor = MaterialTheme.colorScheme.surface,
+            scrimColor = androidx.compose.ui.graphics.Color.Transparent, // no opaque block over transparent status bar
+            contentWindowInsets = androidx.compose.foundation.layout.WindowInsets(0, 0, 0, 0), // edge-to-edge: zero offset
             sheetMaxWidth = 480.dp // Responsive capsule for tablets/DeX
         ) {
                 Column(
@@ -390,7 +392,7 @@ fun AppSettingsModal(
                         }
                     }
                     
-                    Spacer(modifier = Modifier.navigationBarsPadding().height(16.dp))
+                    Spacer(modifier = Modifier.windowInsetsPadding(androidx.compose.foundation.layout.WindowInsets.safeDrawing.only(androidx.compose.foundation.layout.WindowInsetsSides.Bottom)).height(16.dp))
                 } // Close Column
         } // ModalBottomSheet
     } // if (isOpen)
@@ -413,6 +415,8 @@ fun NewsSettingsModal(
             sheetState = sheetState,
             dragHandle = null,
             containerColor = MaterialTheme.colorScheme.surface,
+            scrimColor = androidx.compose.ui.graphics.Color.Transparent, // no opaque block over transparent status bar
+            contentWindowInsets = androidx.compose.foundation.layout.WindowInsets(0, 0, 0, 0), // edge-to-edge: zero offset
             sheetMaxWidth = 480.dp // Responsive capsule for tablets/DeX
         ) {
                 Column(
@@ -654,7 +658,7 @@ fun NewsSettingsModal(
                             }
                         }
                     }
-                    Spacer(modifier = Modifier.navigationBarsPadding().height(16.dp))
+                    Spacer(modifier = Modifier.windowInsetsPadding(androidx.compose.foundation.layout.WindowInsets.safeDrawing.only(androidx.compose.foundation.layout.WindowInsetsSides.Bottom)).height(16.dp))
                 } // Close Column
         } // ModalBottomSheet
     } // if (isOpen)

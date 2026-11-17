@@ -33,12 +33,12 @@ object AdaptiveLayout {
     /**
      * الارتفاع المضبوط حسب متريال:
      *  - الهاتف الأفقي (compact height) → 44.dp (أقل من 46)
-     *  - الهاتف العمودي العادي → 56.dp
+     *  - الهاتف العمودي العادي → 52.dp (أقل من 56 كما طُلب)
      *  - الشاشات الكبيرة (≥ 600dp عرض، يتضمن >700dp) → 58.dp (ذكي ولا يكبر)
      */
     fun topBarHeight(heightClass: WindowHeightSizeClass, widthClass: WindowWidthSizeClass): Dp = when {
         isCompactHeight(heightClass) -> 44.dp
-        widthClass == WindowWidthSizeClass.COMPACT -> 56.dp
+        widthClass == WindowWidthSizeClass.COMPACT -> 52.dp
         else -> 58.dp
     }
 
