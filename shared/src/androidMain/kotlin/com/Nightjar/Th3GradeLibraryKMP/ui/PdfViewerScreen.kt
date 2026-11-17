@@ -320,6 +320,11 @@ actual fun PdfViewerScreen(
 
     val sharedTransitionScope = LocalSharedTransitionScope.current
     val animatedVisibilityScope = LocalAnimatedVisibilityScope.current
+    // Reserve space for the floating navigation side rail on large screens so reader controls
+    // never get squeezed behind it.
+    val readerIsWide = androidx.compose.material3.adaptive.currentWindowAdaptiveInfo()
+        .windowSizeClass.windowWidthSizeClass != androidx.window.core.layout.WindowWidthSizeClass.COMPACT
+    val readerRailInset = if (readerIsWide) 96.dp else 0.dp
     val targetInitialPage = initialPage ?: if (savedPage > 0) savedPage else 0
     val isInitiallyCached = remember(item.id, targetInitialPage) {
         PdfBitmapCache.cache.get("pdf_${item.id}_page_$targetInitialPage") != null
@@ -629,7 +634,7 @@ actual fun PdfViewerScreen(
                                 .fillMaxWidth()
                                 .windowInsetsPadding(WindowInsets.statusBars.add(WindowInsets.captionBar))
                                 .clickable(interactionSource = remember { MutableInteractionSource() }, indication = null) {}
-                                .padding(horizontal = 16.dp, vertical = 12.dp),
+                                .padding(start = 16.dp, end = 16.dp + readerRailInset, top = 12.dp, bottom = 12.dp),
                             horizontalArrangement = Arrangement.SpaceBetween,
                             verticalAlignment = Alignment.CenterVertically
                         ) {
@@ -737,7 +742,7 @@ actual fun PdfViewerScreen(
                             shape = CircleShape
                         ) {
                             Row(
-                                modifier = Modifier.padding(horizontal = 16.dp, vertical = 6.dp),
+                                modifier = Modifier.padding(start = 16.dp, end = 16.dp + readerRailInset, top = 6.dp, bottom = 6.dp),
                                 verticalAlignment = Alignment.CenterVertically,
                                 horizontalArrangement = Arrangement.spacedBy(12.dp)
                             ) {

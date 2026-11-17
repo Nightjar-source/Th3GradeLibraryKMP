@@ -144,10 +144,12 @@ fun AppSettingsModal(
                 val appSettingsOverscroll = rememberOverscrollEffect()
                 Column(
                     modifier = Modifier
-                        .windowInsetsPadding(androidx.compose.foundation.layout.WindowInsets.safeDrawing.only(androidx.compose.foundation.layout.WindowInsetsSides.Top))
                         .verticalScroll(rememberScrollState(), overscrollEffect = appSettingsOverscroll)
-                        .padding(top = 12.dp, start = 20.dp, end = 20.dp) // Compact padding + safe top
+                        .padding(start = 20.dp, end = 20.dp)
                 ) {
+                    // Edge-to-edge: a leading spacer (scrolls away) offsets content from the
+                    // status bar / system buttons — no persistent colored block under the bar.
+                    Spacer(modifier = Modifier.fillMaxWidth().windowInsetsPadding(androidx.compose.foundation.layout.WindowInsets.statusBars.add(androidx.compose.foundation.layout.WindowInsets.captionBar)).height(12.dp))
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.SpaceBetween,
@@ -235,14 +237,8 @@ fun AppSettingsModal(
                     // Pure White Mode (Light only)
                     AnimatedVisibility(
                         visible = isLightThemeActive,
-                        enter = slideInVertically(
-                            initialOffsetY = { it / 6 },
-                            animationSpec = spring(dampingRatio = 0.85f, stiffness = 320f)
-                        ) + fadeIn(animationSpec = spring(dampingRatio = 0.85f, stiffness = 320f)),
-                        exit = slideOutVertically(
-                            targetOffsetY = { it / 6 },
-                            animationSpec = spring(dampingRatio = 0.85f, stiffness = 320f)
-                        ) + fadeOut(animationSpec = spring(dampingRatio = 0.85f, stiffness = 320f))
+                        enter = androidx.compose.animation.expandVertically(spring(dampingRatio = 0.8f, stiffness = 400f)) + fadeIn(),
+                        exit = androidx.compose.animation.shrinkVertically(spring(dampingRatio = 0.8f, stiffness = 400f)) + fadeOut()
                     ) {
                         Column {
                             Text("الوضع الأبيض الصافي", fontWeight = FontWeight.Bold, fontSize = 13.sp, color = MaterialTheme.colorScheme.primary, modifier = Modifier.padding(horizontal = 20.dp))
@@ -279,14 +275,8 @@ fun AppSettingsModal(
                     // Pure Black Mode (Dark only)
                     AnimatedVisibility(
                         visible = isDarkThemeActive,
-                        enter = slideInVertically(
-                            initialOffsetY = { it / 6 },
-                            animationSpec = spring(dampingRatio = 0.85f, stiffness = 320f)
-                        ) + fadeIn(animationSpec = spring(dampingRatio = 0.85f, stiffness = 320f)),
-                        exit = slideOutVertically(
-                            targetOffsetY = { it / 6 },
-                            animationSpec = spring(dampingRatio = 0.85f, stiffness = 320f)
-                        ) + fadeOut(animationSpec = spring(dampingRatio = 0.85f, stiffness = 320f))
+                        enter = androidx.compose.animation.expandVertically(spring(dampingRatio = 0.8f, stiffness = 400f)) + fadeIn(),
+                        exit = androidx.compose.animation.shrinkVertically(spring(dampingRatio = 0.8f, stiffness = 400f)) + fadeOut()
                     ) {
                         Column {
                             Text("الوضع الأسود النقي", fontWeight = FontWeight.Bold, fontSize = 13.sp, color = MaterialTheme.colorScheme.primary, modifier = Modifier.padding(horizontal = 20.dp))
@@ -352,14 +342,8 @@ fun AppSettingsModal(
                     // Manual color options
                     AnimatedVisibility(
                         visible = !settings.useMaterialYou,
-                        enter = slideInVertically(
-                            initialOffsetY = { it / 6 },
-                            animationSpec = spring(dampingRatio = 0.85f, stiffness = 320f)
-                        ) + fadeIn(animationSpec = spring(dampingRatio = 0.85f, stiffness = 320f)),
-                        exit = slideOutVertically(
-                            targetOffsetY = { it / 6 },
-                            animationSpec = spring(dampingRatio = 0.85f, stiffness = 320f)
-                        ) + fadeOut(animationSpec = spring(dampingRatio = 0.85f, stiffness = 320f))
+                        enter = androidx.compose.animation.expandVertically(spring(dampingRatio = 0.8f, stiffness = 400f)) + fadeIn(),
+                        exit = androidx.compose.animation.shrinkVertically(spring(dampingRatio = 0.8f, stiffness = 400f)) + fadeOut()
                     ) {
                         Column {
                             Text("اختر لونك المفضل يدوياً:", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(horizontal = 20.dp))
@@ -436,10 +420,10 @@ fun NewsSettingsModal(
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .windowInsetsPadding(androidx.compose.foundation.layout.WindowInsets.safeDrawing.only(androidx.compose.foundation.layout.WindowInsetsSides.Top))
                         .verticalScroll(rememberScrollState(), overscrollEffect = newsSettingsOverscroll)
-                        .padding(top = 12.dp)
                 ) {
+                    // Edge-to-edge: leading spacer scrolls away with content (no colored block).
+                    Spacer(modifier = Modifier.fillMaxWidth().windowInsetsPadding(androidx.compose.foundation.layout.WindowInsets.statusBars.add(androidx.compose.foundation.layout.WindowInsets.captionBar)).height(12.dp))
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
