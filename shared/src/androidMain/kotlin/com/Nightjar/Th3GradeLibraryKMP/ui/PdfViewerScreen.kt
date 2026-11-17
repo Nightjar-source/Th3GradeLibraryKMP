@@ -180,7 +180,11 @@ actual fun PdfViewerScreen(
     }
 
     androidx.activity.compose.BackHandler(enabled = true) {
-        onClose()
+        if (isFullscreenMode) {
+            isFullscreenMode = false
+        } else {
+            onClose()
+        }
     }
 
     val scope = rememberCoroutineScope()
@@ -584,17 +588,9 @@ actual fun PdfViewerScreen(
                                 } else false
                             }
                     ) {
-                        // Render page content
+                        // Render page content (Pure Immersive Fullscreen Mode: No taps toggle it except Back gesture/button)
                         Box(
-                            modifier = Modifier
-                                .fillMaxSize()
-                                .pointerInput(Unit) {
-                                    detectTapGestures(
-                                        onTap = {
-                                            isFullscreenMode = !isFullscreenMode
-                                        }
-                                    )
-                                }
+                            modifier = Modifier.fillMaxSize()
                         ) {
                             if (orientation == "vertical") {
                                 VerticalPager(
