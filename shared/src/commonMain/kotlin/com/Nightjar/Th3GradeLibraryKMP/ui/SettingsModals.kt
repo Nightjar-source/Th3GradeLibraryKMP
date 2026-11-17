@@ -139,7 +139,7 @@ fun AppSettingsModal(
             dragHandle = null,
             containerColor = MaterialTheme.colorScheme.surface,
             scrimColor = androidx.compose.ui.graphics.Color.Transparent, // no opaque block over transparent status bar
-            contentWindowInsets = androidx.compose.foundation.layout.WindowInsets(0, 0, 0, 0), // edge-to-edge: zero offset
+            contentWindowInsets = { androidx.compose.foundation.layout.WindowInsets(0, 0, 0, 0) }, // edge-to-edge: zero offset
             sheetMaxWidth = 480.dp // Responsive capsule for tablets/DeX
         ) {
                 Column(
@@ -416,7 +416,7 @@ fun NewsSettingsModal(
             dragHandle = null,
             containerColor = MaterialTheme.colorScheme.surface,
             scrimColor = androidx.compose.ui.graphics.Color.Transparent, // no opaque block over transparent status bar
-            contentWindowInsets = androidx.compose.foundation.layout.WindowInsets(0, 0, 0, 0), // edge-to-edge: zero offset
+            contentWindowInsets = { androidx.compose.foundation.layout.WindowInsets(0, 0, 0, 0) }, // edge-to-edge: zero offset
             sheetMaxWidth = 480.dp // Responsive capsule for tablets/DeX
         ) {
                 Column(
