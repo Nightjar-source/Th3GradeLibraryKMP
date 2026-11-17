@@ -237,7 +237,7 @@ fun NewsScreen(
                         state = lazyGridState,
                         modifier = Modifier
                             .fillMaxSize()
-                            .padding(horizontal = 14.dp)
+                            .padding(horizontal = 14.dp),
                         verticalArrangement = Arrangement.spacedBy(14.dp),
                         horizontalArrangement = Arrangement.spacedBy(14.dp),
                         contentPadding = PaddingValues(top = 0.dp, bottom = bottomPadding)
