@@ -179,7 +179,6 @@ fun BookmarksScreen(
                         .elasticOverscroll(),
                     verticalArrangement = Arrangement.spacedBy(16.dp),
                     horizontalArrangement = Arrangement.spacedBy(16.dp),
-                    horizontalArrangement = Arrangement.spacedBy(16.dp),
                     contentPadding = PaddingValues(top = dynamicTopPadding, bottom = bottomPadding)
                 ) {
                     items(sortedBookIds, key = { it }) { bookId ->
