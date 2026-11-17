@@ -144,12 +144,13 @@ fun AppSettingsModal(
                 val appSettingsOverscroll = rememberOverscrollEffect()
                 Column(
                     modifier = Modifier
+                        .windowInsetsPadding(androidx.compose.foundation.layout.WindowInsets.safeDrawing.only(androidx.compose.foundation.layout.WindowInsetsSides.Horizontal))
                         .verticalScroll(rememberScrollState(), overscrollEffect = appSettingsOverscroll)
                         .padding(start = 20.dp, end = 20.dp)
                 ) {
                     // Edge-to-edge: a leading spacer (scrolls away) offsets content from the
                     // status bar / system buttons — no persistent colored block under the bar.
-                    Spacer(modifier = Modifier.fillMaxWidth().windowInsetsPadding(androidx.compose.foundation.layout.WindowInsets.statusBars.add(androidx.compose.foundation.layout.WindowInsets.captionBar)).height(12.dp))
+                    Spacer(modifier = Modifier.fillMaxWidth().windowInsetsPadding(androidx.compose.foundation.layout.WindowInsets.statusBars).height(12.dp))
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.SpaceBetween,
@@ -420,10 +421,11 @@ fun NewsSettingsModal(
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
+                        .windowInsetsPadding(androidx.compose.foundation.layout.WindowInsets.safeDrawing.only(androidx.compose.foundation.layout.WindowInsetsSides.Horizontal))
                         .verticalScroll(rememberScrollState(), overscrollEffect = newsSettingsOverscroll)
                 ) {
                     // Edge-to-edge: leading spacer scrolls away with content (no colored block).
-                    Spacer(modifier = Modifier.fillMaxWidth().windowInsetsPadding(androidx.compose.foundation.layout.WindowInsets.statusBars.add(androidx.compose.foundation.layout.WindowInsets.captionBar)).height(12.dp))
+                    Spacer(modifier = Modifier.fillMaxWidth().windowInsetsPadding(androidx.compose.foundation.layout.WindowInsets.statusBars).height(12.dp))
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()

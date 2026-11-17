@@ -13,6 +13,9 @@ import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.unit.Velocity
 import kotlinx.coroutines.launch
 
+/** True when the platform draws its own stretch overscroll (Android 12+ / API 31+). */
+val LocalSystemStretchOverscroll = compositionLocalOf { false }
+
 /**
  * Elastic bounce/overscroll effect on vertical scrolling.
  * Custom built smooth rubber band effect.
