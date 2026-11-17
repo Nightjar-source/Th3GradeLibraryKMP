@@ -65,8 +65,17 @@ class BackgroundSyncWorker(
                 }
             }
 
-            // SyncEngine internally checks time intervals and sends notifications via PlatformActionHandler
-            val fetchedCount = SyncEngine.fetchAndSync(forced = false)
+            val lastFcm = com.Nightjar.Th3GradeLibraryKMP.data.AppDataStore.getLong("last_cloud_fcm_heartbeat", 0L)
+            val now = System.currentTimeMillis()
+            val timeSinceFcm = now - lastFcm
+
+            // If cloud FCM was active within the last 24 hours, WorkManager stays completely idle!
+            if (lastFcm > 0L && timeSinceFcm < 24 * 60 * 60 * 1000L) {
+                return Result.success()
+            }
+
+            // Safety Fallback: only triggers if cloud push has been silent for more than 24 hours
+            val fetchedCount = SyncEngine.fetchAndSync(forced = true)
 
             // Deliver any accumulated silent FCM news that arrived in the quiet period
             val pendingTitles = AppFirebaseMessagingService.getAndClearUnnotifiedNews()

@@ -52,23 +52,15 @@ fun scheduleBackgroundSync(context: Context, forceReplace: Boolean = false) {
     // 1. Set up the Heartbeat (12h inexact batching to wake app from Doze)
     HeartbeatScheduler.scheduleHeartbeat(context)
 
-    // 2. Set up Periodic WorkManager for News Sync
-    val intervalMinutes = when (syncInterval) {
-        "15m" -> 15L
-        "30m" -> 30L
-        "1h"  -> 60L
-        "6h"  -> 360L
-        "12h" -> 720L
-        "24h" -> 1440L
-        else  -> 30L
-    }
-
+    // 2. Set up Periodic WorkManager as a 24-Hour emergency fallback only.
+    // The periodic news sync is 100% cloud-driven via Cloudflare & Firebase FCM push!
     val constraints = Constraints.Builder()
         .setRequiredNetworkType(NetworkType.CONNECTED)
+        .setRequiresBatteryNotLow(true)
         .build()
 
     val periodicWorkRequest = PeriodicWorkRequestBuilder<BackgroundSyncWorker>(
-        intervalMinutes, TimeUnit.MINUTES
+        24, TimeUnit.HOURS
     )
         .setConstraints(constraints)
         .build()

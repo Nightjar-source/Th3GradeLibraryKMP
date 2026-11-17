@@ -9,42 +9,15 @@
  *    According to guide: الوكيل/إشعارات_فايربيس_السحابية.md
  */
 
-const BOT_TOKEN = "8862454952:AAGepkN8WMIZVSRWFLAHC24NTSdMZ4SSuFI";
+// Retrieve credentials dynamically from Cloudflare Encrypted Secrets (Settings -> Variables and Secrets)
+const BOT_TOKEN = typeof globalThis.BOT_TOKEN !== "undefined" && globalThis.BOT_TOKEN ? globalThis.BOT_TOKEN : "";
 const RSS_FEED_URL = "https://feeds.feedburner.com/karraraliraqii/gkhbdxas1m0";
 const FCM_TOPIC = "news";
 
 // Firebase Service Account Credentials for FCM v1 (Zero-Cost Serverless Push)
-const FIREBASE_PROJECT_ID = "kariqth3booksexemptioncalc";
-const FIREBASE_CLIENT_EMAIL = "firebase-adminsdk-fbsvc@kariqth3booksexemptioncalc.iam.gserviceaccount.com";
-const FIREBASE_PRIVATE_KEY = `-----BEGIN PRIVATE KEY-----
-MIIEvgIBADANBgkqhkiG9w0BAQEFAASCBKgwggSkAgEAAoIBAQDjXkkgggcse1Q0
-YfRVUt/dBIfunDGRd6Ipo1P1vvD6zWoXbw2mItwZDSUkAOk29O8GFJQghwEim7S4
-FfLyhOYK5UUbMWRdAjN2+UDoBefwf+QMo6rsrnpHacEN+lTW+pDp4Y1SXKxeoDSA
-i4jtyPpV9xh9CKaR1SUgrNgV2yHMAIcg38caBYTBRH1fiVYnP810+Is6oZqC+brj
-iTnRc8QN2OdQBkxRt7ORPOKLZstTMvIRkJnPNWBZ1VmP9FC3trxeSSFxtfmd+MwK
-i+WNERSM4SeBDmimASQGwCaVjTd7DekHbrfEHExDV+zqKmUq0FqcZpsIBKFERS+Q
-xw33HUyfAgMBAAECggEAL9eBD6QMmmGBAFy0Ktf7Xug7KgwXqgJATv6dBhKdZkie
-0Dt/5btkEKlhbUf7yqKTQPZHjOibZorY5ftIWZt5REWl2ujzs1ZpOdmMvMWxXjuq
-4rX1m0PDWw93nddUzr9+ipf5QqFZa7fOFFZIA7DMbBZIQtb1Ja5x14RHG6I2ZFQ6
-jd4Ll512PHsJn7MxMxWjR+Njtp5fBaZHH84Yuu68yesRIBefz+rZm3sGsZEf09JU
-DG0J4l4oo2DwWmAKz+CckXFNoH3X6j6+NCSoj03UcaBMEsuS4D8K/64BjMPI/6KD
-mr6Kxdy6XEhGpewhS4HgN1dYjuAqe4xrnbYrjr/5oQKBgQD1/9ksYWeSDWstwFjt
-gQn855mPoCfszEp3S9v72fLByMoqKnTJ8jlvv+90/m3y1AynTR2p+OO0JNuuUeIC
-vqUHA+GOcKi6ZKERfxePodKh76z6wAkiX7QTSRpndmqJJ7H9qB2PzkssKC0OCBPJ
-tzmqgscPXGxJ6FZK0wyAea1q5wKBgQDsnIpriY5IW9S+ByIigjegjddcP5ViC682
-aQ7Xsjt4/nqwUOId4ATwMsotDDbcfS3LXbHTl/FOUWLlSWzpsNP+KSy+Oa6sarYQ
-QfYfkE8ygOXzcdUWh+iJK/lpOrvzgarLTqTHMjvnBWX/s3DOePzVR7Un+f8pXMU2
-wVWKPiRRiQKBgQCWjoWuIdcvjkLgd251vZoNTPmw64ZD6SxSIv16AIQQkgEZGW7t
-AfChMkktw2IrUhiEdDAJjShfYoeJAthecauyxW9QrCa4HUpu2Ofkole1gGjP9qQg
-g45El2Mvm0vMsZy/8BpXnxxm5BffFJZ3yEnkz7Fg92HXQfk+RjjKkK3QVQKBgQCx
-j4P80Vx6BpfvBvFhzjCqhucPrhOPYU9aWJqv2WvyD57Ig9o8Kynpi2PXTGw7KKFe
-FPDm5gZLDJ5XjLNz56Qe/o06L5VahDYemzF1XFligAKQn2MWpmUl0182zcHQKgWe
-zmSvq43yf0WdDu7fs0GhWE+lMWF/i8PfpFRqCto8aQKBgEbYzHP1K7YK+KxdBiSb
-d1n/N/GKFBCCLbZT7WWKc5K51MnnqtPwE7iUmZb1L9DHOvH2g0P1IHI/TBRyvcYj
-UtiAzJI25ICeQgSOQU+eJB8hpjwFcHGcz0M1dDA0uIRItCwPBAhOPNKvYAGGHxvZ
-dgujgf4i2gHuo3IpvRg3ux4X
------END PRIVATE KEY-----
-`;
+const FIREBASE_PROJECT_ID = typeof globalThis.FIREBASE_PROJECT_ID !== "undefined" && globalThis.FIREBASE_PROJECT_ID ? globalThis.FIREBASE_PROJECT_ID : "kariqth3booksexemptioncalc";
+const FIREBASE_CLIENT_EMAIL = typeof globalThis.FIREBASE_CLIENT_EMAIL !== "undefined" && globalThis.FIREBASE_CLIENT_EMAIL ? globalThis.FIREBASE_CLIENT_EMAIL : "firebase-adminsdk-fbsvc@kariqth3booksexemptioncalc.iam.gserviceaccount.com";
+const FIREBASE_PRIVATE_KEY = typeof globalThis.FIREBASE_PRIVATE_KEY !== "undefined" && globalThis.FIREBASE_PRIVATE_KEY ? globalThis.FIREBASE_PRIVATE_KEY : "";
 
 // Current Active Developer Announcement
 const ACTIVE_ANNOUNCEMENT = null; // Disabled - cleaned from feed
@@ -56,12 +29,8 @@ const _DISABLED_ANNOUNCEMENT = {
   pubDate: "Sun, 01 Nov 2026 14:00:00 +0300"
 };
 
-// In-memory & Edge Cache tracker for last sent notification GUID
+// In-memory & Dynamic Edge Cache tracker for last sent notification GUID (Slides dynamically like Top_Link)
 let lastNotifiedGuid = "";
-const CLOUDFLARE_ACCOUNT_ID = "582d8bda218c7b16eff91fa9ffeddeef";
-const CLOUDFLARE_KV_ID = "85e9ce7f9e0d49b7b3b628b20ea6fc3f";
-// Token injected via worker secret binding
-const CLOUDFLARE_API_TOKEN = typeof CF_API_TOKEN !== "undefined" ? CF_API_TOKEN : "";
 
 function cleanHtmlEntities(str) {
   if (!str) return "";
@@ -85,102 +54,29 @@ function cleanHtmlEntities(str) {
 }
 
 
-async function getFirestoreLastGuid(token) {
-  try {
-    const url = `https://firestore.googleapis.com/v1/projects/${FIREBASE_PROJECT_ID}/databases/(default)/documents/app_state/news_sync`;
-    const resp = await fetch(url, {
-      headers: { "Authorization": `Bearer ${token}` }
-    });
-    if (resp.ok) {
-      const data = await resp.json();
-      return data.fields?.last_notified_guid?.stringValue || "";
-    }
-  } catch (e) {
-    console.error("Firestore read error:", e);
-  }
-  return "";
-}
-
-async function setFirestoreLastGuid(token, guid) {
-  try {
-    const url = `https://firestore.googleapis.com/v1/projects/${FIREBASE_PROJECT_ID}/databases/(default)/documents/app_state/news_sync?updateMask.fieldPaths=last_notified_guid`;
-    await fetch(url, {
-      method: "PATCH",
-      headers: {
-        "Authorization": `Bearer ${token}`,
-        "Content-Type": "application/json"
-      },
-      body: JSON.stringify({
-        fields: {
-          last_notified_guid: { stringValue: guid }
-        }
-      })
-    });
-  } catch (e) {
-    console.error("Firestore write error:", e);
-  }
-}
-
 async function getLastNotifiedGuid() {
-  // 1. Native Cloudflare KV Binding if bound
   try {
-    if (typeof TH3BOOKS_KV !== "undefined") {
-      const val = await TH3BOOKS_KV.get("last_notified_guid");
+    const cache = caches.default;
+    const cacheKey = new Request("https://th3books-gateway.karrar1iq.workers.dev/internal/dynamic-sliding-marker");
+    const response = await cache.match(cacheKey);
+    if (response) {
+      const val = (await response.text()).trim();
       if (val) return val;
     }
   } catch (e) {}
-
-  // 2. Cloudflare KV REST API via Token
-  try {
-    const kvUrl = `https://api.cloudflare.com/client/v4/accounts/${CLOUDFLARE_ACCOUNT_ID}/storage/kv/namespaces/${CLOUDFLARE_KV_ID}/values/last_notified_guid`;
-    const resp = await fetch(kvUrl, {
-      headers: { "Authorization": `Bearer ${CLOUDFLARE_API_TOKEN}` }
-    });
-    if (resp.ok) {
-      const val = await resp.text();
-      if (val && !val.includes("error")) return val;
-    }
-  } catch (e) {}
-
-  // 3. Fallback to Cloudflare Edge Cache
-  try {
-    const cache = caches.default;
-    const cacheKey = new Request("https://th3books-gateway.karrar1iq.workers.dev/internal/last-notified-guid");
-    const response = await cache.match(cacheKey);
-    if (response) {
-      return (await response.text()).trim();
-    }
-  } catch (e) {}
-
   return lastNotifiedGuid;
 }
 
 async function setLastNotifiedGuid(guid) {
   lastNotifiedGuid = guid;
-
-  // 1. Native Cloudflare KV Binding
-  try {
-    if (typeof TH3BOOKS_KV !== "undefined") {
-      await TH3BOOKS_KV.put("last_notified_guid", guid);
-    }
-  } catch (e) {}
-
-  // 2. Cloudflare KV REST API via Token
-  try {
-    const kvUrl = `https://api.cloudflare.com/client/v4/accounts/${CLOUDFLARE_ACCOUNT_ID}/storage/kv/namespaces/${CLOUDFLARE_KV_ID}/values/last_notified_guid`;
-    await fetch(kvUrl, {
-      method: "PUT",
-      headers: { "Authorization": `Bearer ${CLOUDFLARE_API_TOKEN}` },
-      body: guid
-    });
-  } catch (e) {}
-
-  // 3. Cloudflare Edge Cache
   try {
     const cache = caches.default;
-    const cacheKey = new Request("https://th3books-gateway.karrar1iq.workers.dev/internal/last-notified-guid");
+    const cacheKey = new Request("https://th3books-gateway.karrar1iq.workers.dev/internal/dynamic-sliding-marker");
     const response = new Response(guid, {
-      headers: { "Cache-Control": "max-age=2592000" } // 30 days
+      headers: {
+        "Content-Type": "text/plain",
+        "Cache-Control": "public, max-age=86400"
+      }
     });
     await cache.put(cacheKey, response);
   } catch (e) {}
