@@ -935,6 +935,14 @@ fun AppContent(
                 }
 
                 // --- Floating Search Bar (Aligned inside the Main Content Area) ---
+                // Isolated overlay modifier: read the scope once from CompositionLocal, then apply
+                // the overlay modifier without a second read / unsafe !! (Compose-First scope handling).
+                val searchTransitionScope = LocalSharedTransitionScope.current
+                val searchOverlayModifier = if (searchTransitionScope != null) {
+                    with(searchTransitionScope) {
+                        Modifier.renderInSharedTransitionScopeOverlay(zIndexInOverlay = 50f)
+                    }
+                } else Modifier
                 androidx.compose.animation.AnimatedVisibility(
                     visible = !showOnboarding && page == "list" && isSearchOpen,
                     enter = slideInVertically(
@@ -945,13 +953,7 @@ fun AppContent(
                         targetOffsetY = { -it / 2 },
                         animationSpec = spring(dampingRatio = 0.75f, stiffness = Spring.StiffnessMediumLow)
                     ) + fadeOut(animationSpec = tween(200)),
-                    modifier = Modifier.align(if (isWide) Alignment.TopEnd else Alignment.TopCenter).fillMaxWidth().zIndex(200f).then(
-                        if (LocalSharedTransitionScope.current != null) {
-                            with(LocalSharedTransitionScope.current!!) {
-                                Modifier.renderInSharedTransitionScopeOverlay(zIndexInOverlay = 50f)
-                            }
-                        } else Modifier
-                    )
+                    modifier = Modifier.align(if (isWide) Alignment.TopEnd else Alignment.TopCenter).fillMaxWidth().zIndex(200f).then(searchOverlayModifier)
                 ) {
                     val isCompactTopBar = isWide || heightClass == WindowHeightSizeClass.COMPACT
                     val searchBarHeight = if (isCompactTopBar) 44.dp else 52.dp
