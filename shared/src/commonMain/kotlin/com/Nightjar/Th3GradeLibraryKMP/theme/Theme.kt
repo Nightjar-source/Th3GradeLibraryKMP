@@ -27,6 +27,7 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.draw.drawWithCache
+import androidx.compose.ui.graphics.Brush
 import kotlinx.coroutines.launch
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.RoundRect
@@ -70,35 +71,62 @@ val LocalScreenEntranceKey = compositionLocalOf { "default_screen" }
 val LocalIsReturningFromPdf = compositionLocalOf { false }
 
 // Glassmorphism modifier optimized with hardware-accelerated drawWithCache
+// 3D Embossed Glassmorphism modifier optimized with hardware-accelerated drawWithCache
 fun Modifier.liquidGlass(
     isDark: Boolean,
     borderRadius: Dp = 24.dp,
-    alpha: Float = 0.85f // Liquid glass transparency across all devices
+    alpha: Float = 0.82f // 3D Embossed liquid glass transparency
 ): Modifier = composed {
     val isLowEnd = LocalIsLowEndDevice.current
     val effectiveAlpha = if (isLowEnd) 0.90f else alpha
-    val bg = if (isDark) {
-        Color(0xFF1E293B).copy(alpha = effectiveAlpha)
+    
+    // 3D Depth Lighting: Subtle vertical lighting gradient for embossed volume
+    val bodyBrush = if (isDark) {
+        Brush.verticalGradient(
+            listOf(
+                Color(0xFF334155).copy(alpha = effectiveAlpha),
+                Color(0xFF0F172A).copy(alpha = (effectiveAlpha + 0.08f).coerceAtMost(1f))
+            )
+        )
     } else {
-        MaterialTheme.colorScheme.surfaceVariant.copy(alpha = effectiveAlpha)
+        Brush.verticalGradient(
+            listOf(
+                Color(0xFFFFFFFF).copy(alpha = effectiveAlpha),
+                Color(0xFFE2E8F0).copy(alpha = effectiveAlpha)
+            )
+        )
     }
     
-    if (isLowEnd) {
-        return@composed this.background(bg, RoundedCornerShape(borderRadius))
-    }
-    val border = if (isDark) {
-        Color(0xFFFFFFFF).copy(alpha = 0.15f)
+    // Top specular highlight edge for 3D tactile glass feeling
+    val borderBrush = if (isDark) {
+        Brush.verticalGradient(
+            listOf(
+                Color(0xFFFFFFFF).copy(alpha = 0.35f),
+                Color(0xFFFFFFFF).copy(alpha = 0.05f)
+            )
+        )
     } else {
-        MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.15f)
+        Brush.verticalGradient(
+            listOf(
+                Color(0xFFFFFFFF).copy(alpha = 0.85f),
+                Color(0xFF94A3B8).copy(alpha = 0.25f)
+            )
+        )
     }
+
+    if (isLowEnd) {
+        val solidFallback = if (isDark) Color(0xFF1E293B).copy(alpha = effectiveAlpha) else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = effectiveAlpha)
+        return@composed this.background(solidFallback, RoundedCornerShape(borderRadius))
+    }
+
     this.drawWithCache {
         val radiusPx = CornerRadius(borderRadius.coerceAtLeast(0.dp).toPx())
-        val strokeWidth = 1.dp.toPx()
+        val strokeWidth = 1.2.dp.toPx()
         val strokeStyle = Stroke(width = strokeWidth)
         
         onDrawBehind {
-            drawRoundRect(color = bg, cornerRadius = radiusPx)
-            drawRoundRect(color = border, cornerRadius = radiusPx, style = strokeStyle)
+            drawRoundRect(brush = bodyBrush, cornerRadius = radiusPx)
+            drawRoundRect(brush = borderBrush, cornerRadius = radiusPx, style = strokeStyle)
         }
     }
 }

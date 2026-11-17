@@ -185,9 +185,10 @@ object NotificationHelper {
             val inboxStyle = NotificationCompat.InboxStyle()
                 .setBigContentTitle(mainTitle)
                 .setSummaryText("$displayCount أخبار دراسية جديدة")
-            // Show all consecutive news items without restricting to an arbitrary limit
-            titles.forEach { title ->
-                inboxStyle.addLine("• $title")
+            // Consecutive news list protected against SystemUI Binder 1MB transaction overflow
+            titles.take(25).forEach { title ->
+                val safeTitle = if (title.length > 120) title.take(117) + "..." else title
+                inboxStyle.addLine("• $safeTitle")
             }
             builder.setStyle(inboxStyle)
             builder.setContentText(titles.take(3).joinToString(" • "))
