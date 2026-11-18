@@ -18,6 +18,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.zIndex
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.gestures.detectVerticalDragGestures
 import androidx.compose.ui.draw.blur
@@ -1063,8 +1064,8 @@ fun AppContent(
                             .windowInsetsPadding(WindowInsets.safeDrawing.only(WindowInsetsSides.Horizontal))
                             .padding(
                                 top = calculatedTopPadding,
-                                start = if (isWide) 16.dp else 16.dp,
-                                end = if (isWide) 16.dp else 16.dp
+                                start = 16.dp,
+                                end = if (isWide) 96.dp else 16.dp
                             ),
                         contentAlignment = if (isWide) Alignment.TopEnd else Alignment.TopCenter
                     ) {
@@ -1252,10 +1253,13 @@ fun AppContent(
                     }
                 }
 
-        // --- Unified Top Dynamic Island Notification & Alert Capsule (All Screens Overlay) ---
+        // --- Unified Top Dynamic Island Notification & Alert Capsule (Library Screens Priority) ---
+        val isLibraryScreen = (page == "home" || page == "list")
         val rootActiveNotice by com.Nightjar.Th3GradeLibraryKMP.network.BookDownloadManager.activeNoticeMessage.collectAsState()
         val currentToast = toastMessage
-        val activeIslandText = rootActiveNotice ?: currentToast
+        // Download progress notice strictly appears only on Library screens (home / list) and disappears immediately upon tab change
+        val effectiveDownloadNotice = if (isLibraryScreen) rootActiveNotice else null
+        val activeIslandText = effectiveDownloadNotice ?: currentToast
         val isIslandVisible = activeIslandText != null
 
         Box(
@@ -1327,21 +1331,13 @@ fun AppContent(
                             com.Nightjar.Th3GradeLibraryKMP.network.BookDownloadManager.clearActiveNotice()
                         }
                         .pointerInput(Unit) {
-                            detectVerticalDragGestures { change, dragAmount ->
-                                if (dragAmount < -10f) {
+                            detectDragGestures { change, dragAmount ->
+                                if (dragAmount.y < -12f || kotlin.math.abs(dragAmount.x) > 18f) {
                                     change.consume()
                                     com.Nightjar.Th3GradeLibraryKMP.ui.ToastManager.clearToast()
                                     com.Nightjar.Th3GradeLibraryKMP.network.BookDownloadManager.clearActiveNotice()
                                 }
                             }
-                        }
-                        .pointerInput(Unit) {
-                            detectHorizontalDragGestures(
-                                onDragStart = {
-                                    com.Nightjar.Th3GradeLibraryKMP.ui.ToastManager.clearToast()
-                                    com.Nightjar.Th3GradeLibraryKMP.network.BookDownloadManager.clearActiveNotice()
-                                }
-                            ) { change, _ -> change.consume() }
                         }
                 ) {
                     Row(
@@ -1419,8 +1415,8 @@ fun AppContent(
         val hasBottomNavBar = !showOnboarding && page in mainTabs && adaptiveConfig.navigationType == AppNavigationType.BottomNavigationBar
         val targetBannerBottomPadding = when {
             page == "pdf" -> 64.dp // Lift above PDF bottom floating page capsule (52dp + margins)
-            hasBottomNavBar && isBottomBarVisible -> 78.dp
-            else -> 0.dp
+            hasBottomNavBar && isBottomBarVisible -> 82.dp // Lift safely above bottom nav capsule (56dp height + margins + safe gap)
+            else -> 8.dp // Safe clearance above 3-button navigation or home gesture pill
         }
         val rawAnimatedBannerBottomPadding by animateDpAsState(
             targetValue = targetBannerBottomPadding,

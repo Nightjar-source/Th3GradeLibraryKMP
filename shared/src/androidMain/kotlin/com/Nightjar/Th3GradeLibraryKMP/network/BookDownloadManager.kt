@@ -382,7 +382,10 @@ actual object BookDownloadManager {
 
         val job = scope.launch {
             val storageDir = BookStorageEngine.getStorageDir(ctx)
-            val tempTarget = File(storageDir, "partial_$item.id.tmp")
+            if (!storageDir.exists()) {
+                storageDir.mkdirs()
+            }
+            val tempTarget = File(storageDir, "partial_${item.id}.tmp")
             tempFiles[item.id] = tempTarget
             val permanentFile = BookStorageEngine.getPermanentFile(ctx, item)
 
@@ -467,6 +470,12 @@ actual object BookDownloadManager {
                             val activeConn = conn ?: throw Exception("تعذر فتح الاتصال")
                             val contentType = activeConn.contentType ?: ""
                             val responseCode = activeConn.responseCode
+
+                            if (responseCode == 416) {
+                                // Partial range invalid or stale, wipe temp file to start fresh on next pass
+                                tempTarget.delete()
+                                throw Exception("نطاق الملف غير متطابق، تمت إعادة التهيئة")
+                            }
 
                             val isPartial = (responseCode == 206)
                             val isOk = (responseCode == 200)

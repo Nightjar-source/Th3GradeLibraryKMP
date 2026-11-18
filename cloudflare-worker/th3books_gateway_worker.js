@@ -136,7 +136,7 @@ async function handleRequest(request, event) {
     return new Response(JSON.stringify({
       status: "ok",
       service: "th3books-gateway",
-      version: "2.3.6-cloud",
+      version: "2.3.9-cloud",
       hasKV: !!KV,
       developerAnnouncement: ACTIVE_ANNOUNCEMENT?.title || null,
       timestamp: new Date().toISOString()
@@ -146,6 +146,37 @@ async function handleRequest(request, event) {
         "Access-Control-Allow-Origin": "*"
       }
     });
+  }
+
+  // 1.1 Cloud Catalog Manifest Edge Mirror
+  if (path === "/manifest") {
+    const cacheUrl = new URL(request.url);
+    const cacheKey = new Request(cacheUrl.toString(), request);
+    const cache = caches.default;
+    let response = await cache.match(cacheKey);
+    if (!response) {
+      try {
+        const ghResp = await fetch("https://raw.githubusercontent.com/Nightjar-source/Th3GradeLibraryKMP-Cloud/main/cloud_manifest.json", {
+          headers: { "User-Agent": "Cloudflare-Edge-Gateway/2.3" }
+        });
+        if (ghResp.ok) {
+          const body = await ghResp.text();
+          response = new Response(body, {
+            status: 200,
+            headers: {
+              "Content-Type": "application/json; charset=utf-8",
+              "Cache-Control": "public, max-age=1800, s-maxage=3600",
+              "Access-Control-Allow-Origin": "*"
+            }
+          });
+          event.waitUntil(cache.put(cacheKey, response.clone()));
+          return response;
+        }
+      } catch (e) {
+        return new Response(JSON.stringify({ error: e.message }), { status: 502, headers: { "Content-Type": "application/json" } });
+      }
+    }
+    return response;
   }
 
   // 2. Telegram File Proxy

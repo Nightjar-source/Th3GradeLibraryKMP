@@ -5,6 +5,7 @@ import java.io.File
 
 actual object BookStorageEngine {
     private const val STORAGE_DIR_NAME = "books_storage"
+    private val bundledAssetCache = java.util.concurrent.ConcurrentHashMap<String, Boolean>()
 
     fun getStorageDir(context: Context): File {
         val dir = File(context.filesDir, STORAGE_DIR_NAME)
@@ -31,22 +32,24 @@ actual object BookStorageEngine {
     }
 
     actual fun hasBundledAsset(context: Any, item: BookItem): Boolean {
-        return try {
-            val ctx = context as Context
-            val possiblePaths = listOf(
-                "composeResources/com.Nightjar.Th3GradeLibraryKMP.generated.resources/${item.pdfPath}",
-                "composeResources/shared.generated.resources/${item.pdfPath}",
-                item.pdfPath
-            )
-            val assetManager = ctx.assets
-            for (path in possiblePaths) {
-                try {
-                    assetManager.open(path).use { return true }
-                } catch (_: Exception) {}
+        return bundledAssetCache.getOrPut(item.id) {
+            try {
+                val ctx = context as Context
+                val possiblePaths = listOf(
+                    "composeResources/com.Nightjar.Th3GradeLibraryKMP.generated.resources/${item.pdfPath}",
+                    "composeResources/shared.generated.resources/${item.pdfPath}",
+                    item.pdfPath
+                )
+                val assetManager = ctx.assets
+                for (path in possiblePaths) {
+                    try {
+                        assetManager.open(path).use { return@getOrPut true }
+                    } catch (_: Exception) {}
+                }
+                false
+            } catch (_: Exception) {
+                false
             }
-            false
-        } catch (_: Exception) {
-            false
         }
     }
 

@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.height
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.Alignment
@@ -119,16 +120,19 @@ fun AdaptiveBannerAd(
         //    preventing awkward giant stretched banners spanning full 1200dp desktop/tablet screens.
         // 2. In split-screen / pop-up windows (< 320dp, down to 280dp), ensure width matches container width
         //    rather than physical device display metrics.
+        val isCompactPhone = availableWidthDp < 600
         val targetAdWidth = when {
             availableWidthDp <= 0 -> 320
             availableWidthDp >= 840 -> 728.coerceAtMost(availableWidthDp)
             availableWidthDp >= 600 -> 468.coerceAtMost(availableWidthDp)
             else -> availableWidthDp.coerceAtLeast(280)
         }
+        val maxAdHeightDp = if (isCompactPhone) 50.dp else 90.dp
 
         Box(
             modifier = Modifier
                 .widthIn(max = (targetAdWidth + 12).dp)
+                .heightIn(max = maxAdHeightDp + 6.dp)
                 .wrapContentHeight()
                 .clip(RoundedCornerShape(32.dp))
                 .background(
@@ -155,10 +159,15 @@ fun AdaptiveBannerAd(
             AndroidView(
                 modifier = Modifier
                     .widthIn(max = targetAdWidth.dp)
+                    .heightIn(max = maxAdHeightDp)
                     .wrapContentHeight(),
                 factory = { ctx ->
                 AdView(ctx).apply {
-                    val adSize = AdSize.getCurrentOrientationAnchoredAdaptiveBannerAdSize(ctx, targetAdWidth)
+                    val adSize = if (isCompactPhone) {
+                        AdSize.BANNER // Standard phone banner: strictly 320x50dp max height
+                    } else {
+                        AdSize.getCurrentOrientationAnchoredAdaptiveBannerAdSize(ctx, targetAdWidth)
+                    }
                     setAdSize(adSize)
                     adUnitId = AdMobManager.TEST_BANNER_ID
                     adListener = object : AdListener() {

@@ -149,6 +149,7 @@ fun AppSettingsModal(
                 modifier = Modifier
                     .widthIn(max = 480.dp) // Responsive capsule for tablets/DeX
                     .fillMaxWidth()
+                    .windowInsetsPadding(WindowInsets.safeDrawing.only(WindowInsetsSides.Horizontal))
                     .clickable(enabled = false) {}
                     .clip(RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp))
                     .background(MaterialTheme.colorScheme.surface)
@@ -167,8 +168,11 @@ fun AppSettingsModal(
                     modifier = Modifier
                         .fillMaxWidth()
                         .verticalScroll(rememberScrollState())
-                        .padding(top = 16.dp, start = 20.dp, end = 20.dp) // Compact padding
+                        .padding(start = 20.dp, end = 20.dp)
                 ) {
+                    val topSafeInset = WindowInsets.statusBars.add(WindowInsets.captionBar).asPaddingValues().calculateTopPadding()
+                    Spacer(modifier = Modifier.height(topSafeInset + 16.dp))
+
                     Row(
                         modifier = Modifier
                             .fillMaxWidth(),
@@ -506,7 +510,8 @@ fun AppSettingsModal(
                         }
                     }
 
-                    Spacer(modifier = Modifier.navigationBarsPadding().height(16.dp))
+                    val bottomSafeInset = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
+                    Spacer(modifier = Modifier.height(bottomSafeInset + 20.dp))
                 } // Close Column
 
 
@@ -541,6 +546,7 @@ fun NewsSettingsModal(
                 modifier = Modifier
                     .widthIn(max = 480.dp) // Responsive capsule for tablets/DeX
                     .fillMaxWidth()
+                    .windowInsetsPadding(WindowInsets.safeDrawing.only(WindowInsetsSides.Horizontal))
                     .clickable(enabled = false) {}
                     .clip(RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp))
                     .background(MaterialTheme.colorScheme.surface)
@@ -560,8 +566,10 @@ fun NewsSettingsModal(
                         .fillMaxWidth()
                         .animateContentSize()
                         .verticalScroll(rememberScrollState())
-                        .padding(top = 16.dp)
                 ) {
+                    val topSafeInset = WindowInsets.statusBars.add(WindowInsets.captionBar).asPaddingValues().calculateTopPadding()
+                    Spacer(modifier = Modifier.height(topSafeInset + 16.dp))
+
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -797,7 +805,8 @@ fun NewsSettingsModal(
                             }
                         }
                     }
-                    Spacer(modifier = Modifier.navigationBarsPadding().height(16.dp))
+                    val bottomSafeInset = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
+                    Spacer(modifier = Modifier.height(bottomSafeInset + 20.dp))
                 } // Close Column
 
 

@@ -293,9 +293,12 @@ fun LibraryScreen(
                     itemsIndexed(items = filteredList, key = { _, item -> item.id }, contentType = { _, _ -> "library_item" }) { index, item ->
                         ContentCard(
                             modifier = Modifier.animateItem(
-                                fadeInSpec = tween(320, easing = androidx.compose.animation.core.FastOutSlowInEasing),
-                                placementSpec = spring(dampingRatio = 0.82f, stiffness = 300f),
-                                fadeOutSpec = tween(220)
+                                fadeInSpec = tween(260, easing = androidx.compose.animation.core.FastOutSlowInEasing),
+                                placementSpec = spring(
+                                    dampingRatio = 0.82f,
+                                    stiffness = androidx.compose.animation.core.Spring.StiffnessMediumLow
+                                ),
+                                fadeOutSpec = tween(180)
                             ),
                             item = item,
                             isGridView = isGridView,
@@ -511,7 +514,7 @@ fun LazyGridItemScope.ContentCard(
 ) {
     val cardCornerRadius by animateDpAsState(
         targetValue = if (isGridView) 20.dp else 24.dp,
-        animationSpec = spring(dampingRatio = 0.80f, stiffness = 300f),
+        animationSpec = spring(dampingRatio = 0.82f, stiffness = androidx.compose.animation.core.Spring.StiffnessMediumLow),
         label = "cardCornerRadius"
     )
     val sharedTransitionScope = LocalSharedTransitionScope.current
