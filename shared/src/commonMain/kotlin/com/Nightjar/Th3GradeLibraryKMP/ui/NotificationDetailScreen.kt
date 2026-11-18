@@ -46,7 +46,8 @@ fun NotificationDetailScreen(
     isDark: Boolean,
     onBack: () -> Unit,
     onOpenLink: (String) -> Unit,
-    onShare: (String) -> Unit
+    onShare: (String) -> Unit,
+    bottomPadding: androidx.compose.ui.unit.Dp = 100.dp
 ) {
     val scrollState = rememberScrollState()
     val sharedTransitionScope = LocalSharedTransitionScope.current
@@ -74,7 +75,7 @@ fun NotificationDetailScreen(
                 .verticalScroll(scrollState)
                 .windowInsetsPadding(WindowInsets.statusBars.add(WindowInsets.captionBar))
                 .windowInsetsPadding(WindowInsets.safeDrawing.only(WindowInsetsSides.Horizontal))
-                .padding(bottom = 96.dp),
+                .padding(bottom = bottomPadding),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             Spacer(modifier = Modifier.height(72.dp))
@@ -82,7 +83,6 @@ fun NotificationDetailScreen(
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .widthIn(max = 680.dp)
                     .then(sharedCardModifier)
                     .padding(horizontal = 20.dp),
                 verticalArrangement = Arrangement.spacedBy(16.dp)
@@ -251,8 +251,8 @@ fun NotificationDetailScreen(
                             Button(
                                 onClick = { onOpenLink(url) },
                                 modifier = Modifier
-                                    .widthIn(max = 380.dp)
                                     .fillMaxWidth()
+                                    .widthIn(max = 500.dp)
                                     .height(54.dp),
                                 shape = RoundedCornerShape(16.dp),
                                 colors = ButtonDefaults.buttonColors(

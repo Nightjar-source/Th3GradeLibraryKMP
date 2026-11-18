@@ -536,7 +536,9 @@ fun NewsCardSwipeable(
         with(sharedTransitionScope) {
             cardModifier = cardModifier.sharedBounds(
                 sharedContentState = rememberSharedContentState(key = "news-${news.link}"),
-                animatedVisibilityScope = animatedVisibilityScope, renderInOverlayDuringTransition = false
+                animatedVisibilityScope = animatedVisibilityScope,
+                renderInOverlayDuringTransition = true,
+                boundsTransform = { _, _ -> spring(dampingRatio = 0.82f, stiffness = 280f) }
             )
         }
     }

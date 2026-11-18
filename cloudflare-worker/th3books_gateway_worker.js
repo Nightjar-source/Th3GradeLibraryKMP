@@ -321,7 +321,8 @@ async function handleScheduledEvent(force = false) {
           pubDate,
           imageUrl,
           snippet,
-          marker
+          marker,
+          epochSec
         });
       }
     }
@@ -336,11 +337,33 @@ async function handleScheduledEvent(force = false) {
       return { status: "unchanged", marker: newestMarker };
     }
 
+    // Extract stored epoch from storedTopMarker ("link___epochSec")
+    let storedEpoch = 0;
+    if (storedTopMarker && storedTopMarker.includes("___")) {
+      const parts = storedTopMarker.split("___");
+      storedEpoch = parseInt(parts[1], 10) || 0;
+    }
+
+    // Handle deletion of previously notified top article:
+    // If storedTopMarker is not found anywhere in the current feed,
+    // and the newest item in the feed has epochSec <= storedEpoch,
+    // then an article was deleted from Blogger, NOT newly added!
+    const markerExistsInFeed = items.some(itm => itm.marker === storedTopMarker);
+    if (!force && storedEpoch > 0 && !markerExistsInFeed && items[0].epochSec <= storedEpoch) {
+      // Realign the boundary marker to the current top item silently
+      await setLastNotifiedGuid(newestMarker);
+      return { status: "top_item_deleted_realigned", newestMarker };
+    }
+
     // Collect ALL new items published since last sync (from newest down to boundary)
     const newItems = [];
     for (const itm of items) {
       if (!force && itm.marker === storedTopMarker) {
         break; // Reached last notified boundary
+      }
+      // Safety guard against deletion: if an item was deleted, never collect older items
+      if (!force && storedEpoch > 0 && itm.epochSec <= storedEpoch) {
+        break;
       }
       newItems.push(itm);
     }

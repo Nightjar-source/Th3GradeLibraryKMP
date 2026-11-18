@@ -511,27 +511,29 @@ fun AppContent(
                                         targetContentZIndex = -1f
                                     }
                                 } else if (isToNotificationDetail) {
-                                    val slideSpec = androidx.compose.animation.core.tween<androidx.compose.ui.unit.IntOffset>(
-                                        durationMillis = 350,
-                                        easing = androidx.compose.animation.core.CubicBezierEasing(0.16f, 1f, 0.3f, 1f)
+                                    val slideSpec = androidx.compose.animation.core.spring<androidx.compose.ui.unit.IntOffset>(
+                                        dampingRatio = 0.82f,
+                                        stiffness = 340f
                                     )
                                     val fadeSpec = androidx.compose.animation.core.tween<Float>(
-                                        durationMillis = 260,
+                                        durationMillis = 240,
                                         easing = androidx.compose.animation.core.FastOutSlowInEasing
                                     )
+                                    // Notification detail slides in as a top layer; underlying screen stays stationary
                                     (slideInHorizontally(initialOffsetX = { fullWidth -> fullWidth }, animationSpec = slideSpec) + fadeIn(animationSpec = fadeSpec)).togetherWith(
-                                        slideOutHorizontally(targetOffsetX = { fullWidth -> -fullWidth / 4 }, animationSpec = slideSpec) + fadeOut(animationSpec = fadeSpec)
-                                    ).apply { targetContentZIndex = 40f }
+                                        androidx.compose.animation.ExitTransition.None
+                                    ).apply { targetContentZIndex = 50f }
                                 } else if (isFromNotificationDetail) {
-                                    val slideSpec = androidx.compose.animation.core.tween<androidx.compose.ui.unit.IntOffset>(
-                                        durationMillis = 350,
-                                        easing = androidx.compose.animation.core.CubicBezierEasing(0.16f, 1f, 0.3f, 1f)
+                                    val slideSpec = androidx.compose.animation.core.spring<androidx.compose.ui.unit.IntOffset>(
+                                        dampingRatio = 0.82f,
+                                        stiffness = 340f
                                     )
                                     val fadeSpec = androidx.compose.animation.core.tween<Float>(
-                                        durationMillis = 260,
+                                        durationMillis = 200,
                                         easing = androidx.compose.animation.core.FastOutSlowInEasing
                                     )
-                                    (slideInHorizontally(initialOffsetX = { fullWidth -> -fullWidth / 4 }, animationSpec = slideSpec) + fadeIn(animationSpec = fadeSpec)).togetherWith(
+                                    // Notification detail slides out to reveal the underlying screen perfectly stationary without cards jumping
+                                    androidx.compose.animation.EnterTransition.None.togetherWith(
                                         slideOutHorizontally(targetOffsetX = { fullWidth -> fullWidth }, animationSpec = slideSpec) + fadeOut(animationSpec = fadeSpec)
                                     ).apply { targetContentZIndex = -1f }
                                 } else {
@@ -729,7 +731,8 @@ fun AppContent(
                                                 isDark = isDark,
                                                 onBack = { handleTopBarBack() },
                                                 onOpenLink = { url -> platformActionHandler.openCustomTab(url, appSettings.primaryColor) },
-                                                onShare = { shareText -> platformActionHandler.shareText(shareText) }
+                                                onShare = { shareText -> platformActionHandler.shareText(shareText) },
+                                                bottomPadding = if (bottomBannerAd != null) 96.dp else 40.dp
                                             )
                                         } else {
                                             navigateTo("home")

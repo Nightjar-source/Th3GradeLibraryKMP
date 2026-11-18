@@ -549,6 +549,11 @@ object SyncEngine {
                         settings.putString("Bottom_Time", newBottomTime)
                         settings.putString("Top_Link", absoluteNewest.link)
                         settings.putString("Top_Time", absoluteNewest.pubDate)
+                    } else if (topLink.isNotEmpty() && fetchedItems.none { it.link == topLink || normalizeUrl(it.link) == normalizeUrl(topLink) }) {
+                        // The previous Top article was deleted from the feed: realign Top_Link to current feed head
+                        val currentTop = fetchedItems.first()
+                        settings.putString("Top_Link", currentTop.link)
+                        settings.putString("Top_Time", currentTop.pubDate)
                     }
                 }
 
