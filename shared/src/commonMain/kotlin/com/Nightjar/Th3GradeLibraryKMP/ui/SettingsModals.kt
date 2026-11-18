@@ -132,25 +132,32 @@ fun AppSettingsModal(
 
     if (isOpen) {
         val sheetState = androidx.compose.material3.rememberModalBottomSheetState(skipPartiallyExpanded = true)
+        val closeScope = androidx.compose.runtime.rememberCoroutineScope()
+        fun requestClose() {
+            closeScope.launch {
+                try { sheetState.hide() } catch (_: Exception) {}
+                onClose()
+            }
+        }
         androidx.compose.material3.ModalBottomSheet(
-            onDismissRequest = onClose,
+            onDismissRequest = { requestClose() },
             sheetState = sheetState,
             dragHandle = null,
             containerColor = MaterialTheme.colorScheme.surface,
             scrimColor = androidx.compose.ui.graphics.Color.Transparent, // no opaque block over transparent status bar
             contentWindowInsets = { androidx.compose.foundation.layout.WindowInsets(0, 0, 0, 0) }, // edge-to-edge: zero offset
-            sheetMaxWidth = 480.dp // Responsive capsule for tablets/DeX
+            sheetMaxWidth = androidx.compose.ui.unit.Dp.Unspecified // expand to screen edges (no centered capsule)
         ) {
                 val appSettingsOverscroll = rememberOverscrollEffect()
                 Column(
                     modifier = Modifier
-                        .windowInsetsPadding(androidx.compose.foundation.layout.WindowInsets.safeDrawing.only(androidx.compose.foundation.layout.WindowInsetsSides.Horizontal))
+                        .windowInsetsPadding(androidx.compose.foundation.layout.WindowInsets.safeContent.only(androidx.compose.foundation.layout.WindowInsetsSides.Horizontal))
                         .verticalScroll(rememberScrollState(), overscrollEffect = appSettingsOverscroll)
                         .padding(start = 20.dp, end = 20.dp)
                 ) {
                     // Edge-to-edge: a leading spacer (scrolls away) offsets content from the
                     // status bar / system buttons — no persistent colored block under the bar.
-                    Spacer(modifier = Modifier.fillMaxWidth().windowInsetsPadding(androidx.compose.foundation.layout.WindowInsets.statusBars).height(12.dp))
+                    Spacer(modifier = Modifier.fillMaxWidth().windowInsetsPadding(androidx.compose.foundation.layout.WindowInsets.safeContent.only(androidx.compose.foundation.layout.WindowInsetsSides.Top)).height(12.dp))
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.SpaceBetween,
@@ -163,7 +170,7 @@ fun AppSettingsModal(
                             color = MaterialTheme.colorScheme.onSurface
                         )
                         IconButton(
-                            onClick = { onClose() },
+                            onClick = { requestClose() },
                             modifier = Modifier.size(40.dp)
                         ) {
                             Icon(Icons.Default.Close, contentDescription = "Close", modifier = Modifier.size(20.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant)
@@ -408,24 +415,31 @@ fun NewsSettingsModal(
 
     if (isOpen) {
         val sheetState = androidx.compose.material3.rememberModalBottomSheetState(skipPartiallyExpanded = true)
+        val closeScope = androidx.compose.runtime.rememberCoroutineScope()
+        fun requestClose() {
+            closeScope.launch {
+                try { sheetState.hide() } catch (_: Exception) {}
+                onClose()
+            }
+        }
         androidx.compose.material3.ModalBottomSheet(
-            onDismissRequest = onClose,
+            onDismissRequest = { requestClose() },
             sheetState = sheetState,
             dragHandle = null,
             containerColor = MaterialTheme.colorScheme.surface,
             scrimColor = androidx.compose.ui.graphics.Color.Transparent, // no opaque block over transparent status bar
             contentWindowInsets = { androidx.compose.foundation.layout.WindowInsets(0, 0, 0, 0) }, // edge-to-edge: zero offset
-            sheetMaxWidth = 480.dp // Responsive capsule for tablets/DeX
+            sheetMaxWidth = androidx.compose.ui.unit.Dp.Unspecified // expand to screen edges (no centered capsule)
         ) {
                 val newsSettingsOverscroll = rememberOverscrollEffect()
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .windowInsetsPadding(androidx.compose.foundation.layout.WindowInsets.safeDrawing.only(androidx.compose.foundation.layout.WindowInsetsSides.Horizontal))
+                        .windowInsetsPadding(androidx.compose.foundation.layout.WindowInsets.safeContent.only(androidx.compose.foundation.layout.WindowInsetsSides.Horizontal))
                         .verticalScroll(rememberScrollState(), overscrollEffect = newsSettingsOverscroll)
                 ) {
                     // Edge-to-edge: leading spacer scrolls away with content (no colored block).
-                    Spacer(modifier = Modifier.fillMaxWidth().windowInsetsPadding(androidx.compose.foundation.layout.WindowInsets.statusBars).height(12.dp))
+                    Spacer(modifier = Modifier.fillMaxWidth().windowInsetsPadding(androidx.compose.foundation.layout.WindowInsets.safeContent.only(androidx.compose.foundation.layout.WindowInsetsSides.Top)).height(12.dp))
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -440,7 +454,7 @@ fun NewsSettingsModal(
                             color = MaterialTheme.colorScheme.onSurface
                         )
                         IconButton(
-                            onClick = { onClose() },
+                            onClick = { requestClose() },
                             modifier = Modifier.size(40.dp)
                         ) {
                             Icon(Icons.Default.Close, contentDescription = "Close", modifier = Modifier.size(20.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant)
