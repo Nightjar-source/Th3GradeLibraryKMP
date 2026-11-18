@@ -39,4 +39,13 @@ class BookDownloadForegroundService : Service() {
             }
         } catch (_: Exception) {}
     }
+
+    override fun onTaskRemoved(rootIntent: Intent?) {
+        super.onTaskRemoved(rootIntent)
+        try {
+            if (BookDownloadManager.itemStates.value.values.none { it.status == com.Nightjar.Th3GradeLibraryKMP.network.DownloadStatus.DOWNLOADING }) {
+                stopSelf()
+            }
+        } catch (_: Exception) {}
+    }
 }

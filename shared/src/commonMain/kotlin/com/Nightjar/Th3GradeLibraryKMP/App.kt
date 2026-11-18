@@ -1253,12 +1253,12 @@ fun AppContent(
                     }
                 }
 
-        // --- Unified Top Dynamic Island Notification & Alert Capsule (Library Screens Priority) ---
-        val isLibraryScreen = (page == "home" || page == "list")
+        // --- Unified Top Dynamic Island Notification & Alert Capsule (Library & News Screens Dynamic Expansion) ---
+        val isLibraryOrNewsScreen = (page == "home" || page == "list" || page == "news")
         val rootActiveNotice by com.Nightjar.Th3GradeLibraryKMP.network.BookDownloadManager.activeNoticeMessage.collectAsState()
         val currentToast = toastMessage
-        // Download progress notice strictly appears only on Library screens (home / list) and disappears immediately upon tab change
-        val effectiveDownloadNotice = if (isLibraryScreen) rootActiveNotice else null
+        // Dynamic Island alert capsule activates on Library and News screens, with dynamic expand/shrink based on text content
+        val effectiveDownloadNotice = if (isLibraryOrNewsScreen) rootActiveNotice else null
         val activeIslandText = effectiveDownloadNotice ?: currentToast
         val isIslandVisible = activeIslandText != null
 

@@ -31,6 +31,22 @@ actual object BookStorageEngine {
         return false
     }
 
+    actual fun isUpdateAvailable(context: Any, item: BookItem): Boolean {
+        return try {
+            val ctx = context as Context
+            val file = getPermanentFile(ctx, item)
+            if (!file.exists() || file.length() <= 1024L) return false
+            val metaSize = com.Nightjar.Th3GradeLibraryKMP.network.CloudCatalogManager.getMeta(item)?.file_size ?: -1L
+            if (metaSize > 0L && kotlin.math.abs(file.length() - metaSize) > 4096L) {
+                true
+            } else {
+                false
+            }
+        } catch (_: Exception) {
+            false
+        }
+    }
+
     actual fun hasBundledAsset(context: Any, item: BookItem): Boolean {
         return bundledAssetCache.getOrPut(item.id) {
             try {

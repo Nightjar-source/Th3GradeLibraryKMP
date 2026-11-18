@@ -554,6 +554,9 @@ val platformContext = coil3.compose.LocalPlatformContext.current
     val isBookDownloaded: Boolean = remember(item, downloadStates) {
         com.Nightjar.Th3GradeLibraryKMP.data.BookStorageEngine.isDownloaded(platformContext, item)
     }
+    val isUpdateAvailable: Boolean = remember(item, downloadStates) {
+        com.Nightjar.Th3GradeLibraryKMP.data.BookStorageEngine.isUpdateAvailable(platformContext, item)
+    }
 
     Box(
         modifier = modifier
@@ -783,6 +786,35 @@ val platformContext = coil3.compose.LocalPlatformContext.current
                                 }
                             }
                         }
+
+                        if (isBookDownloaded && isUpdateAvailable && itemState.status != com.Nightjar.Th3GradeLibraryKMP.network.DownloadStatus.DOWNLOADING) {
+                            Box(
+                                modifier = Modifier
+                                    .align(Alignment.TopStart)
+                                    .padding(8.dp)
+                                    .clip(RoundedCornerShape(10.dp))
+                                    .background(MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.95f))
+                                    .clickable {
+                                        com.Nightjar.Th3GradeLibraryKMP.network.BookDownloadManager.downloadItem(platformContext, item)
+                                    }
+                                    .padding(horizontal = 8.dp, vertical = 4.dp)
+                            ) {
+                                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                                    Icon(
+                                        imageVector = Icons.Default.Refresh,
+                                        contentDescription = "تحديث متاح",
+                                        tint = MaterialTheme.colorScheme.onPrimaryContainer,
+                                        modifier = Modifier.size(13.dp)
+                                    )
+                                    Text(
+                                        text = "تحديث",
+                                        fontSize = 10.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        color = MaterialTheme.colorScheme.onPrimaryContainer
+                                    )
+                                }
+                            }
+                        }
                     }
 
                     Spacer(modifier = Modifier.height(10.dp))
@@ -991,6 +1023,35 @@ val platformContext = coil3.compose.LocalPlatformContext.current
                                 }
                             }
                         }
+
+                        if (isBookDownloaded && isUpdateAvailable && itemState.status != com.Nightjar.Th3GradeLibraryKMP.network.DownloadStatus.DOWNLOADING) {
+                            Box(
+                                modifier = Modifier
+                                    .align(Alignment.TopStart)
+                                    .padding(8.dp)
+                                    .clip(RoundedCornerShape(10.dp))
+                                    .background(MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.95f))
+                                    .clickable {
+                                        com.Nightjar.Th3GradeLibraryKMP.network.BookDownloadManager.downloadItem(platformContext, item)
+                                    }
+                                    .padding(horizontal = 8.dp, vertical = 4.dp)
+                            ) {
+                                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                                    Icon(
+                                        imageVector = Icons.Default.Refresh,
+                                        contentDescription = "تحديث متاح",
+                                        tint = MaterialTheme.colorScheme.onPrimaryContainer,
+                                        modifier = Modifier.size(13.dp)
+                                    )
+                                    Text(
+                                        text = "تحديث",
+                                        fontSize = 10.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        color = MaterialTheme.colorScheme.onPrimaryContainer
+                                    )
+                                }
+                            }
+                        }
                     }
 
                     Spacer(modifier = Modifier.width(16.dp))
@@ -1032,11 +1093,45 @@ val platformContext = coil3.compose.LocalPlatformContext.current
                         }
                     }
 
-                    Icon(
-                        imageVector = Icons.Default.ChevronLeft,
-                        contentDescription = null,
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
-                    )
+                    if (isBookDownloaded && isUpdateAvailable && itemState.status != com.Nightjar.Th3GradeLibraryKMP.network.DownloadStatus.DOWNLOADING) {
+                        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            Box(
+                                modifier = Modifier
+                                    .clip(RoundedCornerShape(10.dp))
+                                    .background(MaterialTheme.colorScheme.primaryContainer)
+                                    .clickable {
+                                        com.Nightjar.Th3GradeLibraryKMP.network.BookDownloadManager.downloadItem(platformContext, item)
+                                    }
+                                    .padding(horizontal = 9.dp, vertical = 5.dp)
+                            ) {
+                                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                                    Icon(
+                                        imageVector = Icons.Default.Refresh,
+                                        contentDescription = "تحديث",
+                                        tint = MaterialTheme.colorScheme.onPrimaryContainer,
+                                        modifier = Modifier.size(13.dp)
+                                    )
+                                    Text(
+                                        text = "تحديث",
+                                        fontSize = 11.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        color = MaterialTheme.colorScheme.onPrimaryContainer
+                                    )
+                                }
+                            }
+                            Icon(
+                                imageVector = Icons.Default.ChevronLeft,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
+                            )
+                        }
+                    } else {
+                        Icon(
+                            imageVector = Icons.Default.ChevronLeft,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
+                        )
+                    }
                 }
             }
         }
