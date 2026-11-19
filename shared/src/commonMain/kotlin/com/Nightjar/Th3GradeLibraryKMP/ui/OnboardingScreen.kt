@@ -125,11 +125,14 @@ fun OnboardingScreen(
                 )
 
                 if (isWide) {
-                    @OptIn(androidx.compose.foundation.layout.ExperimentalLayoutApi::class)
-                    androidx.compose.foundation.layout.FlowRow(
+                    androidx.compose.foundation.layout.FlexBox(
                         modifier = Modifier.widthIn(max = 1100.dp).fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(16.dp, Alignment.CenterHorizontally),
-                        verticalArrangement = Arrangement.spacedBy(16.dp)
+                        config = {
+                            wrap(androidx.compose.foundation.layout.FlexWrap.Wrap)
+                            rowGap(16.dp)
+                            columnGap(16.dp)
+                            justifyContent(androidx.compose.foundation.layout.FlexJustifyContent.Center)
+                        }
                     ) {
                         OnboardingStepCard(
                             modifier = Modifier.widthIn(min = 280.dp, max = 340.dp),
