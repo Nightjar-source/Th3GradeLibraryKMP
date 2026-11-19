@@ -31,8 +31,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-
-private val SheetHorizontalInset = 10.dp
 import androidx.compose.ui.zIndex
 import com.Nightjar.Th3GradeLibraryKMP.data.AppSettings
 import com.Nightjar.Th3GradeLibraryKMP.theme.parseHexColor
@@ -46,6 +44,8 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.composed
 import androidx.compose.ui.layout.layout
 import kotlinx.coroutines.launch
+
+private val SheetHorizontalInset = 10.dp
 
 fun Modifier.horizontalFadingEdges(
     scrollState: androidx.compose.foundation.ScrollState,
