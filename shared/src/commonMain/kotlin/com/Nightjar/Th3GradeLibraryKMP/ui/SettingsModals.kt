@@ -31,6 +31,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+
+private val SheetHorizontalInset = 10.dp
 import androidx.compose.ui.zIndex
 import com.Nightjar.Th3GradeLibraryKMP.data.AppSettings
 import com.Nightjar.Th3GradeLibraryKMP.theme.parseHexColor
@@ -184,12 +186,12 @@ fun AppSettingsModal(
                     Spacer(modifier = Modifier.height(16.dp)) // Compact height
 
                     // Theme Settings
-                    Text("وضع الإضاءة", fontWeight = FontWeight.Bold, fontSize = 13.sp, color = MaterialTheme.colorScheme.primary, modifier = Modifier.padding(horizontal = 20.dp))
+                    Text("وضع الإضاءة", fontWeight = FontWeight.Bold, fontSize = 13.sp, color = MaterialTheme.colorScheme.primary, modifier = Modifier.padding(horizontal = SheetHorizontalInset))
                     Spacer(modifier = Modifier.height(8.dp))
                     BoxWithConstraints(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(horizontal = 20.dp)
+                            .padding(horizontal = SheetHorizontalInset)
                             .height(48.dp)
                             .background(MaterialTheme.colorScheme.surfaceVariant, RoundedCornerShape(12.dp))
                     ) {
@@ -253,19 +255,19 @@ fun AppSettingsModal(
                         exit = androidx.compose.animation.shrinkVertically(spring(dampingRatio = 0.8f, stiffness = 400f)) + fadeOut()
                     ) {
                         Column {
-                            Text("الوضع الأبيض الصافي", fontWeight = FontWeight.Bold, fontSize = 13.sp, color = MaterialTheme.colorScheme.primary, modifier = Modifier.padding(horizontal = 20.dp))
+                            Text("الوضع الأبيض الصافي", fontWeight = FontWeight.Bold, fontSize = 13.sp, color = MaterialTheme.colorScheme.primary, modifier = Modifier.padding(horizontal = SheetHorizontalInset))
                             Spacer(modifier = Modifier.height(6.dp))
                             Text(
                                 "استخدام خلفية بيضاء ناصعة تماماً للوضع الفاتح لتسهيل القراءة وتوفير مظهر فخم.",
                                 fontSize = 11.sp,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                modifier = Modifier.padding(horizontal = 20.dp)
+                                modifier = Modifier.padding(horizontal = SheetHorizontalInset)
                             )
                             Spacer(modifier = Modifier.height(10.dp))
                             Row(
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .padding(horizontal = 20.dp)
+                                    .padding(horizontal = SheetHorizontalInset)
                                     .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f), RoundedCornerShape(12.dp))
                                     .padding(horizontal = 16.dp, vertical = 10.dp),
                                 horizontalArrangement = Arrangement.SpaceBetween,
@@ -291,19 +293,19 @@ fun AppSettingsModal(
                         exit = androidx.compose.animation.shrinkVertically(spring(dampingRatio = 0.8f, stiffness = 400f)) + fadeOut()
                     ) {
                         Column {
-                            Text("الوضع الأسود النقي", fontWeight = FontWeight.Bold, fontSize = 13.sp, color = MaterialTheme.colorScheme.primary, modifier = Modifier.padding(horizontal = 20.dp))
+                            Text("الوضع الأسود النقي", fontWeight = FontWeight.Bold, fontSize = 13.sp, color = MaterialTheme.colorScheme.primary, modifier = Modifier.padding(horizontal = SheetHorizontalInset))
                             Spacer(modifier = Modifier.height(6.dp))
                             Text(
                                 "استخدام لون أسود صرف للخلفيات لتوفير طاقة البطارية في شاشات OLED وإعطاء مظهر فخم.",
                                 fontSize = 11.sp,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                modifier = Modifier.padding(horizontal = 20.dp)
+                                modifier = Modifier.padding(horizontal = SheetHorizontalInset)
                             )
                             Spacer(modifier = Modifier.height(10.dp))
                             Row(
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .padding(horizontal = 20.dp)
+                                    .padding(horizontal = SheetHorizontalInset)
                                     .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f), RoundedCornerShape(12.dp))
                                     .padding(horizontal = 16.dp, vertical = 10.dp),
                                 horizontalArrangement = Arrangement.SpaceBetween,
@@ -323,20 +325,20 @@ fun AppSettingsModal(
                     }
 
                     // Material You
-                    Text("ألوان متريال ديزاين 3", fontWeight = FontWeight.Bold, fontSize = 13.sp, color = MaterialTheme.colorScheme.primary, modifier = Modifier.padding(horizontal = 20.dp))
+                    Text("ألوان متريال ديزاين 3", fontWeight = FontWeight.Bold, fontSize = 13.sp, color = MaterialTheme.colorScheme.primary, modifier = Modifier.padding(horizontal = SheetHorizontalInset))
                     Spacer(modifier = Modifier.height(6.dp))
                     Text(
                         "استخراج الألوان من نظام أندرويد 12+ (Dynamic Colors) لتعطي تباين وتناسق مريح للعين.",
                         fontSize = 11.sp,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.padding(horizontal = 20.dp)
+                        modifier = Modifier.padding(horizontal = SheetHorizontalInset)
                     )
                     Spacer(modifier = Modifier.height(10.dp))
 
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(horizontal = 20.dp)
+                            .padding(horizontal = SheetHorizontalInset)
                             .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f), RoundedCornerShape(12.dp))
                             .padding(horizontal = 16.dp, vertical = 10.dp),
                         horizontalArrangement = Arrangement.SpaceBetween,
@@ -358,7 +360,7 @@ fun AppSettingsModal(
                         exit = androidx.compose.animation.shrinkVertically(spring(dampingRatio = 0.8f, stiffness = 400f)) + fadeOut()
                     ) {
                         Column {
-                            Text("اختر لونك المفضل يدوياً:", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(horizontal = 20.dp))
+                            Text("اختر لونك المفضل يدوياً:", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(horizontal = SheetHorizontalInset))
                             Spacer(modifier = Modifier.height(8.dp))
                             val colorScrollState = rememberScrollState()
                             Row(
@@ -452,7 +454,7 @@ fun NewsSettingsModal(
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(horizontal = 20.dp),
+                            .padding(horizontal = SheetHorizontalInset),
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
@@ -492,7 +494,7 @@ fun NewsSettingsModal(
                         exit = slideOutVertically(targetOffsetY = { it / 8 }, animationSpec = spring(dampingRatio = 0.85f, stiffness = 320f)) + fadeOut(animationSpec = spring(dampingRatio = 0.85f, stiffness = 320f))
                     ) {
                         Card(
-                            modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp),
+                            modifier = Modifier.fillMaxWidth().padding(horizontal = SheetHorizontalInset),
                             colors = CardDefaults.cardColors(
                                 containerColor = MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.2f)
                             ),
@@ -594,17 +596,17 @@ fun NewsSettingsModal(
                     }
 
                     // Sync intervals
-                    Text("مزامنة الأخبار بالخلفية", fontWeight = FontWeight.Bold, fontSize = 13.sp, color = MaterialTheme.colorScheme.primary, modifier = Modifier.padding(horizontal = 20.dp))
+                    Text("مزامنة الأخبار بالخلفية", fontWeight = FontWeight.Bold, fontSize = 13.sp, color = MaterialTheme.colorScheme.primary, modifier = Modifier.padding(horizontal = SheetHorizontalInset))
                     Spacer(modifier = Modifier.height(6.dp))
                     Text(
                         "سيتم تحديث الأخبار ومزامنتها آلياً حسب التوقيت المناسب لك.",
                         fontSize = 11.sp,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.padding(horizontal = 20.dp)
+                        modifier = Modifier.padding(horizontal = SheetHorizontalInset)
                     )
                     Spacer(modifier = Modifier.height(10.dp))
 
-                    Column(verticalArrangement = Arrangement.spacedBy(6.dp), modifier = Modifier.padding(horizontal = 20.dp)) {
+                    Column(verticalArrangement = Arrangement.spacedBy(6.dp), modifier = Modifier.padding(horizontal = SheetHorizontalInset)) {
                         Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                             OptionGridButton("15 دقيقة", settings.syncInterval == "15m", { onUpdateSettings(settings.copy(syncInterval = "15m")) }, Modifier.weight(1f))
                             OptionGridButton("نصف ساعة", settings.syncInterval == "30m", { onUpdateSettings(settings.copy(syncInterval = "30m")) }, Modifier.weight(1f))
@@ -618,16 +620,16 @@ fun NewsSettingsModal(
                     }
 
                     Spacer(modifier = Modifier.height(16.dp))
-                    HorizontalDivider(color = MaterialTheme.colorScheme.surfaceVariant, modifier = Modifier.padding(horizontal = 20.dp))
+                    HorizontalDivider(color = MaterialTheme.colorScheme.surfaceVariant, modifier = Modifier.padding(horizontal = SheetHorizontalInset))
                     Spacer(modifier = Modifier.height(16.dp))
 
                     // Notification Sound
-                    Text("التنبيهات والأصوات", fontWeight = FontWeight.Bold, fontSize = 13.sp, color = MaterialTheme.colorScheme.primary, modifier = Modifier.padding(horizontal = 20.dp))
+                    Text("التنبيهات والأصوات", fontWeight = FontWeight.Bold, fontSize = 13.sp, color = MaterialTheme.colorScheme.primary, modifier = Modifier.padding(horizontal = SheetHorizontalInset))
                     Spacer(modifier = Modifier.height(10.dp))
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(horizontal = 20.dp)
+                            .padding(horizontal = SheetHorizontalInset)
                             .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f), RoundedCornerShape(12.dp))
                             .padding(horizontal = 16.dp, vertical = 10.dp),
                         horizontalArrangement = Arrangement.SpaceBetween,
@@ -641,21 +643,21 @@ fun NewsSettingsModal(
                     }
 
                     Spacer(modifier = Modifier.height(16.dp))
-                    HorizontalDivider(color = MaterialTheme.colorScheme.surfaceVariant, modifier = Modifier.padding(horizontal = 20.dp))
+                    HorizontalDivider(color = MaterialTheme.colorScheme.surfaceVariant, modifier = Modifier.padding(horizontal = SheetHorizontalInset))
                     Spacer(modifier = Modifier.height(16.dp))
 
                     // Cache intervals
-                    Text("التخزين المؤقت وحذف الأخبار (الكاش)", fontWeight = FontWeight.Bold, fontSize = 13.sp, color = MaterialTheme.colorScheme.primary, modifier = Modifier.padding(horizontal = 20.dp))
+                    Text("التخزين المؤقت وحذف الأخبار (الكاش)", fontWeight = FontWeight.Bold, fontSize = 13.sp, color = MaterialTheme.colorScheme.primary, modifier = Modifier.padding(horizontal = SheetHorizontalInset))
                     Spacer(modifier = Modifier.height(6.dp))
                     Text(
                         "تجنب امتلاء ذاكرة الهاتف بحذف الأخبار القديمة تلقائياً.",
                         fontSize = 11.sp,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.padding(horizontal = 20.dp)
+                        modifier = Modifier.padding(horizontal = SheetHorizontalInset)
                     )
                     Spacer(modifier = Modifier.height(10.dp))
 
-                    Column(verticalArrangement = Arrangement.spacedBy(6.dp), modifier = Modifier.padding(horizontal = 20.dp)) {
+                    Column(verticalArrangement = Arrangement.spacedBy(6.dp), modifier = Modifier.padding(horizontal = SheetHorizontalInset)) {
                         Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                             OptionGridButton("كل أسبوع", settings.cacheClearInterval == "7d", { onUpdateSettings(settings.copy(cacheClearInterval = "7d")) }, Modifier.weight(1f))
                             OptionGridButton("كل شهر", settings.cacheClearInterval == "1m", { onUpdateSettings(settings.copy(cacheClearInterval = "1m")) }, Modifier.weight(1f))
