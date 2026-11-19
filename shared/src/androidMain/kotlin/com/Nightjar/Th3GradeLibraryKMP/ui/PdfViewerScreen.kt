@@ -620,12 +620,19 @@ actual fun PdfViewerScreen(
                     // Completely Floating Top control bar
                     AnimatedVisibility(
                         visible = !isZoomed && controlsVisible,
-                        enter = fadeIn() + slideInVertically { -it },
-                        exit = fadeOut() + slideOutVertically { -it },
+                        enter = fadeIn() + slideInVertically(
+                            initialOffsetY = { -it / 2 },
+                            animationSpec = spring(dampingRatio = 0.8f, stiffness = 320f)
+                        ),
+                        exit = fadeOut() + slideOutVertically(
+                            targetOffsetY = { -it / 2 },
+                            animationSpec = spring(dampingRatio = 0.8f, stiffness = 320f)
+                        ),
                         modifier = Modifier.align(Alignment.TopCenter)
                     ) {
                         Row(
                             modifier = Modifier
+                                .widthIn(max = 820.dp)
                                 .fillMaxWidth()
                                 .windowInsetsPadding(WindowInsets.statusBars.add(WindowInsets.captionBar))
                                 .clickable(interactionSource = remember { MutableInteractionSource() }, indication = null) {}

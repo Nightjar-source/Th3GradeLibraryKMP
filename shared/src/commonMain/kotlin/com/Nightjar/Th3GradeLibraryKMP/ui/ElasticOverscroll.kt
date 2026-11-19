@@ -123,7 +123,12 @@ fun Modifier.elasticOverscroll(
                     settleTo(0f, spring(dampingRatio = Spring.DampingRatioLowBouncy, stiffness = Spring.StiffnessLow))
                     return Velocity.Zero
                 }
-                // One UI Reachability: settle smoothly to where the finger released (stays pulled).
+                // One UI Reachability: a quick upward fling snaps content back to rest so it
+                // never disappears behind the top bar; a slow release keeps it where dropped.
+                if (available.y < -700f) {
+                    settleTo(0f, spring(dampingRatio = 0.82f, stiffness = Spring.StiffnessMediumLow))
+                    return available
+                }
                 return Velocity.Zero
             }
         }

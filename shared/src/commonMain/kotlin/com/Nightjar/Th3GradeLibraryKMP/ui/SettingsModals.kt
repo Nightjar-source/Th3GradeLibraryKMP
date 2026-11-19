@@ -135,8 +135,14 @@ fun AppSettingsModal(
         val closeScope = androidx.compose.runtime.rememberCoroutineScope()
         fun requestClose() {
             closeScope.launch {
-                try { sheetState.hide() } catch (_: Exception) {}
-                onClose()
+                try {
+                    // Await the full spring slide-down before removing the sheet, so the X
+                    // button looks identical to the back gesture's smooth dismissal.
+                    val hidden = sheetState.hide()
+                    if (hidden) onClose()
+                } catch (_: Exception) {
+                    onClose()
+                }
             }
         }
         androidx.compose.material3.ModalBottomSheet(
@@ -145,15 +151,13 @@ fun AppSettingsModal(
             dragHandle = null,
             containerColor = MaterialTheme.colorScheme.surface,
             scrimColor = androidx.compose.ui.graphics.Color.Transparent, // no opaque block over transparent status bar
-            contentWindowInsets = { androidx.compose.foundation.layout.WindowInsets(0, 0, 0, 0) }, // edge-to-edge: zero offset
-            sheetMaxWidth = androidx.compose.ui.unit.Dp.Unspecified // expand to screen edges (no centered capsule)
+            contentWindowInsets = { androidx.compose.foundation.layout.WindowInsets.safeContent.only(androidx.compose.foundation.layout.WindowInsetsSides.Horizontal) },
+            sheetMaxWidth = 480.dp // original M3 sheet width; content fills edge-to-edge inside it
         ) {
                 val appSettingsOverscroll = rememberOverscrollEffect()
                 Column(
                     modifier = Modifier
-                        .windowInsetsPadding(androidx.compose.foundation.layout.WindowInsets.safeContent.only(androidx.compose.foundation.layout.WindowInsetsSides.Horizontal))
                         .verticalScroll(rememberScrollState(), overscrollEffect = appSettingsOverscroll)
-                        .padding(start = 20.dp, end = 20.dp)
                 ) {
                     // Edge-to-edge: a leading spacer (scrolls away) offsets content from the
                     // status bar / system buttons — no persistent colored block under the bar.
@@ -418,8 +422,14 @@ fun NewsSettingsModal(
         val closeScope = androidx.compose.runtime.rememberCoroutineScope()
         fun requestClose() {
             closeScope.launch {
-                try { sheetState.hide() } catch (_: Exception) {}
-                onClose()
+                try {
+                    // Await the full spring slide-down before removing the sheet, so the X
+                    // button looks identical to the back gesture's smooth dismissal.
+                    val hidden = sheetState.hide()
+                    if (hidden) onClose()
+                } catch (_: Exception) {
+                    onClose()
+                }
             }
         }
         androidx.compose.material3.ModalBottomSheet(
@@ -428,14 +438,13 @@ fun NewsSettingsModal(
             dragHandle = null,
             containerColor = MaterialTheme.colorScheme.surface,
             scrimColor = androidx.compose.ui.graphics.Color.Transparent, // no opaque block over transparent status bar
-            contentWindowInsets = { androidx.compose.foundation.layout.WindowInsets(0, 0, 0, 0) }, // edge-to-edge: zero offset
-            sheetMaxWidth = androidx.compose.ui.unit.Dp.Unspecified // expand to screen edges (no centered capsule)
+            contentWindowInsets = { androidx.compose.foundation.layout.WindowInsets.safeContent.only(androidx.compose.foundation.layout.WindowInsetsSides.Horizontal) },
+            sheetMaxWidth = 480.dp // original M3 sheet width; content fills edge-to-edge inside it
         ) {
                 val newsSettingsOverscroll = rememberOverscrollEffect()
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .windowInsetsPadding(androidx.compose.foundation.layout.WindowInsets.safeContent.only(androidx.compose.foundation.layout.WindowInsetsSides.Horizontal))
                         .verticalScroll(rememberScrollState(), overscrollEffect = newsSettingsOverscroll)
                 ) {
                     // Edge-to-edge: leading spacer scrolls away with content (no colored block).
