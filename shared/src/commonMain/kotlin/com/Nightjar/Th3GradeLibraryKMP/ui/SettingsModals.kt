@@ -151,8 +151,8 @@ fun AppSettingsModal(
             dragHandle = null,
             containerColor = MaterialTheme.colorScheme.surface,
             scrimColor = androidx.compose.ui.graphics.Color.Transparent, // no opaque block over transparent status bar
-            contentWindowInsets = { androidx.compose.foundation.layout.WindowInsets.safeContent.only(androidx.compose.foundation.layout.WindowInsetsSides.Horizontal) },
-            sheetMaxWidth = 480.dp // original M3 sheet width; content fills edge-to-edge inside it
+            contentWindowInsets = { androidx.compose.foundation.layout.WindowInsets(0, 0, 0, 0) },
+            sheetMaxWidth = 480.dp // original M3 width; child content fills edge-to-edge inside
         ) {
                 val appSettingsOverscroll = rememberOverscrollEffect()
                 Column(
@@ -438,8 +438,8 @@ fun NewsSettingsModal(
             dragHandle = null,
             containerColor = MaterialTheme.colorScheme.surface,
             scrimColor = androidx.compose.ui.graphics.Color.Transparent, // no opaque block over transparent status bar
-            contentWindowInsets = { androidx.compose.foundation.layout.WindowInsets.safeContent.only(androidx.compose.foundation.layout.WindowInsetsSides.Horizontal) },
-            sheetMaxWidth = 480.dp // original M3 sheet width; content fills edge-to-edge inside it
+            contentWindowInsets = { androidx.compose.foundation.layout.WindowInsets(0, 0, 0, 0) },
+            sheetMaxWidth = 480.dp // original M3 width; child content fills edge-to-edge inside
         ) {
                 val newsSettingsOverscroll = rememberOverscrollEffect()
                 Column(

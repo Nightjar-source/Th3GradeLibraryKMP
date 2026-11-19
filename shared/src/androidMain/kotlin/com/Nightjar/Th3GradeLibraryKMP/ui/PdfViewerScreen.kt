@@ -637,7 +637,9 @@ actual fun PdfViewerScreen(
                                 .windowInsetsPadding(WindowInsets.statusBars.add(WindowInsets.captionBar))
                                 .clickable(interactionSource = remember { MutableInteractionSource() }, indication = null) {}
                                 .padding(horizontal = 16.dp, vertical = 12.dp),
-                            horizontalArrangement = Arrangement.SpaceBetween,
+                            // Start alignment keeps the action buttons next to the title
+                            // instead of being pushed toward the side rail on wide screens.
+                            horizontalArrangement = Arrangement.Start,
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             IconButton(
