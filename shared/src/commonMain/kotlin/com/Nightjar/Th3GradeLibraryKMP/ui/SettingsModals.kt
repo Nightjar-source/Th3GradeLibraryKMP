@@ -136,10 +136,10 @@ fun AppSettingsModal(
         fun requestClose() {
             closeScope.launch {
                 try {
-                    // Await the full spring slide-down before removing the sheet, so the X
-                    // button looks identical to the back gesture's smooth dismissal.
-                    val hidden = sheetState.hide()
-                    if (hidden) onClose()
+                    // hide() suspends until the spring slide-down finishes; only then remove
+                    // the sheet so the X button matches the back gesture's smooth dismissal.
+                    sheetState.hide()
+                    onClose()
                 } catch (_: Exception) {
                     onClose()
                 }
@@ -423,10 +423,10 @@ fun NewsSettingsModal(
         fun requestClose() {
             closeScope.launch {
                 try {
-                    // Await the full spring slide-down before removing the sheet, so the X
-                    // button looks identical to the back gesture's smooth dismissal.
-                    val hidden = sheetState.hide()
-                    if (hidden) onClose()
+                    // hide() suspends until the spring slide-down finishes; only then remove
+                    // the sheet so the X button matches the back gesture's smooth dismissal.
+                    sheetState.hide()
+                    onClose()
                 } catch (_: Exception) {
                     onClose()
                 }
