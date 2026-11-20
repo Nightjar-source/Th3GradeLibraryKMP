@@ -592,7 +592,7 @@ fun NewsCard(
     isRead: Boolean,
     modifier: Modifier = Modifier
 ) {
-    val cleanDate = news.formattedDate.ifEmpty { formatNewsDate(news.pubDate) }
+    val cleanDate = news.formattedDate.ifEmpty { SyncEngine.formatNewsDate(news.pubDate) }
 
     Column(
         modifier = modifier
@@ -738,32 +738,6 @@ fun NewsCard(
         )
     }
 }
-
-private fun formatNewsDate(pubDate: String): String = try {
-    val dParts = pubDate.split(" ")
-    if (dParts.size >= 5) {
-        val day = dParts[1]
-        val month = when (dParts[2].lowercase()) {
-            "jan" -> "1"; "feb" -> "2"; "mar" -> "3"; "apr" -> "4"
-            "may" -> "5"; "jun" -> "6"; "jul" -> "7"; "aug" -> "8"
-            "sep" -> "9"; "oct" -> "10"; "nov" -> "11"; "dec" -> "12"
-            else -> "1"
-        }
-        val year = dParts[3]
-        val timeParts = dParts[4].split(":")
-        var hour = timeParts[0].toIntOrNull() ?: 12
-        val min = timeParts[1]
-        
-        // تعديل التوقيت ليكون بتوقيت العراق (+3)
-        hour += 3
-        if (hour >= 24) hour -= 24
-        
-        val amPm = if (hour >= 12) "م" else "ص"
-        if (hour > 12) hour -= 12
-        if (hour == 0) hour = 12
-        "$day-$month-$year  $hour:$min $amPm"
-    } else pubDate
-} catch (e: Exception) { pubDate }
 
 enum class NetworkBannerState {
     ONLINE, OFFLINE

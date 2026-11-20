@@ -559,7 +559,6 @@ fun LazyGridItemScope.ContentCard(
             .fillMaxWidth()
             .then(sharedBoundsModifier)
             .then(contentSizeModifier)
-            .onGloballyPositioned { coordinates -> if (coordinates.isAttached) { TransitionTargetTracker.updateTargetBounds("card_${item.id}", coordinates.boundsInRoot()) } }
             .liquidGlass(isDark, borderRadius = cardCornerRadius, alpha = 0.5f)
             .clip(RoundedCornerShape(cardCornerRadius))
             .clickable {

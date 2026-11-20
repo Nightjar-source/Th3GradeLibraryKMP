@@ -1,9 +1,6 @@
 package com.Nightjar.Th3GradeLibraryKMP.network
 
 import com.Nightjar.Th3GradeLibraryKMP.data.AppDataStore
-import io.ktor.client.HttpClient
-import io.ktor.client.request.get
-import io.ktor.client.statement.bodyAsText
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import com.Nightjar.Th3GradeLibraryKMP.data.NewsItem
@@ -18,8 +15,6 @@ import kotlinx.coroutines.withContext
 object SyncEngine {
     private val settings = AppDataStore
     private val json = Json { ignoreUnknownKeys = true }
-    private val client = HttpClient()
-
     var platformActionHandler: PlatformActionHandler? = null
 
     private val _notificationsEnabled = MutableStateFlow(true)

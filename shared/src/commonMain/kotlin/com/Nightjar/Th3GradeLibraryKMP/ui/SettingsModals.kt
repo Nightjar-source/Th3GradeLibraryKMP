@@ -173,7 +173,8 @@ fun AppSettingsModal(
                             text = "المظهر واللون",
                             fontSize = 18.sp, // Compact title
                             fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.onSurface
+                            color = MaterialTheme.colorScheme.onSurface,
+                            modifier = Modifier.padding(start = 10.dp, end = 10.dp) // 10dp margins from the edge and the beginning
                         )
                         IconButton(
                             onClick = { requestClose() },
@@ -462,7 +463,8 @@ fun NewsSettingsModal(
                             text = "إعدادات الأخبار والمزامنة",
                             fontSize = 18.sp, // Compact title
                             fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.onSurface
+                            color = MaterialTheme.colorScheme.onSurface,
+                            modifier = Modifier.padding(start = 10.dp, end = 10.dp) // 10dp margins from the edge and the beginning
                         )
                         IconButton(
                             onClick = { requestClose() },

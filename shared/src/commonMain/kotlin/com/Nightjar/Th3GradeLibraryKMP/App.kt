@@ -550,7 +550,7 @@ fun AppContent(
                                 }
                             }
                             val pageContentPadding = PaddingValues(
-                                end = if (isWide && targetPage in listOf("home", "list", "news", "bookmarks", "shortcuts", "about")) 90.dp else 0.dp
+                                end = if (isWide && (targetPage in listOf("home", "list", "news", "bookmarks", "shortcuts", "about") || targetPage == "pdf")) 90.dp else 0.dp
                             )
                             val innerHorizontalInsets = if (targetPage != "pdf") WindowInsets.safeDrawing.only(WindowInsetsSides.Horizontal) else WindowInsets(0, 0, 0, 0)
                             Box(
@@ -698,7 +698,7 @@ fun AppContent(
                     val topBarHeight = topBarHeightGlobal
                     val topBarPaddingV = topBarPaddingVGlobal
                     // Wide windows show the floating side rail at the END edge (RTL left) - reserve its width so the top bar never collides with it.
-                    val sideRailVisible = !showOnboarding && page in listOf("home", "list", "news", "bookmarks", "shortcuts", "about") && isWide
+                    val sideRailVisible = !showOnboarding && (page in listOf("home", "list", "news", "bookmarks", "shortcuts", "about") || page == "pdf") && isWide
                     Box(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -1416,7 +1416,7 @@ fun AppContent(
         
         // --- Tablet/Wide Floating Side Navigation Capsule ---
         androidx.compose.animation.AnimatedVisibility(
-            visible = !showOnboarding && page in mainTabs && isWide,
+            visible = !showOnboarding && (page in mainTabs || page == "pdf") && isWide,
             enter = slideInHorizontally(animationSpec = spring(dampingRatio = 0.76f, stiffness = 280f)) { -it } + fadeIn(tween(260)),
             exit = slideOutHorizontally(animationSpec = spring(dampingRatio = 0.76f, stiffness = 280f)) { -it } + fadeOut(tween(220)),
             modifier = Modifier.align(Alignment.CenterEnd).fillMaxHeight().zIndex(200f).then(
@@ -1651,6 +1651,7 @@ fun AppContent(
                     Column(
                         modifier = Modifier
                             .fillMaxSize()
+                            .elasticOverscroll()
                             .verticalScroll(rememberScrollState())
                             .statusBarsPadding()
                             .windowInsetsPadding(WindowInsets.safeDrawing.only(WindowInsetsSides.Horizontal))

@@ -47,13 +47,17 @@ fun Modifier.elasticOverscroll(
         reboundJob[0] = scope.launch {
             Animatable(offsetY.floatValue).animateTo(target, spec) {
                 offsetY.floatValue = value
-                TransitionTargetTracker.currentOverscrollY = value
+                
             }
         }
     }
 
     val connection = remember(systemStretch, topEnabled, bottomEnabled) {
         object : NestedScrollConnection {
+            // Set when onPreScroll unwinds a reachability offset; consumed by the very next
+            // onPostScroll so the bottom rubber band doesn't fire on the same upward scroll.
+            var justUnwoundReachability = false
+
             override fun onPreScroll(available: Offset, source: NestedScrollSource): Offset {
                 val current = offsetY.floatValue
                 if (current > 0f && source == NestedScrollSource.UserInput && available.y < 0f) {
@@ -61,14 +65,19 @@ fun Modifier.elasticOverscroll(
                     if (reboundJob[0]?.isActive == true) reboundJob[0]?.cancel()
                     val next = (current + available.y).coerceAtLeast(0f)
                     offsetY.floatValue = next
-                    TransitionTargetTracker.currentOverscrollY = next
-                    return Offset(0f, available.y)
+                    // Consume only the part that actually unwound the offset. When the upward
+                    // delta meets or exceeds the offset (next == 0), the remaining delta is
+                    // left for the list, so scrolling up from reachability starts scrolling
+                    // the list smoothly instead of snapping the offset (and the list) back to
+                    // the top.
+                    justUnwoundReachability = true
+                    return Offset(0f, next - current)
                 }
                 if (current < 0f && source == NestedScrollSource.UserInput && available.y > 0f) {
                     if (reboundJob[0]?.isActive == true) reboundJob[0]?.cancel()
                     val next = (current + available.y).coerceAtMost(0f)
                     offsetY.floatValue = next
-                    TransitionTargetTracker.currentOverscrollY = next
+                    
                     return Offset(0f, available.y)
                 }
                 return Offset.Zero
@@ -87,6 +96,13 @@ fun Modifier.elasticOverscroll(
                     // Bottom edge: Android 12+ native stretch owns it — don't consume.
                     if (systemStretch) return Offset.Zero
                     if (!bottomEnabled) return Offset.Zero
+                    // Scrolling up while unwinding a reachability state: the list itself
+                    // scrolls — the bottom rubber band would only fire on a genuine bottom
+                    // (offsetY < 0).
+                    if (justUnwoundReachability) {
+                        justUnwoundReachability = false
+                        return Offset.Zero
+                    }
                 }
                 if (pullingDown && !topEnabled) return Offset.Zero
 
@@ -107,7 +123,7 @@ fun Modifier.elasticOverscroll(
                     (current + available.y * resistance).coerceIn(-maxOffset, 0f)
                 }
                 offsetY.floatValue = next
-                TransitionTargetTracker.currentOverscrollY = next
+                
                 return Offset(0f, available.y)
             }
 

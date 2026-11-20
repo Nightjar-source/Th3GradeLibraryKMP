@@ -223,12 +223,11 @@ fun BookAccordionItem(
     modifier: Modifier = Modifier,
     isWide: Boolean = false
 ) {
-    // Dynamic page tracking: maintains pages being animated out so shrinkVertically runs smoothly
-    val trackedPages = remember { mutableStateListOf<Int>() }
+    // Dynamic page tracking (UI-free logic in core.TrackedPagesTracker): maintains pages
+    // being animated out so shrinkVertically runs smoothly
+    val trackedPages = remember { com.Nightjar.Th3GradeLibraryKMP.core.TrackedPagesTracker() }
     LaunchedEffect(pages) {
-        pages.forEach { p ->
-            if (p !in trackedPages) trackedPages.add(p)
-        }
+        trackedPages.onPagesChange(pages)
     }
 
     Column(
@@ -386,7 +385,7 @@ fun BookAccordionItem(
                 val sharedTransitionScope = LocalSharedTransitionScope.current
 
                 // Render all tracked pages sorted
-                val sortedPages = remember(trackedPages.toList()) { trackedPages.sorted() }
+                val sortedPages = remember(trackedPages.pages) { trackedPages.pages.sorted() }
                 sortedPages.forEach { pageIndex ->
                     val rowInteractionSource = remember { MutableInteractionSource() }
                     val rowTargetKey = "bookmark_${item.id}_$pageIndex"
@@ -440,14 +439,6 @@ fun BookAccordionItem(
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .then(rowSharedModifier)
-                                .onGloballyPositioned { coordinates ->
-                                    if (coordinates.isAttached) {
-                                        TransitionTargetTracker.updateTargetBounds(
-                                            rowTargetKey,
-                                            coordinates.boundsInRoot()
-                                        )
-                                    }
-                                }
                                 .expressiveButtonMorph(
                                     restRadius = 14.dp,
                                     pressedRadius = 8.dp,

@@ -830,6 +830,12 @@ class MainActivity : ComponentActivity() {
         } catch (e: Exception) {
             e.printStackTrace()
         }
+        // Release the global action-handler reference retained by SyncEngine
+        try {
+            SyncEngine.platformActionHandler = null
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
         // Delete all temporary PDF cache files upon exiting the app to ensure zero storage footprint
         try {
             com.Nightjar.Th3GradeLibraryKMP.ui.clearPdfCache(cacheDir)

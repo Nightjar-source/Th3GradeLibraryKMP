@@ -388,22 +388,6 @@ actual fun PdfViewerScreen(
                 resizeMode = SharedTransitionScope.ResizeMode.RemeasureToBounds
             )
         }
-    } else if (animatedVisibilityScope != null) {
-        // Liquid Dynamic Island sink-down exit ONLY when bookmark is deleted or when opening from a shortcut/news
-        with(animatedVisibilityScope) {
-            Modifier.animateEnterExit(
-                enter = androidx.compose.animation.fadeIn(androidx.compose.animation.core.tween(220)) + androidx.compose.animation.scaleIn(initialScale = 0.92f),
-                exit = androidx.compose.animation.fadeOut(androidx.compose.animation.core.tween(220, delayMillis = 60)) +
-                       androidx.compose.animation.scaleOut(
-                           targetScale = 0.28f,
-                           animationSpec = spring(dampingRatio = 0.82f, stiffness = 280f)
-                       ) +
-                       androidx.compose.animation.slideOutVertically(
-                           targetOffsetY = { it },
-                           animationSpec = spring(dampingRatio = 0.82f, stiffness = 280f)
-                       )
-            )
-        }
     } else Modifier
 
     val rootModifier = Modifier
@@ -412,7 +396,25 @@ actual fun PdfViewerScreen(
         .clip(androidx.compose.foundation.shape.RoundedCornerShape(safeCornerRadius))
         .background(MaterialTheme.colorScheme.background)
 
-    Box(modifier = rootModifier) {
+    // Unified reader close — the X button, the back button (chevron) and the system
+    // back/Escape all end in onClose, so every close plays one exit: slide-up +
+    // fadeOut with the app's smooth spring spec
+    // (spring(dampingRatio = 0.8f, stiffness = 320f), the same spec used by the top bar exit).
+    val readerCloseExit = androidx.compose.animation.fadeOut(
+        animationSpec = spring(dampingRatio = 0.8f, stiffness = 320f)
+    ) + androidx.compose.animation.slideOutVertically(
+        targetOffsetY = { -it / 2 },
+        animationSpec = spring(dampingRatio = 0.8f, stiffness = 320f)
+    )
+
+    // Play the close exit when the screen is removed: slide-up + fadeOut with the app's
+    // smooth spring spec (same spec as the top-bar exit).
+    AnimatedVisibility(
+        visible = true,
+        enter = if (animatedVisibilityScope != null) androidx.compose.animation.fadeIn(androidx.compose.animation.core.tween(220)) + androidx.compose.animation.scaleIn(initialScale = 0.92f) else androidx.compose.animation.EnterTransition.None,
+        exit = readerCloseExit,
+        modifier = rootModifier
+    ) {
         if (loadingError != null) {
             Column(
                 modifier = Modifier
@@ -543,7 +545,7 @@ actual fun PdfViewerScreen(
                                 VerticalPager(
                                     state = pagerState,
                                     beyondViewportPageCount = 1,
-                                    modifier = Modifier.fillMaxSize(),
+                                    modifier = Modifier.fillMaxSize().elasticOverscroll(),
                                     contentPadding = PaddingValues(0.dp),
                                     pageSpacing = 0.dp
                                 ) { pageIndex ->
@@ -846,16 +848,6 @@ actual fun PdfViewerScreen(
                                     .fillMaxWidth(0.85f)
                                     .clickable(enabled = false) {}
                                     .shadow(24.dp, RoundedCornerShape(28.dp))
-                                    .animateEnterExit(
-                                        enter = androidx.compose.animation.scaleIn(
-                                            initialScale = 0.8f,
-                                            animationSpec = spring(dampingRatio = 0.7f, stiffness = Spring.StiffnessLow)
-                                        ) + androidx.compose.animation.fadeIn(),
-                                        exit = androidx.compose.animation.scaleOut(
-                                            targetScale = 0.9f,
-                                            animationSpec = spring(dampingRatio = 0.75f, stiffness = Spring.StiffnessLow)
-                                        ) + androidx.compose.animation.fadeOut()
-                                    )
                             ) {
                                 Column(
                                     modifier = Modifier.padding(24.dp),
@@ -1222,7 +1214,7 @@ fun AndroidPdfPage(
 
             LaunchedEffect(currentBitmap, scale, scrollDirection, isAppDark, h, containerHeight) {
                 try {
-                    val (bmpTopLight, bmpBotLight) = sampleBitmapLuminance(currentBitmap)
+                    val (bmpTopLight, bmpBotLight) = withContext(Dispatchers.IO) { sampleBitmapLuminance(currentBitmap) }
                     val effectiveTopLight = if (touchesEdges) bmpTopLight else !isAppDark
                     val effectiveBottomLight = if (touchesEdges) bmpBotLight else !isAppDark
                     onLuminanceCalculated(effectiveTopLight, effectiveBottomLight)
