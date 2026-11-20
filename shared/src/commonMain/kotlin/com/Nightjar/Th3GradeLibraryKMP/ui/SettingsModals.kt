@@ -165,7 +165,8 @@ fun AppSettingsModal(
                     // status bar / system buttons — no persistent colored block under the bar.
                     Spacer(modifier = Modifier.fillMaxWidth().windowInsetsPadding(androidx.compose.foundation.layout.WindowInsets.safeContent.only(androidx.compose.foundation.layout.WindowInsetsSides.Top)).height(12.dp))
                     Row(
-                        modifier = Modifier.fillMaxWidth(),
+                        // Title + X sit 10dp from both sheet edges (user asked for ~10dp on the X).
+                        modifier = Modifier.fillMaxWidth().padding(horizontal = 10.dp),
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
@@ -173,8 +174,7 @@ fun AppSettingsModal(
                             text = "المظهر واللون",
                             fontSize = 18.sp, // Compact title
                             fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.onSurface,
-                            modifier = Modifier.padding(start = 10.dp, end = 10.dp) // 10dp margins from the edge and the beginning
+                            color = MaterialTheme.colorScheme.onSurface
                         )
                         IconButton(
                             onClick = { requestClose() },
@@ -463,8 +463,7 @@ fun NewsSettingsModal(
                             text = "إعدادات الأخبار والمزامنة",
                             fontSize = 18.sp, // Compact title
                             fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.onSurface,
-                            modifier = Modifier.padding(start = 10.dp, end = 10.dp) // 10dp margins from the edge and the beginning
+                            color = MaterialTheme.colorScheme.onSurface // Row padding already gives 10dp margins
                         )
                         IconButton(
                             onClick = { requestClose() },

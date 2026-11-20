@@ -959,7 +959,8 @@ fun AppContent(
                     val searchBarHeight = if (isCompactTopBar) 44.dp else 52.dp
                     // Dynamic gap: derived from the live top bar block height; kept tight
                     // (2dp) so the search bar hugs the title bar responsively on every layout.
-                    val searchTopPadding = topBarBlockHeight + 2.dp
+                    // Tight gap (< 5-10dp) between the search bar and the title bar.
+                    val searchTopPadding = topBarHeightGlobal + topBarPaddingVGlobal + 2.dp
                     val searchFontSize = if (isCompactTopBar) 14.sp else 15.sp
                     var isListening by remember { mutableStateOf(false) }
 
