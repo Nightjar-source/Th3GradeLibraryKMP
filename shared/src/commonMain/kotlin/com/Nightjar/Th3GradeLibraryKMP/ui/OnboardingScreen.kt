@@ -1,4 +1,3 @@
-@file:OptIn(androidx.compose.foundation.layout.ExperimentalFlexBoxApi::class)
 package com.Nightjar.Th3GradeLibraryKMP.ui
 
 import androidx.compose.foundation.background
