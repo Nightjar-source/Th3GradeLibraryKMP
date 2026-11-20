@@ -4,7 +4,9 @@ import android.app.Service
 import android.content.Intent
 import android.content.pm.ServiceInfo
 import android.os.Build
+import android.os.Handler
 import android.os.IBinder
+import android.os.Looper
 import com.Nightjar.Th3GradeLibraryKMP.network.BookDownloadManager
 
 class BookDownloadForegroundService : Service() {
@@ -13,33 +15,50 @@ class BookDownloadForegroundService : Service() {
         const val ACTION_STOP = "com.Nightjar.Th3GradeLibraryKMP.ACTION_STOP_DOWNLOAD_SERVICE"
     }
 
+    private var isForegroundActive = false
+    private val mainHandler = Handler(Looper.getMainLooper())
+
     override fun onBind(intent: Intent?): IBinder? = null
 
     override fun onCreate() {
         super.onCreate()
-        promoteToForeground()
+        ensureForegroundNotification()
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
-        promoteToForeground()
+        // ALWAYS satisfy Android's foreground service contract immediately
+        ensureForegroundNotification()
+
         if (intent?.action == ACTION_STOP) {
-            stopSelfSafely()
+            // Post stop slightly delayed so the Android OS acknowledges startForeground first
+            mainHandler.postDelayed({
+                stopSelfSafely()
+            }, 350L)
             return START_NOT_STICKY
         }
         return START_NOT_STICKY
     }
 
-    private fun promoteToForeground() {
+    private fun ensureForegroundNotification() {
+        if (isForegroundActive) return
         try {
             val notification = BookDownloadManager.createForegroundNotification(this)
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-                startForeground(
-                    BookDownloadManager.NOTIFICATION_ID,
-                    notification,
-                    ServiceInfo.FOREGROUND_SERVICE_TYPE_DATA_SYNC
-                )
+                try {
+                    startForeground(
+                        BookDownloadManager.NOTIFICATION_ID,
+                        notification,
+                        ServiceInfo.FOREGROUND_SERVICE_TYPE_DATA_SYNC
+                    )
+                    isForegroundActive = true
+                } catch (e: Exception) {
+                    // Fallback without DATA_SYNC flag if restricted by Android 14+
+                    startForeground(BookDownloadManager.NOTIFICATION_ID, notification)
+                    isForegroundActive = true
+                }
             } else {
                 startForeground(BookDownloadManager.NOTIFICATION_ID, notification)
+                isForegroundActive = true
             }
         } catch (e: Exception) {
             e.printStackTrace()
@@ -55,6 +74,7 @@ class BookDownloadForegroundService : Service() {
                 stopForeground(true)
             }
         } catch (_: Exception) {}
+        isForegroundActive = false
         stopSelf()
     }
 

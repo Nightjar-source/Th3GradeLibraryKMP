@@ -554,15 +554,22 @@ fun LazyGridItemScope.ContentCard(
         }
     } else Modifier
 
-val platformContext = coil3.compose.LocalPlatformContext.current
+    val platformContext = coil3.compose.LocalPlatformContext.current
     val downloadStates by com.Nightjar.Th3GradeLibraryKMP.network.BookDownloadManager.itemStates.collectAsState()
     val itemState = downloadStates[item.id] ?: com.Nightjar.Th3GradeLibraryKMP.network.ItemDownloadState()
+    val animatedProgress by androidx.compose.animation.core.animateFloatAsState(
+        targetValue = itemState.progress.coerceIn(0f, 1f),
+        animationSpec = tween(durationMillis = 220, easing = LinearOutSlowInEasing),
+        label = "BookProgressAnimation"
+    )
     val isBookDownloaded: Boolean = remember(item, downloadStates) {
         com.Nightjar.Th3GradeLibraryKMP.data.BookStorageEngine.isDownloaded(platformContext, item)
     }
     val isUpdateAvailable: Boolean = remember(item, downloadStates) {
         com.Nightjar.Th3GradeLibraryKMP.data.BookStorageEngine.isUpdateAvailable(platformContext, item)
     }
+
+    var lastCardClickTime by remember { mutableStateOf<kotlin.time.ComparableTimeMark?>(null) }
 
     Box(
         modifier = modifier
@@ -572,6 +579,13 @@ val platformContext = coil3.compose.LocalPlatformContext.current
             .liquidGlass(isDark, borderRadius = cardCornerRadius, alpha = 0.5f)
             .clip(RoundedCornerShape(cardCornerRadius))
             .clickable {
+                val now = kotlin.time.TimeSource.Monotonic.markNow()
+                val elapsed = lastCardClickTime?.let { now - it }
+                if (elapsed != null && elapsed.inWholeMilliseconds < 450L) {
+                    return@clickable
+                }
+                lastCardClickTime = now
+
                 if (isBookDownloaded) {
                     TransitionTargetTracker.activeTargetId = "card_${item.id}"
                     TransitionTargetTracker.isTransitionActive = true
@@ -692,7 +706,7 @@ val platformContext = coil3.compose.LocalPlatformContext.current
                                         com.Nightjar.Th3GradeLibraryKMP.network.DownloadStatus.DOWNLOADING -> {
                                             Column(horizontalAlignment = Alignment.CenterHorizontally) {
                                                 CircularProgressIndicator(
-                                                    progress = { itemState.progress },
+                                                    progress = { animatedProgress },
                                                     modifier = Modifier.size(38.dp),
                                                     color = MaterialTheme.colorScheme.primary,
                                                     strokeWidth = 3.5.dp,
@@ -700,7 +714,7 @@ val platformContext = coil3.compose.LocalPlatformContext.current
                                                 )
                                                 Spacer(modifier = Modifier.height(4.dp))
                                                 Text(
-                                                    text = "${(itemState.progress * 100).toInt()}%",
+                                                    text = "${(animatedProgress * 100).toInt()}%",
                                                     fontSize = 11.sp,
                                                     fontWeight = FontWeight.Bold,
                                                     color = Color.White
@@ -983,7 +997,7 @@ val platformContext = coil3.compose.LocalPlatformContext.current
                                         com.Nightjar.Th3GradeLibraryKMP.network.DownloadStatus.DOWNLOADING -> {
                                             Column(horizontalAlignment = Alignment.CenterHorizontally) {
                                                 CircularProgressIndicator(
-                                                    progress = { itemState.progress },
+                                                    progress = { animatedProgress },
                                                     modifier = Modifier.size(26.dp),
                                                     color = MaterialTheme.colorScheme.primary,
                                                     strokeWidth = 3.dp,

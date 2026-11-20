@@ -134,10 +134,15 @@ actual object BookDownloadManager {
             val intent = Intent().apply {
                 setClassName(context.packageName, "com.Nightjar.Th3GradeLibraryKMP.BookDownloadForegroundService")
             }
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                context.startForegroundService(intent)
-            } else {
+            try {
+                // When app is active in foreground, startService starts the service safely
+                // without imposing the dangerous 5-second crash timer of startForegroundService:
                 context.startService(intent)
+            } catch (e: Exception) {
+                // If the app is in the background and startService is disallowed, fallback to startForegroundService
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                    context.startForegroundService(intent)
+                }
             }
         } catch (_: Exception) {}
     }
@@ -366,7 +371,7 @@ actual object BookDownloadManager {
     actual fun downloadItem(context: Any, item: BookItem) {
         val now = System.currentTimeMillis()
         val last = lastActionTimes[item.id] ?: 0L
-        if (now - last < 350L) return
+        if (now - last < 500L) return
         lastActionTimes[item.id] = now
 
         val ctx = context as Context
@@ -597,7 +602,7 @@ actual object BookDownloadManager {
     actual fun pauseDownload(item: BookItem) {
         val now = System.currentTimeMillis()
         val last = lastActionTimes[item.id] ?: 0L
-        if (now - last < 350L) return
+        if (now - last < 500L) return
         lastActionTimes[item.id] = now
 
         val job = activeJobs.remove(item.id)
@@ -639,7 +644,7 @@ actual object BookDownloadManager {
     actual fun cancelDownload(item: BookItem) {
         val now = System.currentTimeMillis()
         val last = lastActionTimes[item.id] ?: 0L
-        if (now - last < 350L) return
+        if (now - last < 500L) return
         lastActionTimes[item.id] = now
 
         val job = activeJobs.remove(item.id)
