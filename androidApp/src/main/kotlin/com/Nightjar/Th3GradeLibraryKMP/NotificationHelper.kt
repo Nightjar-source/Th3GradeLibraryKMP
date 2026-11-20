@@ -182,6 +182,8 @@ object NotificationHelper {
         }
 
         if (displayCount > 1) {
+            builder.setGroup("news_group")
+            builder.setGroupSummary(true)
             val inboxStyle = NotificationCompat.InboxStyle()
                 .setBigContentTitle(mainTitle)
                 .setSummaryText("$displayCount أخبار دراسية جديدة")

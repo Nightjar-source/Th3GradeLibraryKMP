@@ -1,13 +1,23 @@
 /**
+ * ============================================================================
  * Cloudflare Worker: th3books-gateway
+ * ============================================================================
+ * ARCHITECTURAL SITEMAP & DEVELOPER GUIDE:
  * 
- * Features:
- * 1. Telegram Bot File Proxy (/file/:file_id)
- * 2. Edge-Cached News RSS Feed (/news) with Developer Announcement injection
- * 3. Developer Announcement API (/developer-announcement)
- * 4. Scheduled Cron Handler (every 10m) for FCM v1 Push Notifications
- *    According to guide: الوكيل/إشعارات_فايربيس_السحابية.md
- * 5. Dynamic Sliding Marker via Cloudflare KV (TH3BOOKS_KV) - Zero data bloating.
+ * 1. GET  /manifest.json              -> Serves the cloud catalog & dynamically added books/notes.
+ * 2. GET  /news                       -> Edge-cached RSS news feed with clean summaries & cover images.
+ * 3. GET  /file/:file_id              -> High-speed streaming proxy for Telegram-hosted PDF files.
+ * 4. POST /send-features-announcement -> Instant administrative announcement broadcast to topics [news, announcements].
+ * 5. POST /send-test-push             -> Test FCM push trigger.
+ * 6. CRON (every 10m)                 -> Automatic scheduled check of RSS feed and zero-drain FCM delivery.
+ * 
+ * ENVIRONMENT SECRETS (Cloudflare Dashboard -> Settings -> Variables and Secrets):
+ * - BOT_TOKEN: Telegram Bot API Token for streaming files.
+ * - FIREBASE_PROJECT_ID: Firebase project identifier.
+ * - FIREBASE_CLIENT_EMAIL: Google Service Account email for FCM v1.
+ * - FIREBASE_PRIVATE_KEY: RSA private key for JWT OAuth2 signing.
+ * - TH3BOOKS_KV: KV namespace for dynamic sliding markers.
+ * ============================================================================
  */
 
 // Retrieve credentials dynamically from Cloudflare Encrypted Secrets (Settings -> Variables and Secrets)
@@ -276,6 +286,28 @@ async function handleRequest(request, event) {
   }
 
   // 5. Test Trigger FCM Endpoint (POST /trigger-push)
+  if (path === "/send-features-announcement") {
+    const payload = {
+      title: "✨ ميزات تطبيق كتب وملازم الثالث متوسط الحديثة",
+      body: "تعرف على ميزات الإصدار الجديد: التكيف الشامل مع كافة الشاشات، التخزين الدائم أوفلاين في داتا يوزر، إشعارات حية ذكية وسائلة، ودعم كامل لكافة أحجام الشاشات.",
+      imageUrl: "https://images.unsplash.com/photo-1544716278-ca5e3f4abd8c?w=800&auto=format&fit=crop&q=80",
+      data: {
+        type: "announcement",
+        title: "✨ ميزات تطبيق كتب وملازم الثالث متوسط الحديثة",
+        link: "https://t.me/bookiraqi",
+        content: "أبرز ميزات التحديث الجديد للمكتبة:\n\n1. التكيف الشامل (Adaptive Layouts): توافق 100% مع الهواتف العادية، الشاشات العريضة، الأجهزة اللوحية (Tablets)، والشاشات القابلة للطي (Foldables).\n2. التخزين الدائم والتشغيل الأوفلاين: حفظ الكتب والملازم والأغلفة داخل ذاكرة المستخدم الداخلية (User Data) دون الحاجة لإعادة التنزيل أو استهلاك الإنترنت.\n3. أزرار تفاعلية سائلة: تحول سلس وانسيابي كالزبدة بين التنزيل وشريط التقدم الحي وفتح الملفات.\n4. نظام إشعارات ذكي: دعم إشعارات أندرويد الحية المجمعة وإمكانية النقر على أي خبر بمفرده.\n5. حفظ دائم لجميع الأخبار والتبليغات الوزارية الرسمية.",
+        image_url: "https://images.unsplash.com/photo-1544716278-ca5e3f4abd8c?w=800&auto=format&fit=crop&q=80",
+        pubDate: new Date().toUTCString(),
+        is_announcement: "true"
+      }
+    };
+    const pushResultNews = await sendFcmNotification(Object.assign({ topic: "news" }, payload));
+    const pushResultAnnounce = await sendFcmNotification(Object.assign({ topic: "announcements" }, payload));
+    return new Response(JSON.stringify({ status: "sent", resultNews: pushResultNews, resultAnnouncements: pushResultAnnounce }), {
+      headers: { "Content-Type": "application/json; charset=utf-8", "Access-Control-Allow-Origin": "*" }
+    });
+  }
+
   if (path === "/send-test-push") {
     const pushResult = await sendFcmNotification({
       title: "وزارة التربية: إعلان نتائج الدور الثالث للصف الثالث متوسط",
@@ -408,15 +440,14 @@ async function handleScheduledEvent(force = false) {
     for (const itm of itemsToNotify) {
       const res = await sendFcmNotification({
         title: itm.title,
-        body: itm.snippet || "",
+        body: "",
         imageUrl: itm.imageUrl || "",
         data: {
           type: "news",
           title: itm.title,
           link: itm.link,
           click_url: itm.link,
-          pubDate: itm.pubDate,
-          content: itm.snippet || "",
+          pubDate: itm.pubDate || "",
           image_url: itm.imageUrl || ""
         }
       });
@@ -438,7 +469,7 @@ async function handleScheduledEvent(force = false) {
 /**
  * Sends FCM v1 notification using Google Service Account JWT signing (Web Crypto)
  */
-async function sendFcmNotification({ title, body, imageUrl, data }) {
+async function sendFcmNotification({ topic, title, body, imageUrl, data }) {
   try {
     const token = await getGoogleOAuthToken();
     const endpoint = `https://fcm.googleapis.com/v1/projects/${FIREBASE_PROJECT_ID}/messages:send`;
@@ -455,7 +486,7 @@ async function sendFcmNotification({ title, body, imageUrl, data }) {
     // and lets Android client strictly enforce the user's sync schedule.
     const message = {
       message: {
-        topic: FCM_TOPIC,
+        topic: topic || FCM_TOPIC,
         data: fcmData,
         android: {
           priority: "HIGH"

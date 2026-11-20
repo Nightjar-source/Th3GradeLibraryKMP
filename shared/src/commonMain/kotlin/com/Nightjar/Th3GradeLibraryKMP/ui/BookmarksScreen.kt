@@ -272,7 +272,7 @@ fun BookAccordionItem(
                         } else {
                             try {
                                 Res.getUri("drawable/${item.coverResName}." + if (item.coverResName in listOf("ayajaaa", "english", "englishactivity", "kss1")) "jpg" else "png")
-                            } catch (_: Exception) {
+                            } catch (_: Throwable) {
                                 null
                             }
                         }

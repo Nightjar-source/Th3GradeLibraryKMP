@@ -15,8 +15,38 @@ actual object BookStorageEngine {
         return dir
     }
 
+    fun getBooksDir(context: Context): File {
+        val dir = File(context.filesDir, "files/books")
+        if (!dir.exists()) dir.mkdirs()
+        return dir
+    }
+
+    fun getNotesDir(context: Context): File {
+        val dir = File(context.filesDir, "files/notes")
+        if (!dir.exists()) dir.mkdirs()
+        return dir
+    }
+
+    fun getCoversDir(context: Context): File {
+        val dir = File(context.filesDir, "files/covers")
+        if (!dir.exists()) dir.mkdirs()
+        return dir
+    }
+
     fun getPermanentFile(context: Context, item: BookItem): File {
-        return File(getStorageDir(context), "pdf_${item.id}.pdf")
+        val targetDir = if (item.isNote) getNotesDir(context) else getBooksDir(context)
+        val structuredFile = File(targetDir, "pdf_${item.id}.pdf")
+        if (structuredFile.exists()) return structuredFile
+
+        // Fallback for items previously downloaded into books_storage/
+        val legacyFile = File(getStorageDir(context), "pdf_${item.id}.pdf")
+        if (legacyFile.exists()) return legacyFile
+
+        return structuredFile
+    }
+
+    fun getPermanentCoverFile(context: Context, item: BookItem): File {
+        return File(getCoversDir(context), "cover_${item.id}.jpg")
     }
 
     actual fun isDownloaded(context: Any, item: BookItem): Boolean {
@@ -72,6 +102,8 @@ actual object BookStorageEngine {
     actual fun deleteBook(context: Any, item: BookItem): Boolean {
         val ctx = context as Context
         val file = getPermanentFile(ctx, item)
+        val coverFile = getPermanentCoverFile(ctx, item)
+        try { if (coverFile.exists()) coverFile.delete() } catch (_: Exception) {}
         return if (file.exists()) file.delete() else false
     }
 }

@@ -25,11 +25,13 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.AddCard
+import androidx.compose.material.icons.filled.MenuBook
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.ContentScale
@@ -53,7 +55,13 @@ fun ShortcutsScreen(
     onScrollableStateChanged: (Boolean) -> Unit = {},
     lazyGridState: androidx.compose.foundation.lazy.grid.LazyGridState = androidx.compose.foundation.lazy.grid.rememberLazyGridState()
 ) {
-    val allItemsList = AllItems.books + AllItems.notes
+    val dynamicBooks by com.Nightjar.Th3GradeLibraryKMP.network.CloudCatalogManager.dynamicBooks.collectAsState()
+    val dynamicNotes by com.Nightjar.Th3GradeLibraryKMP.network.CloudCatalogManager.dynamicNotes.collectAsState()
+    val manifest by com.Nightjar.Th3GradeLibraryKMP.network.CloudCatalogManager.manifest.collectAsState()
+
+    val allItemsList = remember(dynamicBooks, dynamicNotes, manifest) {
+        AllItems.books + AllItems.notes
+    }
 
     val canScroll by remember {
         derivedStateOf {
@@ -139,6 +147,32 @@ fun ShortcutItemCard(
 ) {
     val imageModifier = Modifier.fillMaxSize()
 
+    val cloudManifest by com.Nightjar.Th3GradeLibraryKMP.network.CloudCatalogManager.manifest.collectAsState()
+    val cloudCoverUrl = remember(item, cloudManifest) {
+        val m = com.Nightjar.Th3GradeLibraryKMP.network.CloudCatalogManager.getMeta(item)
+        m?.cover_url?.takeIf { it.isNotBlank() }
+    }
+    val hasCloudCover = !cloudCoverUrl.isNullOrBlank()
+    val hasBundledCover = item.coverResName.isNotBlank() && item.coverResName != "app_icon" && item.id != "b_abood"
+
+    val coverData: Any? = remember(item, cloudCoverUrl) {
+        if (hasCloudCover) {
+            cloudCoverUrl
+        } else if (item.coverResName.startsWith("http://") || item.coverResName.startsWith("https://")) {
+            item.coverResName
+        } else if (hasBundledCover) {
+            try {
+                com.Nightjar.Th3GradeLibraryKMP.generated.resources.Res.getUri(
+                    "drawable/${item.coverResName}." + if (item.coverResName in listOf("ayajaaa", "english", "englishactivity", "kss1")) "jpg" else "png"
+                )
+            } catch (_: Throwable) {
+                null
+            }
+        } else {
+            null
+        }
+    }
+
     Column(
         modifier = modifier
             .fillMaxWidth()
@@ -156,14 +190,51 @@ fun ShortcutItemCard(
                 .clip(RoundedCornerShape(20.dp))
                 .background(MaterialTheme.colorScheme.surfaceVariant)
         ) {
-            coil3.compose.AsyncImage(
-                model = coil3.request.ImageRequest.Builder(coil3.compose.LocalPlatformContext.current)
-                    .data(com.Nightjar.Th3GradeLibraryKMP.generated.resources.Res.getUri("drawable/${item.coverResName}." + if (item.coverResName in listOf("ayajaaa", "english", "englishactivity", "kss1")) "jpg" else "png"))
-                    .build(),
-                contentDescription = item.title,
-                contentScale = ContentScale.Crop,
-                modifier = imageModifier
-            )
+            if (coverData != null) {
+                coil3.compose.AsyncImage(
+                    model = coil3.request.ImageRequest.Builder(coil3.compose.LocalPlatformContext.current)
+                        .data(coverData)
+                        .memoryCacheKey("shortcut_cover_${item.id}_${coverData.hashCode()}")
+                        .diskCacheKey("shortcut_cover_${item.id}_${coverData.hashCode()}")
+                        .memoryCachePolicy(coil3.request.CachePolicy.ENABLED)
+                        .diskCachePolicy(coil3.request.CachePolicy.ENABLED)
+                        .build(),
+                    contentDescription = item.title,
+                    contentScale = ContentScale.Crop,
+                    modifier = imageModifier
+                )
+            } else {
+                val pdfThumbnail = rememberPdfCoverThumbnail(item)
+                if (pdfThumbnail != null) {
+                    androidx.compose.foundation.Image(
+                        bitmap = pdfThumbnail,
+                        contentDescription = null,
+                        modifier = imageModifier,
+                        contentScale = ContentScale.Crop
+                    )
+                } else {
+                    val itemGradStart = remember(item) {
+                        try { Color(item.primaryColor.removePrefix("#").toLong(16) or 0x00000000FF000000) } catch (_: Exception) { Color(0xFF2563EB) }
+                    }
+                    val itemGradEnd = remember(item) {
+                        try { Color(item.secondaryColor.removePrefix("#").toLong(16) or 0x00000000FF000000) } catch (_: Exception) { Color(0xFF1D4ED8) }
+                    }
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .background(Brush.linearGradient(listOf(itemGradStart, itemGradEnd))),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.MenuBook,
+                            contentDescription = null,
+                            tint = Color.White.copy(alpha = 0.85f),
+                            modifier = Modifier.size(36.dp)
+                        )
+                    }
+                }
+            }
+
             Box(
                 modifier = Modifier
                     .fillMaxSize()

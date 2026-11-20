@@ -88,6 +88,15 @@ class AppViewModel : ViewModel() {
                     page = "pdf"
                     persistState()
                 }
+            } else if (initialPage != null) {
+                if (pageHistory.value.lastOrNull() != initialPage) {
+                    pageHistory.value = if (initialPage == "home") listOf("home") else listOf("home", initialPage)
+                }
+                page = initialPage
+                persistState()
+            }
+            if (!initialSearchQuery.isNullOrEmpty()) {
+                searchQuery = initialSearchQuery
             }
             return
         }

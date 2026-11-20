@@ -138,14 +138,13 @@ fun OnboardingScreen(
                 val isBatchDownloading by com.Nightjar.Th3GradeLibraryKMP.network.BookDownloadManager.isBatchDownloading.collectAsState()
 
                 if (isWide) {
-                    @OptIn(androidx.compose.foundation.layout.ExperimentalLayoutApi::class)
-                    androidx.compose.foundation.layout.FlowRow(
+                    Row(
                         modifier = Modifier.widthIn(max = 1100.dp).fillMaxWidth(),
                         horizontalArrangement = Arrangement.spacedBy(16.dp, Alignment.CenterHorizontally),
-                        verticalArrangement = Arrangement.spacedBy(16.dp)
+                        verticalAlignment = Alignment.Top
                     ) {
                         OnboardingStepCard(
-                            modifier = cardWidth,
+                            modifier = Modifier.weight(1f),
                             icon = { Icon(Icons.Default.MenuBook, null, tint = MaterialTheme.colorScheme.primary) },
                             title = "1. تحميل وتصفح الكتب:",
                             description = "اضغط على أي كتاب أو ملزمة لتنزيلها، أو حمّل كل المناهج الآن لتصفحها أوفلاين بالكامل بدون إنترنت.",
@@ -162,7 +161,7 @@ fun OnboardingScreen(
                             }
                         )
                         OnboardingStepCard(
-                            modifier = cardWidth,
+                            modifier = Modifier.weight(1f),
                             icon = { Icon(Icons.Default.NotificationsActive, null, tint = MaterialTheme.colorScheme.primary) },
                             title = "2. إشعارات الكتب والتحديثات:",
                             description = "فعّل الإشعارات لتصلك تنبيهات الملازم الجديدة، الأخبار الوزارية، والنتائج فور صدورها.",
@@ -170,7 +169,7 @@ fun OnboardingScreen(
                             onClick = { platformActionHandler.requestNotificationPermission() }
                         )
                         OnboardingStepCard(
-                            modifier = cardWidth,
+                            modifier = Modifier.weight(1f),
                             icon = { Icon(Icons.Default.BatteryAlert, null, tint = MaterialTheme.colorScheme.secondary) },
                             title = "3. استقرار التنزيل (اختياري):",
                             description = "تخطي قيود البطارية لضمان استمرار تحميل الكتب والملازم في الخلفية حتى عند قفل الشاشة.",

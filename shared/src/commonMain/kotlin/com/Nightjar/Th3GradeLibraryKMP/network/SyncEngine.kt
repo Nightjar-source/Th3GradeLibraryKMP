@@ -322,6 +322,29 @@ object SyncEngine {
         }
     }
 
+    fun recordDirectAnnouncement(title: String, content: String, imageUrl: String, link: String) {
+        try {
+            val id = if (link.isNotBlank()) link else ("announcement_" + title.hashCode() + "_" + (ClockSystem.currentTimeMillis() / 1000))
+            val nowStr = ClockSystem.currentTimeMillis().toString()
+            val existing = _newsList.value.toMutableList()
+            val alreadyPresent = existing.any { it.title == title && it.contentSnippet == content }
+            if (!alreadyPresent) {
+                val item = NewsItem(
+                    id = id,
+                    title = title,
+                    link = link,
+                    contentSnippet = content,
+                    pubDate = nowStr,
+                    imageUrl = imageUrl.ifBlank { null },
+                    formattedDate = formatNewsDate(nowStr),
+                    isAnnouncement = true
+                )
+                existing.add(0, item)
+                saveLocalNews(existing)
+            }
+        } catch (_: Exception) {}
+    }
+
     private fun extractDomain(url: String): String {
         return try {
             val withoutProtocol = if (url.contains("://")) {
@@ -397,6 +420,28 @@ object SyncEngine {
             "$day-$month-$year  $hour:$min $amPm"
         } else pubDate
     } catch (e: Exception) { pubDate }
+
+    fun parseNewsDateToMillis(pubDate: String): Long = try {
+        val dParts = pubDate.split(" ")
+        if (dParts.size >= 5) {
+            val day = dParts[1].toIntOrNull() ?: 1
+            val month = when (dParts[2].lowercase()) {
+                "jan" -> 1; "feb" -> 2; "mar" -> 3; "apr" -> 4
+                "may" -> 5; "jun" -> 6; "jul" -> 7; "aug" -> 8
+                "sep" -> 9; "oct" -> 10; "nov" -> 11; "dec" -> 12
+                else -> 1
+            }
+            val year = dParts[3].toIntOrNull() ?: 2026
+            val timeParts = dParts[4].split(":")
+            val hour = timeParts.getOrNull(0)?.toIntOrNull() ?: 0
+            val min = timeParts.getOrNull(1)?.toIntOrNull() ?: 0
+            val sec = timeParts.getOrNull(2)?.toIntOrNull() ?: 0
+            val daysApprox = (year - 1970) * 365L + ((year - 1970) / 4) + (month - 1) * 30L + day
+            (daysApprox * 86400L + hour * 3600L + min * 60L + sec) * 1000L
+        } else {
+            0L
+        }
+    } catch (_: Exception) { 0L }
 
     suspend fun fetchAndSync(forced: Boolean = false): Int = withContext(Dispatchers.Default) {
         if (_syncing.value) return@withContext 0 // Sync Lock: exit immediately if a sync is already in progress
@@ -490,10 +535,10 @@ object SyncEngine {
                 val domainChanged = topLink.isNotEmpty() && firstItemLink.isNotEmpty() && 
                         extractDomain(topLink) != extractDomain(firstItemLink)
 
-                val isCacheCleared = false
+                val isListEmpty = _newsList.value.isEmpty()
 
-                if (topLink.isEmpty() || domainChanged || isCacheCleared) {
-                    // First run or domain changed: take latest 15 only
+                if (topLink.isEmpty() || domainChanged || isListEmpty) {
+                    // First run, domain changed, or empty cache/list: take latest 15 baseline items
                     val validItems = fetchedItems.take(15)
                     newUniqueItems.addAll(validItems)
                     
@@ -585,19 +630,29 @@ object SyncEngine {
                         if (norm.isNotEmpty()) norm else (it.title.ifBlank { it.id })
                     }
 
-                    // Apply cache-clear limit (date-based cap)
+                    // Retain all items permanently in user data without arbitrary count limits
                     val cacheClear = _appSettings.value.cacheClearInterval
-                    val limitDays = when (cacheClear) {
-                        "7d"   -> 7
-                        "1m"   -> 30
-                        "3m"   -> 90
-                        "6m"   -> 180
-                        "never" -> Int.MAX_VALUE
-                        else   -> 180 // default 6 months
+                    val filteredList = if (cacheClear == "never") {
+                        combined
+                    } else {
+                        val limitDays = when (cacheClear) {
+                            "7d"   -> 7
+                            "1m"   -> 30
+                            "3m"   -> 90
+                            "6m"   -> 180
+                            else   -> null
+                        }
+                        if (limitDays != null) {
+                            val cutoffMs = System.currentTimeMillis() - (limitDays.toLong() * 24 * 60 * 60 * 1000L)
+                            combined.filter { item ->
+                                if (item.isAnnouncement) return@filter true
+                                val parsed = try { parseNewsDateToMillis(item.pubDate) } catch (_: Exception) { 0L }
+                                parsed == 0L || parsed >= cutoffMs
+                            }
+                        } else {
+                            combined
+                        }
                     }
-                    // Cap list to limitDays worth of news (approx 3 news/day)
-                    val maxItems = if (limitDays == Int.MAX_VALUE) 200 else (limitDays * 3).coerceAtLeast(15)
-                    val filteredList = if (combined.size > maxItems) combined.take(maxItems) else combined
 
                     saveLocalNews(filteredList)
                     _lastFetchedCount.value = newUniqueItems.size
@@ -653,6 +708,8 @@ object SyncEngine {
         settings.putString("Top_Time", "")
         settings.putString("Bottom_Link", "")
         settings.putString("Bottom_Time", "")
+        settings.putString("unnotified_fcm_titles", "")
+        _lastFetchedCount.value = -1
     }
 
     fun restoreNewsItem(item: NewsItem, index: Int) {

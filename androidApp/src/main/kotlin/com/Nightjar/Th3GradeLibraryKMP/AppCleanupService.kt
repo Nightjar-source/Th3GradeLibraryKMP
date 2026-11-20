@@ -28,6 +28,25 @@ class AppCleanupService : Service() {
                         try { file.delete() } catch (_: Exception) {}
                     }
                 }
+
+                // Clean orphaned .tmp files in permanent storage directory (books_storage)
+                try {
+                    val booksDir = java.io.File(context.filesDir, "books_storage")
+                    if (booksDir.exists() && booksDir.isDirectory) {
+                        val activeDownloadingIds = com.Nightjar.Th3GradeLibraryKMP.network.BookDownloadManager.itemStates.value
+                            .filter { it.value.status == com.Nightjar.Th3GradeLibraryKMP.network.DownloadStatus.DOWNLOADING }
+                            .keys
+
+                        booksDir.listFiles()?.forEach { file ->
+                            if (file.name.endsWith(".tmp") || file.name.startsWith("partial_")) {
+                                val isActivelyDownloading = activeDownloadingIds.any { id -> file.name.contains(id) }
+                                if (!isActivelyDownloading) {
+                                    try { file.delete() } catch (_: Exception) {}
+                                }
+                            }
+                        }
+                    }
+                } catch (_: Exception) {}
                 // Memory caches eviction
                 com.Nightjar.Th3GradeLibraryKMP.ui.PdfBitmapCache.cache.evictAll()
                 try {

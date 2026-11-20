@@ -94,38 +94,98 @@ class MainActivity : ComponentActivity() {
     private lateinit var notificationPermissionLauncher: androidx.activity.result.ActivityResultLauncher<String>
     private lateinit var batteryOptimizationLauncher: androidx.activity.result.ActivityResultLauncher<Intent>
 
-    private fun loadCoverBitmap(coverResName: String, maxWidth: Int, maxHeight: Int): Bitmap? {
-        val assetManager = assets
-        val possibleExtensions = listOf("png", "jpg", "jpeg")
-        for (ext in possibleExtensions) {
-            val assetPath = "composeResources/com.Nightjar.Th3GradeLibraryKMP.generated.resources/drawable/$coverResName.$ext"
-            try {
-                assetManager.open(assetPath).use { inputStream ->
-                    val options = BitmapFactory.Options().apply {
-                        inJustDecodeBounds = true
-                    }
-                    BitmapFactory.decodeStream(inputStream, null, options)
-                    
-                    assetManager.open(assetPath).use { actualStream ->
-                        val scaleOptions = BitmapFactory.Options().apply {
-                            inSampleSize = calculateInSampleSize(options, maxWidth, maxHeight)
-                            inJustDecodeBounds = false
+    private fun loadCoverBitmap(item: BookItem, maxWidth: Int, maxHeight: Int): Bitmap? {
+        // 1. Check permanent offline cover file in files/covers/
+        try {
+            val permanentCover = BookStorageEngine.getPermanentCoverFile(this, item)
+            if (permanentCover.exists() && permanentCover.length() > 512L) {
+                val decoded = BitmapFactory.decodeFile(permanentCover.absolutePath)
+                if (decoded != null) {
+                    val scaled = Bitmap.createScaledBitmap(decoded, maxWidth, maxHeight, true)
+                    return scaled
+                }
+            }
+        } catch (_: Exception) {}
+
+        // 2. Check bundled asset
+        if (item.coverResName.isNotBlank() && item.coverResName != "app_icon") {
+            val assetManager = assets
+            val possibleExtensions = listOf("png", "jpg", "jpeg")
+            for (ext in possibleExtensions) {
+                val assetPath = "composeResources/com.Nightjar.Th3GradeLibraryKMP.generated.resources/drawable/${item.coverResName}.$ext"
+                try {
+                    assetManager.open(assetPath).use { inputStream ->
+                        val options = BitmapFactory.Options().apply {
+                            inJustDecodeBounds = true
                         }
-                        val decoded = BitmapFactory.decodeStream(actualStream, null, scaleOptions)
-                        if (decoded != null) {
-                            val scaled = Bitmap.createScaledBitmap(decoded, maxWidth, maxHeight, true)
-                            if (scaled != decoded) {
-                                decoded.recycle()
+                        BitmapFactory.decodeStream(inputStream, null, options)
+                        
+                        assetManager.open(assetPath).use { actualStream ->
+                            val scaleOptions = BitmapFactory.Options().apply {
+                                inSampleSize = calculateInSampleSize(options, maxWidth, maxHeight)
+                                inJustDecodeBounds = false
                             }
-                            return scaled
+                            val decoded = BitmapFactory.decodeStream(actualStream, null, scaleOptions)
+                            if (decoded != null) {
+                                val scaled = Bitmap.createScaledBitmap(decoded, maxWidth, maxHeight, true)
+                                if (scaled != decoded) {
+                                    decoded.recycle()
+                                }
+                                return scaled
+                            }
+                        }
+                    }
+                } catch (e: Exception) {}
+            }
+        }
+
+        // 3. If book is downloaded, render page 0 via PdfRenderer
+        try {
+            val file = BookStorageEngine.getPermanentFile(this, item)
+            if (file.exists() && file.length() > 1024L) {
+                android.os.ParcelFileDescriptor.open(file, android.os.ParcelFileDescriptor.MODE_READ_ONLY)?.use { pfd ->
+                    android.graphics.pdf.PdfRenderer(pfd).use { renderer ->
+                        if (renderer.pageCount > 0) {
+                            renderer.openPage(0).use { page ->
+                                val bmp = Bitmap.createBitmap(maxWidth, maxHeight, Bitmap.Config.ARGB_8888)
+                                page.render(bmp, null, null, android.graphics.pdf.PdfRenderer.Page.RENDER_MODE_FOR_DISPLAY)
+                                return bmp
+                            }
                         }
                     }
                 }
-            } catch (e: Exception) {
-                // Try next extension
             }
+        } catch (_: Exception) {}
+
+        // 4. Fallback: Draw an adaptive color gradient bitmap with the book's Arabic title
+        return try {
+            val bmp = Bitmap.createBitmap(maxWidth, maxHeight, Bitmap.Config.ARGB_8888)
+            val canvas = android.graphics.Canvas(bmp)
+            val pStart = try { android.graphics.Color.parseColor(item.colorStart) } catch (_: Exception) { android.graphics.Color.parseColor("#2563EB") }
+            val pEnd = try { android.graphics.Color.parseColor(item.colorEnd) } catch (_: Exception) { android.graphics.Color.parseColor("#1D4ED8") }
+            val gradient = android.graphics.LinearGradient(
+                0f, 0f, maxWidth.toFloat(), maxHeight.toFloat(),
+                pStart, pEnd, android.graphics.Shader.TileMode.CLAMP
+            )
+            val paint = android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG).apply {
+                shader = gradient
+            }
+            val rect = android.graphics.RectF(0f, 0f, maxWidth.toFloat(), maxHeight.toFloat())
+            canvas.drawRoundRect(rect, 36f, 36f, paint)
+
+            val textPaint = android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG).apply {
+                color = android.graphics.Color.WHITE
+                textSize = maxWidth * 0.22f
+                typeface = android.graphics.Typeface.DEFAULT_BOLD
+                textAlign = android.graphics.Paint.Align.CENTER
+            }
+            val initial = item.title.trim().take(4)
+            val textY = (maxHeight / 2f) - ((textPaint.descent() + textPaint.ascent()) / 2f)
+            canvas.drawText(initial, maxWidth / 2f, textY, textPaint)
+            bmp
+        } catch (_: Exception) {
+            BitmapFactory.decodeResource(resources, R.drawable.app_icon)
         }
-        return null
     }
 
     private fun calculateInSampleSize(options: BitmapFactory.Options, reqWidth: Int, reqHeight: Int): Int {
@@ -326,7 +386,7 @@ class MainActivity : ComponentActivity() {
                         val width = if (maxIconWidth > 0) maxIconWidth else 192
                         val height = if (maxIconHeight > 0) maxIconHeight else 192
 
-                        val coverBitmap = loadCoverBitmap(item.coverResName, width, height)
+                        val coverBitmap = loadCoverBitmap(item, width, height)
                         val icon = if (coverBitmap != null) {
                             Icon.createWithBitmap(coverBitmap)
                         } else {
@@ -796,10 +856,17 @@ class MainActivity : ComponentActivity() {
     private fun handleIntent(intent: Intent?) {
         if (intent == null) return
         
-        // 1. Direct browser / Custom Tab redirection for type=news
         val browserUrl = intent.getStringExtra("open_browser_url")
-        if (!browserUrl.isNullOrEmpty()) {
+        val isFromFirebase = intent.hasExtra("google.message_id") ||
+                intent.hasExtra("gcm.notification.title") ||
+                intent.hasExtra("gcm.notification.body") ||
+                intent.hasExtra("gcm.n.e") ||
+                (intent.getStringExtra("from")?.contains("topic") == true)
+
+        // 1. RSS News item with web link -> open in CustomTab / browser as requested
+        if (!browserUrl.isNullOrEmpty() && !isFromFirebase) {
             NotificationHelper.clearNewsNotifications(this)
+            pageState.value = "news"
             val primaryColorHex = com.Nightjar.Th3GradeLibraryKMP.network.SyncEngine.appSettings.value.primaryColor
             try {
                 val colorInt = android.graphics.Color.parseColor(primaryColorHex)
@@ -821,7 +888,42 @@ class MainActivity : ComponentActivity() {
             return
         }
 
+        // 2. Manual Firebase Console Announcement -> save to user data and open in NotificationDetailScreen
+        if (isFromFirebase || intent.getStringExtra("page") == "notification_detail") {
+            NotificationHelper.clearNewsNotifications(this)
+            
+            val fcmTitle = intent.getStringExtra("gcm.notification.title") 
+                ?: intent.getStringExtra("title") 
+                ?: "تبليغ وزاري جديد"
+            val fcmBody = intent.getStringExtra("gcm.notification.body") 
+                ?: intent.getStringExtra("body") 
+                ?: intent.getStringExtra("content") 
+                ?: ""
+            val fcmImage = intent.getStringExtra("gcm.notification.image") 
+                ?: intent.getStringExtra("image_url") 
+                ?: ""
+            val fcmLink = intent.getStringExtra("link") 
+                ?: intent.getStringExtra("click_url") 
+                ?: ""
+            
+            if (fcmTitle.isNotBlank() || fcmBody.isNotBlank()) {
+                com.Nightjar.Th3GradeLibraryKMP.network.SyncEngine.recordDirectAnnouncement(
+                    title = fcmTitle,
+                    content = fcmBody,
+                    imageUrl = fcmImage,
+                    link = fcmLink
+                )
+            }
+            pageState.value = "notification_detail"
+            return
+        }
+
         val targetPage = intent.getStringExtra("page")
+        val uriPage = intent.data?.getQueryParameter("page")
+        if (targetPage == "news" || uriPage == "news") {
+            NotificationHelper.clearNewsNotifications(this)
+            pageState.value = "news"
+        }
         if (targetPage == "news" || intent.hasExtra("link") || intent.data?.getQueryParameter("page") == "news") {
             NotificationHelper.clearNewsNotifications(this)
         }

@@ -375,6 +375,14 @@ fun AppContent(
                 consumed = true
             }
         } else if (initialPage != null) {
+            if (initialPage == "notification_detail") {
+                val news = SyncEngine.newsList.value
+                val matched = news.firstOrNull { it.isAnnouncement } ?: news.firstOrNull()
+                if (matched != null) {
+                    activeNotificationItem = matched
+                }
+                viewModel.pageHistory.value = listOf("home", "news", "notification_detail")
+            }
             navigateTo(initialPage)
             consumed = true
         }

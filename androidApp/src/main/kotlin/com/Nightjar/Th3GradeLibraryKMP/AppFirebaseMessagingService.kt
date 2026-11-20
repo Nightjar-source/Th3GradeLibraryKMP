@@ -44,8 +44,10 @@ class AppFirebaseMessagingService : FirebaseMessagingService() {
         fun subscribeToNewsTopic() {
             try {
                 FirebaseMessaging.getInstance().subscribeToTopic("news")
-                FirebaseMessaging.getInstance().subscribeToTopic("kar")
+                FirebaseMessaging.getInstance().subscribeToTopic("all")
                 FirebaseMessaging.getInstance().subscribeToTopic("announcements")
+                FirebaseMessaging.getInstance().subscribeToTopic("general")
+                FirebaseMessaging.getInstance().subscribeToTopic("kar")
             } catch (e: Exception) {
                 e.printStackTrace()
             }
@@ -95,59 +97,46 @@ class AppFirebaseMessagingService : FirebaseMessagingService() {
         super.onMessageReceived(remoteMessage)
 
         val data = remoteMessage.data
-        val title = data["title"] ?: remoteMessage.notification?.title ?: "خبر دراسي جديد"
-        val link = data["link"] ?: data["click_url"] ?: ""
-        val imageUrl = data["image_url"] ?: data["imageUrl"] ?: ""
-        val pubDate = data["pubDate"] ?: ""
-        val content = data["content"] ?: data["body"] ?: remoteMessage.notification?.body ?: ""
+        val rawTitle = data["title"] ?: remoteMessage.notification?.title ?: "تبليغ وزاري جديد"
+        val title = rawTitle.trim().ifBlank { "تبليغ وزاري جديد" }
+        val link = (data["link"] ?: data["click_url"] ?: "").trim()
+        val imageUrl = (data["image_url"] ?: data["imageUrl"] ?: remoteMessage.notification?.imageUrl?.toString() ?: "").trim()
+        val content = (data["content"] ?: data["body"] ?: remoteMessage.notification?.body ?: "").trim()
+        val rawPubDate = (data["pubDate"] ?: "").trim()
+        val pubDate = if (rawPubDate.isNotBlank()) rawPubDate else {
+            java.text.SimpleDateFormat("yyyy-MM-dd HH:mm:ss", java.util.Locale.US).format(java.util.Date())
+        }
 
         val isDevTest = title.contains("المطور") || title.contains("تجريبي") || link.startsWith("dev_") || data["is_test"] == "true"
-        
-        // 1. Silent Local Cache Update (Smart Watermark deduplication)
-        // Ensure ALL items (including test notifications) are always saved to cache and displayed in News cards!
         val fromTopic = remoteMessage.from ?: ""
-        // STRICT CONDITION:
-        // News MUST originate from topic "news" (/topics/news) AND have data["type"] == "news".
-        // ALL OTHER NOTIFICATIONS are strictly treated as administrative announcements!
         val isStrictNews = (fromTopic.endsWith("/news") || fromTopic == "news" || fromTopic.contains("/topics/news")) && data["type"] == "news"
-        val isNews = isStrictNews
-        val isAnnouncement = !isStrictNews
+        val isAnnouncement = !isStrictNews || data["type"] == "announcement" || data["is_announcement"] == "true" || title.contains("ميزات") || title.contains("تبليغ")
 
+        // 1. Permanent Local Cache Update (Saved permanently in User Data)
         val isNewItem = saveToCache(title, link, imageUrl, pubDate, content, isAnnouncement)
 
-        if (!isNewItem && !isDevTest) {
-            // Item already received and in cache: ZERO redundant background alerts!
-            return
-        }
-
-        // 2. User Sync Schedule Check
-        val syncInterval = SyncEngine.appSettings.value.syncInterval
-        if (syncInterval == "on_open" && !isDevTest) {
-            // User selected updates ONLY when opening the app: ZERO background notifications
-            return
-        }
-
-        if (SyncEngine.isUserOnNewsScreen && !isDevTest && !isAnnouncement) {
-            // User is currently actively looking at the News screen: already displayed in front of them, ZERO redundant notifications
-            return
-        }
-
-        if (isDevTest) {
-            // Explicit developer test trigger: show immediately as a micro-thumbnail notification
-            showMicroThumbnailNotification(title, content, link, imageUrl, isNews = !isAnnouncement)
-            return
-        }
-
-        // If it's general/admin announcement, show immediately in details activity/screen
-        if (isAnnouncement) {
+        // 2. Announcements & Admin updates ALWAYS fire immediately (never suppressed)
+        if (isAnnouncement || isDevTest) {
             showMicroThumbnailNotification(title, content, link, imageUrl, isNews = false)
             return
         }
 
-        // 3. Record in pending unnotified queue
+        // 3. User Sync Schedule Check for standard RSS news
+        val syncInterval = SyncEngine.appSettings.value.syncInterval
+        if (syncInterval == "on_open") {
+            // User selected updates ONLY when opening the app: ZERO background notifications
+            return
+        }
+
+        if (SyncEngine.isUserOnNewsScreen) {
+            // User is currently actively looking at the News screen
+            return
+        }
+
+        // 4. Record in pending unnotified queue
         recordUnnotifiedNews(title)
 
-        // 4. Batch Delivery Window Check
+        // 5. Batch Delivery Window Check
         val intervalMs = when (syncInterval) {
             "15m" -> 15 * 60 * 1000L
             "30m" -> 30 * 60 * 1000L
@@ -164,15 +153,13 @@ class AppFirebaseMessagingService : FirebaseMessagingService() {
             AppDataStore.putLong("last_fcm_news_alert_time", now)
             val pendingTitles = getAndClearUnnotifiedNews()
             val soundEnabled = SyncEngine.appSettings.value.notificationSound
+            showMicroThumbnailNotification(title, content, link, imageUrl, isNews = true)
+
             if (pendingTitles.size > 1) {
                 val microThumb = loadMicroThumbnail(imageUrl)
-                // Bundle all accumulated items from newest to oldest into ONE notification
                 NotificationHelper.showNotifications(this, pendingTitles, pendingTitles.size, soundEnabled, microThumb)
-            } else {
-                showMicroThumbnailNotification(title, content, link, imageUrl, isNews = true)
             }
         } else {
-            // Schedule one-time delayed delivery for the end of the quiet window
             val remainingMs = intervalMs - (now - lastNotif)
             NewsBatchDeliveryWorker.scheduleDelivery(this, remainingMs)
         }
@@ -183,27 +170,27 @@ class AppFirebaseMessagingService : FirebaseMessagingService() {
             val json = Json { ignoreUnknownKeys = true }
             val cachedJson = AppDataStore.getString("app_news_cache", "")
             val existingList: MutableList<NewsItem> = if (cachedJson.isNotEmpty()) {
-                json.decodeFromString<List<NewsItem>>(cachedJson).toMutableList()
+                try {
+                    json.decodeFromString<List<NewsItem>>(cachedJson).toMutableList()
+                } catch (_: Exception) {
+                    SyncEngine.newsList.value.toMutableList()
+                }
             } else {
-                mutableListOf()
+                SyncEngine.newsList.value.toMutableList()
             }
 
-            val id = if (link.isNotEmpty()) link else ("news_" + title.hashCode())
+            val id = if (link.isNotEmpty()) link else ("news_" + title.hashCode() + "_" + (System.currentTimeMillis() / 1000))
             val formattedDate = SyncEngine.formatNewsDate(pubDate)
-
-            // Strict temporal & link boundary check:
-            // A news item is only a duplicate if its ID/link/title AND its pubDate match the cached item.
-            // If the same link/article was updated with a new publication timestamp, it is treated as a fresh update!
             val normLink = SyncEngine.normalizeUrl(link)
+
             val existingItem = existingList.find {
                 it.id == id ||
                 (normLink.isNotEmpty() && SyncEngine.normalizeUrl(it.link) == normLink) ||
-                (title.isNotBlank() && it.title == title)
+                (title.isNotBlank() && it.title == title && it.contentSnippet == content)
             }
-            val isDuplicate = existingItem != null && (pubDate.isEmpty() || existingItem.pubDate == pubDate)
+            val isExactDuplicate = existingItem != null && (existingItem.contentSnippet == content && existingItem.title == title)
 
-            if (!isDuplicate) {
-                // If it existed with older timestamp, remove old version so updated article takes top position
+            if (!isExactDuplicate) {
                 if (existingItem != null) {
                     existingList.remove(existingItem)
                 }
@@ -219,7 +206,8 @@ class AppFirebaseMessagingService : FirebaseMessagingService() {
                     isAnnouncement = isAnnouncement
                 )
                 existingList.add(0, newItem)
-                AppDataStore.putString("app_news_cache", json.encodeToString(existingList.take(60)))
+                // Retain all items permanently in user data without arbitrary limits
+                AppDataStore.putString("app_news_cache", json.encodeToString(existingList))
                 AppDataStore.putString("Top_Link", link.ifEmpty { id })
                 if (pubDate.isNotEmpty()) AppDataStore.putString("Top_Time", pubDate)
                 val now = System.currentTimeMillis()
@@ -228,6 +216,13 @@ class AppFirebaseMessagingService : FirebaseMessagingService() {
                 SyncEngine.reloadFromPersistence()
                 true
             } else {
+                false
+            }
+        } catch (e: Exception) {
+            e.printStackTrace()
+            false
+        }
+    }
                 false
             }
         } catch (e: Exception) {
@@ -312,22 +307,21 @@ class AppFirebaseMessagingService : FirebaseMessagingService() {
             flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
             if (isNews) {
                 if (link.startsWith("http")) {
-                    // News topic / type=news: opens directly in the browser / CustomTab
                     putExtra("open_browser_url", link)
                     data = Uri.parse(link)
                 } else {
-                    // News topic without direct web link: opens News screen
                     putExtra("page", "news")
                     data = Uri.parse("th3books://library?page=news")
                 }
             } else {
-                // General announcement: opens in app NotificationDetailScreen
-                data = Uri.parse(if (link.isNotEmpty()) "th3books://library?page=notification_detail&link=" + Uri.encode(link) else "th3books://library?page=notification_detail")
                 putExtra("page", "notification_detail")
                 if (link.isNotEmpty()) {
                     putExtra("link", link)
                     putExtra("open_notification_id", link)
                 }
+                putExtra("title", title)
+                putExtra("content", content)
+                data = Uri.parse(if (link.isNotEmpty()) "th3books://library?page=notification_detail&link=" + Uri.encode(link) else "th3books://library?page=notification_detail")
             }
         }
 

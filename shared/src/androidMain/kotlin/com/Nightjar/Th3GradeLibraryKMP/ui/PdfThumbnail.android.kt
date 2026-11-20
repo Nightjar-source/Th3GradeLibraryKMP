@@ -35,6 +35,23 @@ actual fun rememberPdfCoverThumbnail(item: BookItem): ImageBitmap? {
                         return@withContext
                     }
 
+                    // 1. Check permanent offline cover file in files/covers/
+                    val permanentCover = BookStorageEngine.getPermanentCoverFile(context, item)
+                    if (permanentCover.exists() && permanentCover.length() > 512L) {
+                        val decoded = android.graphics.BitmapFactory.decodeFile(permanentCover.absolutePath)
+                        if (decoded != null) {
+                            val imgBmp = decoded.asImageBitmap()
+                            synchronized(thumbnailLruCache) {
+                                thumbnailLruCache.put(cacheKey, imgBmp)
+                            }
+                            withContext(Dispatchers.Main) {
+                                bitmap = imgBmp
+                            }
+                            return@withContext
+                        }
+                    }
+
+                    // 2. Render from PDF page 0 and persist permanently to files/covers/
                     ParcelFileDescriptor.open(file, ParcelFileDescriptor.MODE_READ_ONLY)?.use { pfd ->
                         PdfRenderer(pfd).use { renderer ->
                             if (renderer.pageCount > 0) {
@@ -43,6 +60,14 @@ actual fun rememberPdfCoverThumbnail(item: BookItem): ImageBitmap? {
                                     val height = (360 * page.height / page.width).coerceAtLeast(480)
                                     val bmp = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
                                     page.render(bmp, null, null, PdfRenderer.Page.RENDER_MODE_FOR_DISPLAY)
+                                    
+                                    // Save permanently in user data directory (Offline forever)
+                                    try {
+                                        permanentCover.outputStream().use { out ->
+                                            bmp.compress(Bitmap.CompressFormat.JPEG, 90, out)
+                                        }
+                                    } catch (_: Exception) {}
+
                                     val imgBmp = bmp.asImageBitmap()
                                     synchronized(thumbnailLruCache) {
                                         thumbnailLruCache.put(cacheKey, imgBmp)

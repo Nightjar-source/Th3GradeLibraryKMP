@@ -77,11 +77,40 @@ actual object AppDataStore {
     }
 
     actual fun getString(key: String, defaultValue: String): String {
-        return (cache[key] as? String) ?: defaultValue
+        val mem = cache[key] as? String
+        if (mem != null) return mem
+        return try {
+            val ctx = getSafeContext()
+            if (ctx != null) {
+                val sp = ctx.getSharedPreferences("${ctx.packageName}_preferences", Context.MODE_PRIVATE)
+                val fromSp = sp.getString(key, null)
+                if (fromSp != null) {
+                    cache[key] = fromSp
+                    return fromSp
+                }
+            }
+            defaultValue
+        } catch (_: Throwable) {
+            defaultValue
+        }
     }
 
     actual fun putString(key: String, value: String) {
         cache[key] = value
+        try {
+            val ctx = getSafeContext()
+            if (ctx != null) {
+                val sp = ctx.getSharedPreferences("${ctx.packageName}_preferences", Context.MODE_PRIVATE)
+                sp.edit().putString(key, value).apply()
+                if (key == "app_news_cache") {
+                    try {
+                        val file = java.io.File(ctx.filesDir, "files/news_permanent_archive.json")
+                        file.parentFile?.mkdirs()
+                        file.writeText(value)
+                    } catch (_: Throwable) {}
+                }
+            }
+        } catch (_: Throwable) {}
         scope.launch {
             try {
                 val ctx = getSafeContext() ?: return@launch

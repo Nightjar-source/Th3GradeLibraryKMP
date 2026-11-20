@@ -127,6 +127,8 @@ actual object BookDownloadManager {
         }
     }
 
+    private val lastActionTimes = java.util.concurrent.ConcurrentHashMap<String, Long>()
+
     private fun startForegroundServiceIfNeeded(context: Context) {
         try {
             val intent = Intent().apply {
@@ -145,8 +147,9 @@ actual object BookDownloadManager {
             try {
                 val intent = Intent().apply {
                     setClassName(context.packageName, "com.Nightjar.Th3GradeLibraryKMP.BookDownloadForegroundService")
+                    action = "com.Nightjar.Th3GradeLibraryKMP.ACTION_STOP_DOWNLOAD_SERVICE"
                 }
-                context.stopService(intent)
+                context.startService(intent)
             } catch (_: Exception) {}
         }
     }
@@ -361,6 +364,11 @@ actual object BookDownloadManager {
     }
 
     actual fun downloadItem(context: Any, item: BookItem) {
+        val now = System.currentTimeMillis()
+        val last = lastActionTimes[item.id] ?: 0L
+        if (now - last < 350L) return
+        lastActionTimes[item.id] = now
+
         val ctx = context as Context
         appContext = ctx.applicationContext
         registerReceiverIfNeeded(ctx)
@@ -522,6 +530,9 @@ actual object BookDownloadManager {
                                         permanentFile.delete()
                                     }
                                     tempTarget.renameTo(permanentFile)
+                                    try {
+                                        com.Nightjar.Th3GradeLibraryKMP.ui.PdfBitmapCache.evictBook(item.id)
+                                    } catch (_: Exception) {}
                                     updateState(item.id, ItemDownloadState(status = DownloadStatus.COMPLETED, progress = 1f))
                                     downloadSuccess = true
                                     activeJobs.remove(item.id)
@@ -584,6 +595,11 @@ actual object BookDownloadManager {
     }
 
     actual fun pauseDownload(item: BookItem) {
+        val now = System.currentTimeMillis()
+        val last = lastActionTimes[item.id] ?: 0L
+        if (now - last < 350L) return
+        lastActionTimes[item.id] = now
+
         val job = activeJobs.remove(item.id)
         job?.cancel()
         val currentProgress = _itemStates.value[item.id]?.progress ?: 0f
@@ -621,6 +637,11 @@ actual object BookDownloadManager {
     }
 
     actual fun cancelDownload(item: BookItem) {
+        val now = System.currentTimeMillis()
+        val last = lastActionTimes[item.id] ?: 0L
+        if (now - last < 350L) return
+        lastActionTimes[item.id] = now
+
         val job = activeJobs.remove(item.id)
         job?.cancel()
         tempFiles.remove(item.id)?.delete()
