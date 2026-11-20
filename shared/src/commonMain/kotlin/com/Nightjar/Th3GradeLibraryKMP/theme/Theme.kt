@@ -23,6 +23,7 @@ import androidx.compose.ui.draw.scale
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.composed
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontFamily
@@ -42,6 +43,9 @@ import org.jetbrains.compose.resources.Font
 import com.Nightjar.Th3GradeLibraryKMP.generated.resources.Res
 import com.Nightjar.Th3GradeLibraryKMP.generated.resources.reem_kufi_bold
 import com.Nightjar.Th3GradeLibraryKMP.generated.resources.reem_kufi_medium
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.core.LinearOutSlowInEasing
 import androidx.compose.material3.ColorScheme
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.lightColorScheme
@@ -62,48 +66,76 @@ fun parseHexColor(hex: String): Color {
 
 val LocalIsLowEndDevice = compositionLocalOf { false }
 
-
 val LocalIsNavigatingBack = compositionLocalOf { false }
 val LocalSeenEntranceItems = compositionLocalOf<androidx.compose.runtime.snapshots.SnapshotStateMap<String, Boolean>?> { null }
 val LocalScreenEntranceKey = compositionLocalOf { "default_screen" }
 val LocalIsReturningFromPdf = compositionLocalOf { false }
 
 // Glassmorphism modifier optimized with hardware-accelerated drawWithCache
+// 3D Embossed Glassmorphism modifier optimized with hardware-accelerated drawWithCache
 fun Modifier.liquidGlass(
     isDark: Boolean,
     borderRadius: Dp = 24.dp,
-    alpha: Float = 0.95f // Increased to hide content underneath
+    alpha: Float = 0.82f // 3D Embossed liquid glass transparency
 ): Modifier = composed {
     val isLowEnd = LocalIsLowEndDevice.current
-    val bg = if (isDark) {
-        Color(0xFF1E293B).copy(alpha = if (isLowEnd) 1.0f else alpha) // Slate 800 (Solid for low end)
+    val effectiveAlpha = if (isLowEnd) 0.90f else alpha
+    
+    // 3D Depth Lighting: Subtle vertical lighting gradient for embossed volume
+    val bodyBrush = if (isDark) {
+        Brush.verticalGradient(
+            listOf(
+                Color(0xFF334155).copy(alpha = effectiveAlpha),
+                Color(0xFF0F172A).copy(alpha = (effectiveAlpha + 0.08f).coerceAtMost(1f))
+            )
+        )
     } else {
-        MaterialTheme.colorScheme.surfaceVariant.copy(alpha = if (isLowEnd) 1.0f else alpha)
+        Brush.verticalGradient(
+            listOf(
+                Color(0xFFFFFFFF).copy(alpha = effectiveAlpha),
+                Color(0xFFE2E8F0).copy(alpha = effectiveAlpha)
+            )
+        )
     }
     
-    if (isLowEnd) {
-        return@composed this.background(bg, RoundedCornerShape(borderRadius))
-    }
-    val border = if (isDark) {
-        Color(0xFFFFFFFF).copy(alpha = 0.15f)
+    // Top specular highlight edge for 3D tactile glass feeling
+    val borderBrush = if (isDark) {
+        Brush.verticalGradient(
+            listOf(
+                Color(0xFFFFFFFF).copy(alpha = 0.35f),
+                Color(0xFFFFFFFF).copy(alpha = 0.05f)
+            )
+        )
     } else {
-        MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.15f)
+        Brush.verticalGradient(
+            listOf(
+                Color(0xFFFFFFFF).copy(alpha = 0.85f),
+                Color(0xFF94A3B8).copy(alpha = 0.25f)
+            )
+        )
     }
+
+    if (isLowEnd) {
+        val solidFallback = if (isDark) Color(0xFF1E293B).copy(alpha = effectiveAlpha) else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = effectiveAlpha)
+        return@composed this.background(solidFallback, RoundedCornerShape(borderRadius))
+    }
+
     this.drawWithCache {
         val radiusPx = CornerRadius(borderRadius.coerceAtLeast(0.dp).toPx())
-        val strokeWidth = 1.dp.toPx()
+        val strokeWidth = 1.2.dp.toPx()
         val strokeStyle = Stroke(width = strokeWidth)
         
         onDrawBehind {
-            drawRoundRect(color = bg, cornerRadius = radiusPx)
-            drawRoundRect(color = border, cornerRadius = radiusPx, style = strokeStyle)
+            drawRoundRect(brush = bodyBrush, cornerRadius = radiusPx)
+            drawRoundRect(brush = borderBrush, cornerRadius = radiusPx, style = strokeStyle)
         }
     }
 }
 
+@Composable
 fun Modifier.bounceClick(
     onClick: () -> Unit
-): Modifier = composed {
+): Modifier {
     val interactionSource = androidx.compose.runtime.remember { androidx.compose.foundation.interaction.MutableInteractionSource() }
     val isPressed by interactionSource.collectIsPressedAsState()
     val scale by androidx.compose.animation.core.animateFloatAsState(
@@ -113,7 +145,7 @@ fun Modifier.bounceClick(
             stiffness = androidx.compose.animation.core.Spring.StiffnessHigh
         )
     )
-    this
+    return this
         .graphicsLayer {
             scaleX = scale
             scaleY = scale
@@ -141,12 +173,12 @@ fun Modifier.expressiveButtonMorph(
     val isPressed by interactionSource.collectIsPressedAsState()
     val cornerRadius by androidx.compose.animation.core.animateDpAsState(
         targetValue = if (isPressed) pressedRadius else restRadius,
-        animationSpec = androidx.compose.animation.core.spring(dampingRatio = 0.6f, stiffness = 360f),
+        animationSpec = androidx.compose.animation.core.spring(dampingRatio = 0.52f, stiffness = 420f),
         label = "expressive_corner_morph"
     )
     val scale by androidx.compose.animation.core.animateFloatAsState(
         targetValue = if (isPressed) pressedScale else 1.0f,
-        animationSpec = androidx.compose.animation.core.spring(dampingRatio = 0.6f, stiffness = 360f),
+        animationSpec = androidx.compose.animation.core.spring(dampingRatio = 0.52f, stiffness = 420f),
         label = "expressive_scale_morph"
     )
     val shape = RoundedCornerShape(cornerRadius.coerceAtLeast(0.dp))
@@ -182,10 +214,7 @@ fun Modifier.screenEntranceStagger(index: Int = 0, itemId: String? = null): Modi
 
     // When returning from PDF or navigating back or on active shared target: keep 100% stationary with zero movement!
     if (isReturningFromPdf || isNavigatingBack || isActiveSharedTarget) {
-        // Writing snapshot state during composition is not allowed — mark seen via a side effect instead.
-        androidx.compose.runtime.LaunchedEffect(itemKey) {
-            seenMap?.put(itemKey, true)
-        }
+        seenMap?.put(itemKey, true)
         return@composed this
     }
 
@@ -194,28 +223,27 @@ fun Modifier.screenEntranceStagger(index: Int = 0, itemId: String? = null): Modi
 
     val animProgress = androidx.compose.runtime.remember(screenKey, itemKey) { androidx.compose.animation.core.Animatable(0f) }
     val density = androidx.compose.ui.platform.LocalDensity.current
-    val offsetYPx = androidx.compose.runtime.remember(density) { with(density) { 18.dp.toPx() } }
+    val offsetYPx = androidx.compose.runtime.remember(density) { with(density) { 14.dp.toPx() } }
 
     androidx.compose.runtime.LaunchedEffect(screenKey, itemKey) {
-        val staggerDelay = ((index % 8).coerceIn(0, 7) * 20L)
+        val staggerDelay = ((index % 8).coerceIn(0, 7) * 24L)
         if (staggerDelay > 0) kotlinx.coroutines.delay(staggerDelay)
         animProgress.animateTo(
             targetValue = 1f,
             animationSpec = androidx.compose.animation.core.spring(
-                dampingRatio = 0.72f, // Ultra-fluid organic iOS lock-screen bloom
-                stiffness = 280f
+                dampingRatio = 0.76f, // Ultra-moist fluid organic spring (كالجبنة)
+                stiffness = 320f
             )
         )
         seenMap?.put(itemKey, true)
     }
 
-    // Read animation state inside the draw lambda: invalidates only the layer, not composition, per frame.
+    val p = animProgress.value
     this.graphicsLayer {
-        val p = animProgress.value
-        this.alpha = 0.20f + 0.80f * p
+        this.alpha = 0.30f + 0.70f * p // Base alpha 0.30f eliminates harsh dark/white flashes!
         this.translationY = (1f - p) * offsetYPx
-        this.scaleX = 0.94f + 0.06f * p
-        this.scaleY = 0.94f + 0.06f * p
+        this.scaleX = 0.985f + 0.015f * p
+        this.scaleY = 0.985f + 0.015f * p
         this.clip = false
     }
 }
@@ -237,6 +265,81 @@ val KufiReemFontFamily: FontFamily
         Font(Res.font.reem_kufi_medium, FontWeight.Medium),
         Font(Res.font.reem_kufi_bold, FontWeight.Bold)
     )
+
+/**
+ * Animated color scheme — smooth 350ms transitions when the color scheme changes.
+ */
+@Composable
+fun animateColorScheme(targetColorScheme: ColorScheme): ColorScheme {
+    val animationSpec = tween<Color>(durationMillis = 350, easing = LinearOutSlowInEasing)
+    
+    val primary = animateColorAsState(targetColorScheme.primary, animationSpec).value
+    val onPrimary = animateColorAsState(targetColorScheme.onPrimary, animationSpec).value
+    val primaryContainer = animateColorAsState(targetColorScheme.primaryContainer, animationSpec).value
+    val onPrimaryContainer = animateColorAsState(targetColorScheme.onPrimaryContainer, animationSpec).value
+    val inversePrimary = animateColorAsState(targetColorScheme.inversePrimary, animationSpec).value
+    val secondary = animateColorAsState(targetColorScheme.secondary, animationSpec).value
+    val onSecondary = animateColorAsState(targetColorScheme.onSecondary, animationSpec).value
+    val secondaryContainer = animateColorAsState(targetColorScheme.secondaryContainer, animationSpec).value
+    val onSecondaryContainer = animateColorAsState(targetColorScheme.onSecondaryContainer, animationSpec).value
+    val tertiary = animateColorAsState(targetColorScheme.tertiary, animationSpec).value
+    val onTertiary = animateColorAsState(targetColorScheme.onTertiary, animationSpec).value
+    val tertiaryContainer = animateColorAsState(targetColorScheme.tertiaryContainer, animationSpec).value
+    val onTertiaryContainer = animateColorAsState(targetColorScheme.onTertiaryContainer, animationSpec).value
+    val background = animateColorAsState(targetColorScheme.background, animationSpec).value
+    val onBackground = animateColorAsState(targetColorScheme.onBackground, animationSpec).value
+    val surface = animateColorAsState(targetColorScheme.surface, animationSpec).value
+    val onSurface = animateColorAsState(targetColorScheme.onSurface, animationSpec).value
+    val surfaceVariant = animateColorAsState(targetColorScheme.surfaceVariant, animationSpec).value
+    val onSurfaceVariant = animateColorAsState(targetColorScheme.onSurfaceVariant, animationSpec).value
+    val surfaceTint = animateColorAsState(targetColorScheme.surfaceTint, animationSpec).value
+    val inverseSurface = animateColorAsState(targetColorScheme.inverseSurface, animationSpec).value
+    val inverseOnSurface = animateColorAsState(targetColorScheme.inverseOnSurface, animationSpec).value
+    val error = animateColorAsState(targetColorScheme.error, animationSpec).value
+    val onError = animateColorAsState(targetColorScheme.onError, animationSpec).value
+    val errorContainer = animateColorAsState(targetColorScheme.errorContainer, animationSpec).value
+    val onErrorContainer = animateColorAsState(targetColorScheme.onErrorContainer, animationSpec).value
+    val outline = animateColorAsState(targetColorScheme.outline, animationSpec).value
+    val outlineVariant = animateColorAsState(targetColorScheme.outlineVariant, animationSpec).value
+    val scrim = animateColorAsState(targetColorScheme.scrim, animationSpec).value
+
+    return ColorScheme(
+        primary = primary,
+        onPrimary = onPrimary,
+        primaryContainer = primaryContainer,
+        onPrimaryContainer = onPrimaryContainer,
+        inversePrimary = inversePrimary,
+        secondary = secondary,
+        onSecondary = onSecondary,
+        secondaryContainer = secondaryContainer,
+        onSecondaryContainer = onSecondaryContainer,
+        tertiary = tertiary,
+        onTertiary = onTertiary,
+        tertiaryContainer = tertiaryContainer,
+        onTertiaryContainer = onTertiaryContainer,
+        background = background,
+        onBackground = onBackground,
+        surface = surface,
+        onSurface = onSurface,
+        surfaceVariant = surfaceVariant,
+        onSurfaceVariant = onSurfaceVariant,
+        surfaceTint = surfaceTint,
+        inverseSurface = inverseSurface,
+        inverseOnSurface = inverseOnSurface,
+        error = error,
+        onError = onError,
+        errorContainer = errorContainer,
+        onErrorContainer = onErrorContainer,
+        outline = outline,
+        outlineVariant = outlineVariant,
+        scrim = scrim
+    )
+}
+
+/**
+ * Pop-in animation on initial load (caliq5 standard).
+ */
+fun Modifier.popInOnInitialLoad(index: Int = 0, itemId: String? = null): Modifier = this.screenEntranceStagger(index, itemId)
 
 @Composable
 fun Th3GradeTheme(
@@ -350,9 +453,10 @@ fun Th3GradeTheme(
         }
     }
 
-    // Material 3 switches colors instantly — no 350ms 30-state animation storm, no stacking/lag during theme toggle.
+    val animatedColorScheme = animateColorScheme(colorScheme)
+
     MaterialTheme(
-        colorScheme = colorScheme,
+        colorScheme = animatedColorScheme,
         typography = Typography(),
         content = content
     )
@@ -384,12 +488,12 @@ fun MorphingButton(
 
     val cornerRadius by androidx.compose.animation.core.animateDpAsState(
         targetValue = if (isMorphActive) pressedRadius else restRadius,
-        animationSpec = androidx.compose.animation.core.spring(dampingRatio = 0.6f, stiffness = 360f),
+        animationSpec = androidx.compose.animation.core.spring(dampingRatio = 0.52f, stiffness = 420f),
         label = "expressive_corner_morph"
     )
     val scale by androidx.compose.animation.core.animateFloatAsState(
         targetValue = if (isMorphActive) pressedScale else 1.0f,
-        animationSpec = androidx.compose.animation.core.spring(dampingRatio = 0.6f, stiffness = 360f),
+        animationSpec = androidx.compose.animation.core.spring(dampingRatio = 0.52f, stiffness = 420f),
         label = "expressive_scale_morph"
     )
 

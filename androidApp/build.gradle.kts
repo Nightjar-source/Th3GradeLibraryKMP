@@ -21,8 +21,8 @@ android {
         applicationId = "com.Nightjar.Th3GradeLibraryKMP"
         minSdk = libs.versions.android.minSdk.get().toInt()
         targetSdk = libs.versions.android.targetSdk.get().toInt()
-        versionCode = 12122
-        versionName = "1.5.7"
+        versionCode = 12123
+        versionName = "1.5.8"
     }
     
     val keystoreProperties = Properties()
