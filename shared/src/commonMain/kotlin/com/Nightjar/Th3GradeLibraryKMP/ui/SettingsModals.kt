@@ -132,21 +132,25 @@ fun AppSettingsModal(
         "#9C27B0"  // Purple
     )
 
-    if (isOpen) {
-        val sheetState = androidx.compose.material3.rememberModalBottomSheetState(skipPartiallyExpanded = true)
-        val closeScope = androidx.compose.runtime.rememberCoroutineScope()
-        fun requestClose() {
-            closeScope.launch {
-                try {
-                    // hide() suspends until the spring slide-down finishes; only then remove
-                    // the sheet so the X button matches the back gesture's smooth dismissal.
-                    sheetState.hide()
-                    onClose()
-                } catch (_: Exception) {
-                    onClose()
-                }
+    // Hoisted out of the visibility gate so the sheet state / scope are created once and
+    // reused across opens (avoids re-initializing ModalBottomSheet state + coroutine scope
+    // on every open, which contributed to the open jank / stuttered slide-up).
+    val sheetState = androidx.compose.material3.rememberModalBottomSheetState(skipPartiallyExpanded = true)
+    val closeScope = androidx.compose.runtime.rememberCoroutineScope()
+    fun requestClose() {
+        closeScope.launch {
+            try {
+                // hide() suspends until the spring slide-down finishes; only then remove
+                // the sheet so the X button matches the back gesture's smooth dismissal.
+                sheetState.hide()
+                onClose()
+            } catch (_: Exception) {
+                onClose()
             }
         }
+    }
+
+    if (isOpen) {
         androidx.compose.material3.ModalBottomSheet(
             onDismissRequest = { requestClose() },
             sheetState = sheetState,
@@ -420,21 +424,25 @@ fun NewsSettingsModal(
     onRequestClearCache: () -> Unit
 ) {
 
-    if (isOpen) {
-        val sheetState = androidx.compose.material3.rememberModalBottomSheetState(skipPartiallyExpanded = true)
-        val closeScope = androidx.compose.runtime.rememberCoroutineScope()
-        fun requestClose() {
-            closeScope.launch {
-                try {
-                    // hide() suspends until the spring slide-down finishes; only then remove
-                    // the sheet so the X button matches the back gesture's smooth dismissal.
-                    sheetState.hide()
-                    onClose()
-                } catch (_: Exception) {
-                    onClose()
-                }
+    // Hoisted out of the visibility gate so the sheet state / scope are created once and
+    // reused across opens (avoids re-initializing ModalBottomSheet state + coroutine scope
+    // on every open, which contributed to the open jank / stuttered slide-up).
+    val sheetState = androidx.compose.material3.rememberModalBottomSheetState(skipPartiallyExpanded = true)
+    val closeScope = androidx.compose.runtime.rememberCoroutineScope()
+    fun requestClose() {
+        closeScope.launch {
+            try {
+                // hide() suspends until the spring slide-down finishes; only then remove
+                // the sheet so the X button matches the back gesture's smooth dismissal.
+                sheetState.hide()
+                onClose()
+            } catch (_: Exception) {
+                onClose()
             }
         }
+    }
+
+    if (isOpen) {
         androidx.compose.material3.ModalBottomSheet(
             onDismissRequest = { requestClose() },
             sheetState = sheetState,
