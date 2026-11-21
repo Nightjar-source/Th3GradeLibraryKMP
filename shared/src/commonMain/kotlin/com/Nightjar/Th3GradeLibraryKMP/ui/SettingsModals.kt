@@ -13,6 +13,9 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.horizontalScroll
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.tween
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.rememberOverscrollEffect
@@ -45,7 +48,7 @@ import androidx.compose.ui.composed
 import androidx.compose.ui.layout.layout
 import kotlinx.coroutines.launch
 
-private val SheetHorizontalInset = 10.dp
+private val SheetHorizontalInset = 20.dp
 
 fun Modifier.horizontalFadingEdges(
     scrollState: androidx.compose.foundation.ScrollState,
@@ -132,63 +135,71 @@ fun AppSettingsModal(
         "#9C27B0"  // Purple
     )
 
-    // Hoisted out of the visibility gate so the sheet state / scope are created once and
-    // reused across opens (avoids re-initializing ModalBottomSheet state + coroutine scope
-    // on every open, which contributed to the open jank / stuttered slide-up).
-    val sheetState = androidx.compose.material3.rememberModalBottomSheetState(skipPartiallyExpanded = true)
-    val closeScope = androidx.compose.runtime.rememberCoroutineScope()
-    fun requestClose() {
-        closeScope.launch {
-            try {
-                // hide() suspends until the spring slide-down finishes; only then remove
-                // the sheet so the X button matches the back gesture's smooth dismissal.
-                sheetState.hide()
-                onClose()
-            } catch (_: Exception) {
-                onClose()
-            }
-        }
-    }
-
-    if (isOpen) {
-        androidx.compose.material3.ModalBottomSheet(
-            onDismissRequest = { requestClose() },
-            sheetState = sheetState,
-            dragHandle = null,
-            containerColor = MaterialTheme.colorScheme.surface,
-            scrimColor = androidx.compose.ui.graphics.Color.Transparent, // no opaque block over transparent status bar
-            contentWindowInsets = { androidx.compose.foundation.layout.WindowInsets(0, 0, 0, 0) },
-            sheetMaxWidth = 480.dp // original M3 width; child content fills edge-to-edge inside
+    // ── Backup design: custom bottom sheet (no ModalBottomSheet) with smooth spring entrances ──
+    AnimatedVisibility(
+        visible = isOpen,
+        enter = fadeIn(animationSpec = tween(300)),
+        exit = fadeOut(animationSpec = tween(220)),
+        modifier = Modifier.zIndex(800f)
+    ) {
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(Color.Black.copy(alpha = 0.5f))
+                .clickable { onClose() }
         ) {
-                val appSettingsOverscroll = rememberOverscrollEffect()
-                Column(
+            AnimatedVisibility(
+                visible = isOpen,
+                enter = slideInVertically(
+                    initialOffsetY = { it },
+                    animationSpec = spring(dampingRatio = 0.8f, stiffness = Spring.StiffnessLow)
+                ) + fadeIn(animationSpec = tween(300)),
+                exit = slideOutVertically(
+                    targetOffsetY = { it },
+                    animationSpec = spring(dampingRatio = 0.9f, stiffness = Spring.StiffnessMedium)
+                ) + fadeOut(animationSpec = tween(220)),
+                modifier = Modifier.align(Alignment.BottomCenter)
+            ) {
+                Box(
                     modifier = Modifier
-                        .verticalScroll(rememberScrollState(), overscrollEffect = appSettingsOverscroll)
+                        .widthIn(max = 480.dp) // Responsive capsule for tablets/DeX
+                        .fillMaxWidth()
+                        .windowInsetsPadding(WindowInsets.safeDrawing.only(WindowInsetsSides.Horizontal))
+                        .clickable(enabled = false) {}
+                        .clip(RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp))
+                        .background(MaterialTheme.colorScheme.surface)
                 ) {
-                    // Edge-to-edge: a leading spacer (scrolls away) offsets content from the
-                    // status bar / system buttons — no persistent colored block under the bar.
-                    Spacer(modifier = Modifier.fillMaxWidth().windowInsetsPadding(androidx.compose.foundation.layout.WindowInsets.safeContent.only(androidx.compose.foundation.layout.WindowInsetsSides.Top)).height(12.dp))
-                    Row(
-                        // Title + X sit 10dp from both sheet edges (user asked for ~10dp on the X).
-                        modifier = Modifier.fillMaxWidth().padding(horizontal = 10.dp),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .verticalScroll(rememberScrollState())
+                            .padding(start = 20.dp, end = 20.dp)
                     ) {
-                        Text(
-                            text = "المظهر واللون",
-                            fontSize = 18.sp, // Compact title
-                            fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.onSurface
-                        )
-                        IconButton(
-                            onClick = { requestClose() },
-                            modifier = Modifier.size(40.dp)
-                        ) {
-                            Icon(Icons.Default.Close, contentDescription = "Close", modifier = Modifier.size(20.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant)
-                        }
-                    }
+                        val topSafeInset = WindowInsets.statusBars.add(WindowInsets.captionBar).asPaddingValues().calculateTopPadding()
+                        Spacer(modifier = Modifier.height(topSafeInset + 16.dp))
 
-                    Spacer(modifier = Modifier.height(16.dp)) // Compact height
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(
+                                text = "المظهر واللون",
+                                fontSize = 18.sp, // Compact title
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.onSurface
+                            )
+                            IconButton(
+                                onClick = onClose,
+                                modifier = Modifier
+                                    .size(36.dp) // Compact close button
+                                    .background(MaterialTheme.colorScheme.surfaceVariant, CircleShape)
+                            ) {
+                                Icon(Icons.Default.Close, contentDescription = "Close", modifier = Modifier.size(20.dp))
+                            }
+                        }
+
+                        Spacer(modifier = Modifier.height(16.dp)) // Compact height
 
                     // Theme Settings
                     Text("وضع الإضاءة", fontWeight = FontWeight.Bold, fontSize = 13.sp, color = MaterialTheme.colorScheme.primary, modifier = Modifier.padding(horizontal = SheetHorizontalInset))
@@ -410,8 +421,10 @@ fun AppSettingsModal(
                     
                     Spacer(modifier = Modifier.windowInsetsPadding(androidx.compose.foundation.layout.WindowInsets.safeDrawing.only(androidx.compose.foundation.layout.WindowInsetsSides.Bottom)).height(16.dp))
                 } // Close Column
-        } // ModalBottomSheet
-    } // if (isOpen)
+                } // Box sheet
+            } // AnimatedVisibility — sheet
+        } // Box scrim
+    } // AnimatedVisibility — scrim
 }
 
 @OptIn(androidx.compose.material3.ExperimentalMaterial3Api::class)
@@ -423,65 +436,71 @@ fun NewsSettingsModal(
     onUpdateSettings: (AppSettings) -> Unit,
     onRequestClearCache: () -> Unit
 ) {
-
-    // Hoisted out of the visibility gate so the sheet state / scope are created once and
-    // reused across opens (avoids re-initializing ModalBottomSheet state + coroutine scope
-    // on every open, which contributed to the open jank / stuttered slide-up).
-    val sheetState = androidx.compose.material3.rememberModalBottomSheetState(skipPartiallyExpanded = true)
-    val closeScope = androidx.compose.runtime.rememberCoroutineScope()
-    fun requestClose() {
-        closeScope.launch {
-            try {
-                // hide() suspends until the spring slide-down finishes; only then remove
-                // the sheet so the X button matches the back gesture's smooth dismissal.
-                sheetState.hide()
-                onClose()
-            } catch (_: Exception) {
-                onClose()
-            }
-        }
-    }
-
-    if (isOpen) {
-        androidx.compose.material3.ModalBottomSheet(
-            onDismissRequest = { requestClose() },
-            sheetState = sheetState,
-            dragHandle = null,
-            containerColor = MaterialTheme.colorScheme.surface,
-            scrimColor = androidx.compose.ui.graphics.Color.Transparent, // no opaque block over transparent status bar
-            contentWindowInsets = { androidx.compose.foundation.layout.WindowInsets(0, 0, 0, 0) },
-            sheetMaxWidth = 480.dp // original M3 width; child content fills edge-to-edge inside
+    // ── Backup design: custom bottom sheet (no ModalBottomSheet) with smooth spring entrances ──
+    AnimatedVisibility(
+        visible = isOpen,
+        enter = fadeIn(animationSpec = tween(300)),
+        exit = fadeOut(animationSpec = tween(220)),
+        modifier = Modifier.zIndex(800f)
+    ) {
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(Color.Black.copy(alpha = 0.5f))
+                .clickable { onClose() }
         ) {
-                val newsSettingsOverscroll = rememberOverscrollEffect()
-                Column(
+            AnimatedVisibility(
+                visible = isOpen,
+                enter = slideInVertically(
+                    initialOffsetY = { it },
+                    animationSpec = spring(dampingRatio = 0.8f, stiffness = Spring.StiffnessLow)
+                ) + fadeIn(animationSpec = tween(300)),
+                exit = slideOutVertically(
+                    targetOffsetY = { it },
+                    animationSpec = spring(dampingRatio = 0.9f, stiffness = Spring.StiffnessMedium)
+                ) + fadeOut(animationSpec = tween(220)),
+                modifier = Modifier.align(Alignment.BottomCenter)
+            ) {
+                Box(
                     modifier = Modifier
+                        .widthIn(max = 480.dp)
                         .fillMaxWidth()
-                        .verticalScroll(rememberScrollState(), overscrollEffect = newsSettingsOverscroll)
+                        .windowInsetsPadding(WindowInsets.safeDrawing.only(WindowInsetsSides.Horizontal))
+                        .clickable(enabled = false) {}
+                        .clip(RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp))
+                        .background(MaterialTheme.colorScheme.surface)
                 ) {
-                    // Edge-to-edge: leading spacer scrolls away with content (no colored block).
-                    Spacer(modifier = Modifier.fillMaxWidth().windowInsetsPadding(androidx.compose.foundation.layout.WindowInsets.safeContent.only(androidx.compose.foundation.layout.WindowInsetsSides.Top)).height(12.dp))
-                    Row(
+                    Column(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(horizontal = SheetHorizontalInset),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
+                            .verticalScroll(rememberScrollState())
+                            .padding(start = 20.dp, end = 20.dp)
                     ) {
-                        Text(
-                            text = "إعدادات الأخبار والمزامنة",
-                            fontSize = 18.sp, // Compact title
-                            fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.onSurface // Row padding already gives 10dp margins
-                        )
-                        IconButton(
-                            onClick = { requestClose() },
-                            modifier = Modifier.size(40.dp)
-                        ) {
-                            Icon(Icons.Default.Close, contentDescription = "Close", modifier = Modifier.size(20.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant)
-                        }
-                    }
+                        val topSafeInset = WindowInsets.statusBars.add(WindowInsets.captionBar).asPaddingValues().calculateTopPadding()
+                        Spacer(modifier = Modifier.height(topSafeInset + 16.dp))
 
-                    Spacer(modifier = Modifier.height(16.dp))
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(
+                                text = "إعدادات الأخبار والمزامنة",
+                                fontSize = 18.sp, // Compact title
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.onSurface
+                            )
+                            IconButton(
+                                onClick = onClose,
+                                modifier = Modifier
+                                    .size(36.dp) // Compact close button
+                                    .background(MaterialTheme.colorScheme.surfaceVariant, CircleShape)
+                            ) {
+                                Icon(Icons.Default.Close, contentDescription = "Close", modifier = Modifier.size(20.dp))
+                            }
+                        }
+
+                        Spacer(modifier = Modifier.height(16.dp))
 
                     val isBatteryIgnored = remember { com.Nightjar.Th3GradeLibraryKMP.network.SyncEngine.platformActionHandler?.isBatteryOptimizationIgnored() ?: false }
                     var batteryStateIgnored by remember { mutableStateOf(isBatteryIgnored) }
@@ -695,8 +714,10 @@ fun NewsSettingsModal(
                     }
                     Spacer(modifier = Modifier.windowInsetsPadding(androidx.compose.foundation.layout.WindowInsets.safeDrawing.only(androidx.compose.foundation.layout.WindowInsetsSides.Bottom)).height(16.dp))
                 } // Close Column
-        } // ModalBottomSheet
-    } // if (isOpen)
+                } // Box sheet
+            } // AnimatedVisibility — sheet
+        } // Box scrim
+    } // AnimatedVisibility — scrim
 }
 
 

@@ -698,7 +698,9 @@ fun AppContent(
                     val topBarHeight = topBarHeightGlobal
                     val topBarPaddingV = topBarPaddingVGlobal
                     // Wide windows show the floating side rail at the END edge (RTL left) - reserve its width so the top bar never collides with it.
-                    val sideRailVisible = !showOnboarding && (page in listOf("home", "list", "news", "bookmarks", "shortcuts", "about") || page == "pdf") && isWide
+                    // NOTE: the reader page ("pdf") is the TOP-MOST layer covering everything below it,
+                    // so the side rail must NOT appear over it on wide screens.
+                    val sideRailVisible = !showOnboarding && (page in listOf("home", "list", "news", "bookmarks", "shortcuts", "about")) && isWide
                     Box(
                         modifier = Modifier
                             .fillMaxWidth()

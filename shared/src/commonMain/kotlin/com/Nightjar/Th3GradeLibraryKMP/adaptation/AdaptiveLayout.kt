@@ -38,7 +38,7 @@ object AdaptiveLayout {
      */
     fun topBarHeight(heightClass: WindowHeightSizeClass, widthClass: WindowWidthSizeClass): Dp = when {
         isCompactHeight(heightClass) -> 44.dp
-        widthClass == WindowWidthSizeClass.COMPACT -> 52.dp
+        widthClass == WindowWidthSizeClass.COMPACT -> 48.dp // Below 50dp — less than the 50dp spec in vertical phone mode
         else -> 58.dp
     }
 
