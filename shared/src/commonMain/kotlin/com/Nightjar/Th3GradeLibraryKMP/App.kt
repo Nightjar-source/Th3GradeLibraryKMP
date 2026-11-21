@@ -835,16 +835,31 @@ fun AppContent(
                                 AnimatedContent(
                                     targetState = page,
                                     transitionSpec = {
-                                        // Droplet-like entrance: the action islands grow out of the title pill side
-                                        (expandHorizontally(expandFrom = Alignment.Start, animationSpec = spring(dampingRatio = 0.72f, stiffness = 280f)) +
-                                            fadeIn(tween(220)) +
-                                            scaleIn(initialScale = 0.4f, animationSpec = spring(dampingRatio = 0.58f, stiffness = 300f)))
-                                            .togetherWith(
-                                                shrinkHorizontally(shrinkTowards = Alignment.Start, animationSpec = spring(dampingRatio = 0.85f, stiffness = 340f)) +
-                                                    fadeOut(tween(170)) +
-                                                    scaleOut(targetScale = 0.4f, animationSpec = tween(170))
-                                            )
-                                            .using(SizeTransform(clip = false))
+                                        val isGoingToPdf = targetState == "pdf"
+                                        val isComingFromPdf = initialState == "pdf"
+                                        if (isGoingToPdf) {
+                                            // Slide straight UP into the top edge and vanish without crossing into the side navigation rail
+                                            (fadeIn(tween(180))).togetherWith(
+                                                slideOutVertically(targetOffsetY = { -it }, animationSpec = spring(dampingRatio = 0.8f, stiffness = 320f)) +
+                                                fadeOut(tween(150))
+                                            ).using(SizeTransform(clip = false))
+                                        } else if (isComingFromPdf) {
+                                            (slideInVertically(initialOffsetY = { -it }, animationSpec = spring(dampingRatio = 0.8f, stiffness = 320f)) +
+                                             fadeIn(tween(200))).togetherWith(
+                                                fadeOut(tween(150))
+                                            ).using(SizeTransform(clip = false))
+                                        } else {
+                                            // Droplet-like entrance: the action islands grow out of the title pill side
+                                            (expandHorizontally(expandFrom = Alignment.Start, animationSpec = spring(dampingRatio = 0.72f, stiffness = 280f)) +
+                                                fadeIn(tween(220)) +
+                                                scaleIn(initialScale = 0.4f, animationSpec = spring(dampingRatio = 0.58f, stiffness = 300f)))
+                                                .togetherWith(
+                                                    shrinkHorizontally(shrinkTowards = Alignment.Start, animationSpec = spring(dampingRatio = 0.85f, stiffness = 340f)) +
+                                                        fadeOut(tween(170)) +
+                                                        scaleOut(targetScale = 0.4f, animationSpec = tween(170))
+                                                )
+                                                .using(SizeTransform(clip = false))
+                                        }
                                     },
                                     label = "topBarActions"
                                 ) { targetPage ->
