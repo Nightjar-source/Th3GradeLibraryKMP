@@ -22,8 +22,8 @@ android {
         applicationId = "com.Nightjar.Th3GradeLibraryKMP.cloud"
         minSdk = libs.versions.android.minSdk.get().toInt()
         targetSdk = libs.versions.android.targetSdk.get().toInt()
-        versionCode = 15138
-        versionName = "2.3.12-cloud"
+        versionCode = 15139
+        versionName = "2.3.13-cloud"
     }
     
     val keystoreProperties = Properties()
@@ -91,6 +91,9 @@ android {
 
 dependencies {
     implementation(project(":shared"))
+    implementation(platform("androidx.compose:compose-bom:2026.11.01"))
+    implementation(platform("com.google.firebase:firebase-bom:33.9.0"))
+
     implementation(libs.androidx.activity.compose)
     implementation(libs.androidx.core.splashscreen)
 
@@ -103,7 +106,6 @@ dependencies {
     implementation("androidx.browser:browser:1.8.0")
     implementation(libs.coil.compose)
     implementation("com.google.android.gms:play-services-ads:23.6.0")
-    implementation(platform("com.google.firebase:firebase-bom:33.9.0"))
     implementation("com.google.firebase:firebase-messaging")
     implementation(libs.kotlinx.serialization.json)
     implementation("androidx.profileinstaller:profileinstaller:1.4.1")
