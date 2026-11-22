@@ -214,10 +214,10 @@ fun ShortcutItemCard(
                     )
                 } else {
                     val itemGradStart = remember(item) {
-                        try { Color(item.primaryColor.removePrefix("#").toLong(16) or 0x00000000FF000000) } catch (_: Exception) { Color(0xFF2563EB) }
+                        try { Color(item.colorStart.removePrefix("#").toLong(16) or 0x00000000FF000000) } catch (_: Exception) { Color(0xFF2563EB) }
                     }
                     val itemGradEnd = remember(item) {
-                        try { Color(item.secondaryColor.removePrefix("#").toLong(16) or 0x00000000FF000000) } catch (_: Exception) { Color(0xFF1D4ED8) }
+                        try { Color(item.colorEnd.removePrefix("#").toLong(16) or 0x00000000FF000000) } catch (_: Exception) { Color(0xFF1D4ED8) }
                     }
                     Box(
                         modifier = Modifier

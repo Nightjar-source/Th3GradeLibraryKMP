@@ -586,7 +586,7 @@ object SyncEngine {
                     if (newUniqueItems.isNotEmpty()) {
                         // Dynamic sliding window: Old Top becomes New Bottom, Absolute Newest becomes New Top
                         val absoluteNewest = fetchedItems.first()
-                        val isFirstRunOrCleared = topLink.isEmpty() || isCacheCleared || domainChanged
+                        val isFirstRunOrCleared = topLink.isEmpty() || isListEmpty || domainChanged
                         val newBottomLink = if (isFirstRunOrCleared) newUniqueItems.last().link else topLink
                         val newBottomTime = if (isFirstRunOrCleared) newUniqueItems.last().pubDate else topTime
                         
@@ -656,7 +656,7 @@ object SyncEngine {
 
                     saveLocalNews(filteredList)
                     _lastFetchedCount.value = newUniqueItems.size
-                    val isFirstRunOrCleared = topLink.isEmpty() || isCacheCleared || domainChanged
+                    val isFirstRunOrCleared = topLink.isEmpty() || isListEmpty || domainChanged
                     if (isFirstRunOrCleared && newUniqueItems.isNotEmpty()) {
                         // Launch initial notification on first run after onboarding finishes
                         if (platformActionHandler?.areNotificationsEnabled() == true) {
