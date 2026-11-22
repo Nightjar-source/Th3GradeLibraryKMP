@@ -223,13 +223,6 @@ class AppFirebaseMessagingService : FirebaseMessagingService() {
             false
         }
     }
-                false
-            }
-        } catch (e: Exception) {
-            e.printStackTrace()
-            false
-        }
-    }
 
     /**
      * Ultra-compact Micro-Thumbnail Loader:
