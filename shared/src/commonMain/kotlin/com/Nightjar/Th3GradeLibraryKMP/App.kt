@@ -700,7 +700,7 @@ fun AppContent(
                     // Wide windows show the floating side rail at the END edge (RTL left) - reserve its width so the top bar never collides with it.
                     // NOTE: the reader page ("pdf") is the TOP-MOST layer covering everything below it,
                     // so the side rail must NOT appear over it on wide screens.
-                    val sideRailVisible = !showOnboarding && (page in listOf("home", "list", "news", "bookmarks", "shortcuts", "about")) && isWide
+                    val sideRailVisible = !showOnboarding && (page in listOf("home", "list", "news", "bookmarks", "shortcuts", "about")) && page != "pdf" && isWide
                     Box(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -1434,7 +1434,7 @@ fun AppContent(
         
         // --- Tablet/Wide Floating Side Navigation Capsule ---
         androidx.compose.animation.AnimatedVisibility(
-            visible = !showOnboarding && (page in mainTabs || page == "pdf") && isWide,
+            visible = !showOnboarding && (page in mainTabs && page != "pdf") && isWide,
             enter = slideInHorizontally(animationSpec = spring(dampingRatio = 0.76f, stiffness = 280f)) { -it } + fadeIn(tween(260)),
             exit = slideOutHorizontally(animationSpec = spring(dampingRatio = 0.76f, stiffness = 280f)) { -it } + fadeOut(tween(220)),
             modifier = Modifier.align(Alignment.CenterEnd).fillMaxHeight().zIndex(200f).then(

@@ -48,7 +48,7 @@ import androidx.compose.ui.composed
 import androidx.compose.ui.layout.layout
 import kotlinx.coroutines.launch
 
-private val SheetHorizontalInset = 20.dp
+private val SheetHorizontalInset = 4.dp
 
 fun Modifier.horizontalFadingEdges(
     scrollState: androidx.compose.foundation.ScrollState,
@@ -173,7 +173,7 @@ fun AppSettingsModal(
                         modifier = Modifier
                             .fillMaxWidth()
                             .verticalScroll(rememberScrollState())
-                            .padding(start = 20.dp, end = 20.dp)
+                            .padding(start = 4.dp, end = 4.dp)
                     ) {
                         val topSafeInset = WindowInsets.statusBars.add(WindowInsets.captionBar).asPaddingValues().calculateTopPadding()
                         Spacer(modifier = Modifier.height(topSafeInset + 16.dp))
@@ -474,7 +474,7 @@ fun NewsSettingsModal(
                         modifier = Modifier
                             .fillMaxWidth()
                             .verticalScroll(rememberScrollState())
-                            .padding(start = 20.dp, end = 20.dp)
+                            .padding(start = 4.dp, end = 4.dp)
                     ) {
                         val topSafeInset = WindowInsets.statusBars.add(WindowInsets.captionBar).asPaddingValues().calculateTopPadding()
                         Spacer(modifier = Modifier.height(topSafeInset + 16.dp))
