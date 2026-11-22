@@ -1261,24 +1261,30 @@ fun AppContent(
                     }
                 }
 
-        // --- Unified Top Dynamic Island Notification & Alert Capsule (Library & News Screens Dynamic Expansion) ---
-        val isLibraryOrNewsScreen = (page == "home" || page == "list" || page == "news")
+        // --- Unified Top Dynamic Island Notification & Alert Capsule (Library Screen Only for Book Downloads) ---
+        val isLibraryScreen = (page == "home" || page == "list")
         val rootActiveNotice by com.Nightjar.Th3GradeLibraryKMP.network.BookDownloadManager.activeNoticeMessage.collectAsState()
         val currentToast = toastMessage
-        // Dynamic Island alert capsule activates on Library and News screens, with dynamic expand/shrink based on text content
-        val effectiveDownloadNotice = if (isLibraryOrNewsScreen) rootActiveNotice else null
+        // Download notice strictly restricted to Library screen, toasts available everywhere
+        val effectiveDownloadNotice = if (isLibraryScreen) rootActiveNotice else null
         val activeIslandText = effectiveDownloadNotice ?: currentToast
-        val isIslandVisible = activeIslandText != null
+        val isIslandVisible = activeIslandText != null && !isDrawerOpen
+
+        val dynamicTopPadding = when {
+            page == "pdf" -> if (isWide) 76.dp else 84.dp
+            isWide -> 52.dp
+            else -> 58.dp
+        }
 
         Box(
             modifier = Modifier
                 .fillMaxWidth()
                 .windowInsetsPadding(WindowInsets.statusBars.add(WindowInsets.captionBar))
-                .padding(top = if (isWide) 52.dp else 58.dp)
-                .zIndex(900f).then(
+                .padding(top = dynamicTopPadding)
+                .zIndex(400f).then(
                     if (LocalSharedTransitionScope.current != null) {
                         with(LocalSharedTransitionScope.current!!) {
-                            Modifier.renderInSharedTransitionScopeOverlay(zIndexInOverlay = 90f)
+                            Modifier.renderInSharedTransitionScopeOverlay(zIndexInOverlay = 40f)
                         }
                     } else Modifier
                 ),
@@ -1288,18 +1294,12 @@ fun AppContent(
                 visible = isIslandVisible,
                 enter = slideInVertically(
                     initialOffsetY = { -it },
-                    animationSpec = spring(dampingRatio = 0.82f, stiffness = 320f)
-                ) + expandVertically(
-                    expandFrom = Alignment.Top,
-                    animationSpec = spring(dampingRatio = 0.82f, stiffness = 320f)
-                ) + fadeIn(tween(180)),
+                    animationSpec = spring(dampingRatio = 0.78f, stiffness = 340f)
+                ) + fadeIn(tween(180)) + scaleIn(initialScale = 0.90f),
                 exit = slideOutVertically(
                     targetOffsetY = { -it },
-                    animationSpec = spring(dampingRatio = 0.82f, stiffness = 380f)
-                ) + shrinkVertically(
-                    shrinkTowards = Alignment.Top,
-                    animationSpec = spring(dampingRatio = 0.82f, stiffness = 380f)
-                ) + fadeOut(tween(150))
+                    animationSpec = spring(dampingRatio = 0.88f, stiffness = 380f)
+                ) + fadeOut(tween(150)) + scaleOut(targetScale = 0.92f)
             ) {
                 val islandText = activeIslandText ?: ""
                 val isDownloading = islandText.contains("%") || islandText.contains("جاري تنزيل") || islandText.contains("جاري تحميل")
@@ -1900,12 +1900,12 @@ fun AppContent(
         // --- Slide Drawer ---
         AnimatedVisibility(
             visible = isDrawerOpen,
-            enter = fadeIn(),
-            exit = fadeOut(),
-            modifier = Modifier.zIndex(500f).then(
+            enter = fadeIn(tween(180)),
+            exit = fadeOut(tween(140)),
+            modifier = Modifier.zIndex(1200f).then(
                 if (LocalSharedTransitionScope.current != null) {
                     with(LocalSharedTransitionScope.current!!) {
-                        Modifier.renderInSharedTransitionScopeOverlay(zIndexInOverlay = 100f)
+                        Modifier.renderInSharedTransitionScopeOverlay(zIndexInOverlay = 150f)
                     }
                 } else Modifier
             )

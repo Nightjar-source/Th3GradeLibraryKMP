@@ -60,15 +60,13 @@ actual object BookDownloadManager {
     private var appContext: Context? = null
     private var isReceiverRegistered = false
 
-    private fun postActiveNotice(message: String?, autoDismissDelayMs: Long = 4000L) {
+    private fun postActiveNotice(message: String?, autoDismissDelayMs: Long = 5000L) {
         noticeDismissJob?.cancel()
         _activeNoticeMessage.value = message
         if (message != null && autoDismissDelayMs > 0L) {
             noticeDismissJob = scope.launch {
                 delay(autoDismissDelayMs)
-                if (activeJobs.isEmpty() && !_isBatchDownloading.value) {
-                    _activeNoticeMessage.value = null
-                }
+                _activeNoticeMessage.value = null
             }
         }
     }
@@ -183,7 +181,7 @@ actual object BookDownloadManager {
             if (justFinishedItem != null) {
                 val typeLabel = if (!justFinishedItem.isNote) "الكتاب" else "الملزمة"
                 val doneMsg = "اكتمل تنزيل $typeLabel: ${justFinishedItem.title} بنجاح ✓"
-                postActiveNotice(doneMsg, 4000L)
+                postActiveNotice(doneMsg, 5000L)
                 updateNotification(
                     ctx,
                     title = "اكتمل تنزيل: ${justFinishedItem.title} بنجاح ✓",
@@ -191,8 +189,6 @@ actual object BookDownloadManager {
                     progress = 100,
                     itemId = null
                 )
-            } else if (!_isBatchDownloading.value) {
-                postActiveNotice(null, 0L)
             }
             stopForegroundServiceIfDone(ctx)
             return
@@ -205,8 +201,6 @@ actual object BookDownloadManager {
             val item = items.first()
             val state = _itemStates.value[item.id]
             val pct = ((state?.progress ?: 0f) * 100).toInt()
-            val typeLabel = if (!item.isNote) "الكتاب" else "الملزمة"
-            postActiveNotice("جاري تنزيل $typeLabel: ${item.title} ($pct%)", 0L)
 
             updateNotification(
                 ctx,
@@ -218,15 +212,6 @@ actual object BookDownloadManager {
         } else {
             val titlesWithPcts = items.map { it to (((_itemStates.value[it.id]?.progress) ?: 0f) * 100).toInt() }
             val avgProgress = (titlesWithPcts.map { it.second }.average()).toInt()
-
-            if (items.size == 2) {
-                val (it1, pct1) = titlesWithPcts[0]
-                val (it2, pct2) = titlesWithPcts[1]
-                postActiveNotice("جاري تنزيل ملفين: ${it1.title} ($pct1%) • ${it2.title} ($pct2%)", 0L)
-            } else {
-                val (it1, pct1) = titlesWithPcts[0]
-                postActiveNotice("جاري تنزيل ${items.size} ملفات: ${it1.title} ($pct1%) و${items.size - 1} ملفات أخرى ($avgProgress%)", 0L)
-            }
 
             updateNotification(
                 ctx,
@@ -418,7 +403,7 @@ actual object BookDownloadManager {
                 } else {
                     "جاري الاتصال بالسحابة لتنزيل $itemType: ${item.title}..."
                 }
-                postActiveNotice(startMsg, 0L)
+                postActiveNotice(startMsg, 5000L)
 
                 val candidateUrls = CloudCatalogManager.getStreamCandidateUrls(item)
                 if (candidateUrls.isEmpty()) {
@@ -680,7 +665,7 @@ actual object BookDownloadManager {
         if (_isBatchDownloading.value) return
         _isBatchDownloading.value = true
         val specialTitle = "جاري تنزيل كتب وملازم الثالث متوسط الان لتكون اوف لاين بدون انترنت ..انتظر"
-        postActiveNotice(specialTitle, 0L)
+        postActiveNotice(specialTitle, 5000L)
         startForegroundServiceIfNeeded(ctx)
 
         scope.launch {
@@ -688,7 +673,7 @@ actual object BookDownloadManager {
                 val undownloaded = items.filter { !BookStorageEngine.isDownloaded(ctx, it) }
                 val totalCount = undownloaded.size
                 if (totalCount == 0) {
-                    postActiveNotice("جميع كتب وملازم الثالث متوسط محملة بالفعل وجاهزة أوفلاين ✓", 4000L)
+                    postActiveNotice("جميع كتب وملازم الثالث متوسط محملة بالفعل وجاهزة أوفلاين ✓", 5000L)
                     ToastManager.showToast("جميع الكتب والملازم محملة بالفعل وجاهزة أوفلاين")
                     _isBatchDownloading.value = false
                     stopForegroundServiceIfDone(ctx)
@@ -698,13 +683,16 @@ actual object BookDownloadManager {
 
                 for (item in undownloaded) {
                     if (!_isBatchDownloading.value) break
-                    downloadItem(ctx, item)
-                    activeJobs[item.id]?.join()
+                    try {
+                        downloadItem(ctx, item)
+                        activeJobs[item.id]?.join()
+                    } catch (e: Exception) {
+                        e.printStackTrace()
+                    }
                     completedCount++
                     val pct = (completedCount.toFloat() / totalCount.toFloat()).coerceIn(0f, 1f)
                     _batchProgress.value = pct
                     val pctInt = (pct * 100).toInt()
-                    postActiveNotice("جاري تنزيل كتب وملازم الثالث متوسط الان لتكون اوف لاين بدون انترنت ..انتظر ($pctInt%)", 0L)
                     updateNotification(
                         ctx,
                         title = "جاري تنزيل كتب وملازم الثالث متوسط الان لتكون اوف لاين بدون انترنت ..انتظر",
@@ -713,7 +701,7 @@ actual object BookDownloadManager {
                     )
                 }
 
-                postActiveNotice("اكتملت جميع تنزيلات كتب وملازم الثالث متوسط بنجاح أوفلاين بدون إنترنت ✓", 4000L)
+                postActiveNotice("اكتملت جميع تنزيلات كتب وملازم الثالث متوسط بنجاح أوفلاين بدون إنترنت ✓", 5000L)
                 updateNotification(
                     ctx,
                     title = "اكتملت جميع التنزيلات بنجاح",

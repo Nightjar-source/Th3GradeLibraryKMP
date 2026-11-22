@@ -185,11 +185,9 @@ fun BookmarksScreen(
                         val book = remember(bookId, savedItems) { savedItems.find { it.id == bookId } }
                         if (book != null) {
                             val pages = groupedPages[bookId] ?: emptyList()
-                                BookAccordionItem(
+                            BookAccordionItem(
                                 modifier = Modifier.animateItem(
-                                    fadeInSpec = tween(160, easing = androidx.compose.animation.core.FastOutSlowInEasing),
-                                    fadeOutSpec = tween(120),
-                                    placementSpec = spring(dampingRatio = 0.98f, stiffness = 450f)
+                                    placementSpec = spring(dampingRatio = 0.88f, stiffness = Spring.StiffnessMediumLow)
                                 ),
                                 item = book,
                                 pages = pages,
@@ -221,14 +219,6 @@ fun BookAccordionItem(
     screenVisibilityScope: AnimatedVisibilityScope?,
     modifier: Modifier = Modifier
 ) {
-    // Dynamic page tracking: maintains pages being animated out so shrinkVertically runs smoothly
-    val trackedPages = remember { mutableStateListOf<Int>() }
-    LaunchedEffect(pages) {
-        pages.forEach { p ->
-            if (p !in trackedPages) trackedPages.add(p)
-        }
-    }
-
     val isReturningFromPdf = LocalIsReturningFromPdf.current
     val isCardActiveTarget = (TransitionTargetTracker.isTransitionActive || isReturningFromPdf) &&
             (TransitionTargetTracker.activeTargetId?.startsWith("bookmark_${item.id}_") == true)
@@ -239,6 +229,12 @@ fun BookAccordionItem(
             .fillMaxWidth()
             .liquidGlass(isDark, borderRadius = 20.dp, alpha = 0.96f)
             .clip(RoundedCornerShape(20.dp))
+            .animateContentSize(
+                animationSpec = spring(
+                    dampingRatio = 0.86f,
+                    stiffness = Spring.StiffnessMediumLow
+                )
+            )
     ) {
         // Accordion Header
         Row(
@@ -419,26 +415,10 @@ fun BookAccordionItem(
                     .padding(top = 8.dp, bottom = 12.dp),
                 verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                // Render all tracked pages sorted
-                val sortedPages = remember(trackedPages.toList()) { trackedPages.sorted() }
+                val sortedPages = remember(pages) { pages.sorted() }
                 sortedPages.forEach { pageIndex ->
                     val rowInteractionSource = remember { MutableInteractionSource() }
                     val rowTargetKey = "bookmark_${item.id}_$pageIndex"
-                    val isRowActiveTarget = (TransitionTargetTracker.isTransitionActive || LocalIsReturningFromPdf.current) &&
-                            TransitionTargetTracker.activeTargetId == rowTargetKey
-
-                    val isSavedLocally = isPageSaved(pageIndex)
-                    val isVisible = isSavedLocally || isRowActiveTarget
-
-                    // Remove exited page from tracker after shrink animation completes
-                    LaunchedEffect(isVisible) {
-                        if (!isVisible && !isRowActiveTarget) {
-                            kotlinx.coroutines.delay(550)
-                            if (!isPageSaved(pageIndex)) {
-                                trackedPages.remove(pageIndex)
-                            }
-                        }
-                    }
 
                     val rowSharedBoundsModifier = if (sharedTransitionScope != null && effectiveVisibilityScope != null) {
                         with(sharedTransitionScope) {
@@ -466,51 +446,40 @@ fun BookAccordionItem(
                         }
                     } else Modifier
 
-                    AnimatedVisibility(
-                        visible = isVisible,
-                        enter = expandVertically(
-                            animationSpec = spring(dampingRatio = 0.82f, stiffness = 280f),
-                            expandFrom = Alignment.Top
-                        ) + fadeIn(tween(180)),
-                        exit = shrinkVertically(
-                            animationSpec = spring(dampingRatio = 0.82f, stiffness = 280f),
-                            shrinkTowards = Alignment.Top
-                        ) + fadeOut(tween(140))
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .then(rowSharedBoundsModifier)
+                            .expressiveButtonMorph(
+                                restRadius = 14.dp,
+                                pressedRadius = 8.dp,
+                                pressedScale = 0.94f,
+                                interactionSource = rowInteractionSource,
+                                backgroundColor = if (isDark) MaterialTheme.colorScheme.surfaceVariant else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+                                borderWidth = 1.dp,
+                                borderColor = if (isDark) Color.White.copy(alpha = 0.15f) else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.20f)
+                            )
+                            .clickable(interactionSource = rowInteractionSource, indication = null) {
+                                TransitionTargetTracker.activeTargetId = rowTargetKey
+                                TransitionTargetTracker.isTransitionActive = true
+                                onNavigateToPdf(pageIndex)
+                            }
+                            .padding(12.dp),
+                        verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .then(rowSharedBoundsModifier)
-                                .expressiveButtonMorph(
-                                    restRadius = 14.dp,
-                                    pressedRadius = 8.dp,
-                                    pressedScale = 0.94f,
-                                    interactionSource = rowInteractionSource,
-                                    backgroundColor = if (isDark) MaterialTheme.colorScheme.surfaceVariant else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
-                                    borderWidth = 1.dp,
-                                    borderColor = if (isDark) Color.White.copy(alpha = 0.15f) else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.20f)
-                                )
-                                .clickable(interactionSource = rowInteractionSource, indication = null) {
-                                    TransitionTargetTracker.activeTargetId = rowTargetKey
-                                    TransitionTargetTracker.isTransitionActive = true
-                                    onNavigateToPdf(pageIndex)
-                                }
-                                .padding(12.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.Bookmark,
-                                contentDescription = "Page",
-                                tint = MaterialTheme.colorScheme.primary,
-                                modifier = Modifier.size(20.dp)
-                            )
-                            Spacer(modifier = Modifier.width(12.dp))
-                            Text(
-                                text = "الصفحة رقم ${pageIndex + 1}",
-                                fontSize = 14.sp,
-                                color = MaterialTheme.colorScheme.onSurface
-                            )
-                        }
+                        Icon(
+                            imageVector = Icons.Default.Bookmark,
+                            contentDescription = "Page",
+                            tint = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.size(20.dp)
+                        )
+                        Spacer(modifier = Modifier.width(12.dp))
+                        Text(
+                            text = "الصفحة رقم ${pageIndex + 1}",
+                            fontSize = 14.sp,
+                            fontWeight = FontWeight.Medium,
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
                     }
                 }
             }

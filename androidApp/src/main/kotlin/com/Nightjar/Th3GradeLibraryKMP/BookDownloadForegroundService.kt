@@ -36,7 +36,8 @@ class BookDownloadForegroundService : Service() {
             }, 350L)
             return START_NOT_STICKY
         }
-        return START_NOT_STICKY
+        // Allow the Android OS to resurrect this service if terminated under low memory:
+        return START_STICKY
     }
 
     private fun ensureForegroundNotification() {
@@ -86,7 +87,13 @@ class BookDownloadForegroundService : Service() {
     override fun onTaskRemoved(rootIntent: Intent?) {
         super.onTaskRemoved(rootIntent)
         try {
-            if (BookDownloadManager.itemStates.value.values.none { it.status == com.Nightjar.Th3GradeLibraryKMP.network.DownloadStatus.DOWNLOADING }) {
+            val isStillDownloading = BookDownloadManager.itemStates.value.values.any { 
+                it.status == com.Nightjar.Th3GradeLibraryKMP.network.DownloadStatus.DOWNLOADING 
+            }
+            if (isStillDownloading) {
+                // User swiped app away from recents, but a download is active: KEEP RUNNING in foreground!
+                ensureForegroundNotification()
+            } else {
                 stopSelfSafely()
             }
         } catch (_: Exception) {}

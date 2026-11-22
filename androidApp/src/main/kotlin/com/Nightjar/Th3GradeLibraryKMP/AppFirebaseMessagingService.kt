@@ -133,36 +133,11 @@ class AppFirebaseMessagingService : FirebaseMessagingService() {
             return
         }
 
-        // 4. Record in pending unnotified queue
-        recordUnnotifiedNews(title)
-
-        // 5. Batch Delivery Window Check
-        val intervalMs = when (syncInterval) {
-            "15m" -> 15 * 60 * 1000L
-            "30m" -> 30 * 60 * 1000L
-            "1h"  -> 60 * 60 * 1000L
-            "6h"  -> 6 * 60 * 60 * 1000L
-            "12h" -> 12 * 60 * 60 * 1000L
-            "24h" -> 24 * 60 * 60 * 1000L
-            else  -> 30 * 60 * 1000L
-        }
-        val lastNotif = AppDataStore.getLong("last_fcm_news_alert_time", 0L)
+        // 4. Deliver every cloud pushed news item immediately as an individual card
+        // Zero Lockout: do not suppress subsequent cloud messages with 30m artificial delays.
         val now = System.currentTimeMillis()
-
-        if (now - lastNotif >= intervalMs) {
-            AppDataStore.putLong("last_fcm_news_alert_time", now)
-            val pendingTitles = getAndClearUnnotifiedNews()
-            val soundEnabled = SyncEngine.appSettings.value.notificationSound
-            showMicroThumbnailNotification(title, content, link, imageUrl, isNews = true)
-
-            if (pendingTitles.size > 1) {
-                val microThumb = loadMicroThumbnail(imageUrl)
-                NotificationHelper.showNotifications(this, pendingTitles, pendingTitles.size, soundEnabled, microThumb)
-            }
-        } else {
-            val remainingMs = intervalMs - (now - lastNotif)
-            NewsBatchDeliveryWorker.scheduleDelivery(this, remainingMs)
-        }
+        AppDataStore.putLong("last_fcm_news_alert_time", now)
+        showMicroThumbnailNotification(title, content, link, imageUrl, isNews = true)
     }
 
     private fun saveToCache(title: String, link: String, imageUrl: String, pubDate: String, content: String, isAnnouncement: Boolean = false): Boolean {
@@ -383,8 +358,24 @@ class AppFirebaseMessagingService : FirebaseMessagingService() {
             }
         }
 
-        val notificationId = (System.currentTimeMillis() % 100000).toInt() + NOTIFICATION_ID_BASE
+        val notificationId = NOTIFICATION_ID_BASE + (cleanTitle.hashCode() and 0x7FFF)
         notificationManager.notify(notificationId, notificationBuilder.build())
+
+        // Post group summary so the OS bundles all individual news cards neatly in the notification shade
+        val summaryBuilder = NotificationCompat.Builder(this, channelId)
+            .setSmallIcon(R.drawable.ic_notification)
+            .setColor(android.graphics.Color.parseColor("#2563EB"))
+            .setContentTitle("أخبار دراسية جديدة")
+            .setContentText("أخبار دراسية جديدة")
+            .setPriority(NotificationCompat.PRIORITY_HIGH)
+            .setContentIntent(pendingIntent)
+            .setAutoCancel(true)
+            .setGroup(GROUP_KEY)
+            .setGroupSummary(true)
+            .setSilent(true)
+        try {
+            notificationManager.notify(NotificationHelper.SUMMARY_NOTIFICATION_ID, summaryBuilder.build())
+        } catch (_: Exception) {}
     }
 
     private fun createChannels(manager: NotificationManager) {

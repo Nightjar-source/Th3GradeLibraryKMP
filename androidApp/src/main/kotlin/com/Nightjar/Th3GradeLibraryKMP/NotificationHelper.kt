@@ -158,71 +158,71 @@ object NotificationHelper {
 
         val targetChannelId = if (withSound) CHANNEL_SOUND_ID else CHANNEL_SILENT_ID
         val soundUri = if (withSound) getCustomSoundUri(context) else null
+        val nm = NotificationManagerCompat.from(context)
 
-        // Unified Notification: When multiple news exist, headline of the newest item is ALWAYS the main title
-        val displayCount = if (count > 0) count else titles.size
-        val firstNewsTitle = titles.firstOrNull() ?: "خبر دراسي جديد"
-        val mainTitle = firstNewsTitle
+        // Strict User Experience: Deliver EACH news article as its own individual notification card
+        // with the full article headline (BigTextStyle), avoiding single-line bulleted (•) grouping.
+        val recentTitles = titles.take(10)
+        recentTitles.forEach { rawTitle ->
+            val cleanTitle = rawTitle.replace("أخبار الثالث متوسط:", "").replace("أخبار الثالث متوسط", "").trim().ifBlank { rawTitle }
+            val notifId = 2000 + (cleanTitle.hashCode() and 0x7FFF)
 
-        val builder = NotificationCompat.Builder(context, targetChannelId)
-            .setSmallIcon(R.drawable.ic_notification)
-            .setColor(android.graphics.Color.parseColor("#2563EB"))
-            .setContentTitle(mainTitle)
-            .setPriority(NotificationCompat.PRIORITY_HIGH)
-            .setContentIntent(openIntent)
-            .setAutoCancel(true)
+            val itemNotification = NotificationCompat.Builder(context, targetChannelId)
+                .setSmallIcon(R.drawable.ic_notification)
+                .setColor(android.graphics.Color.parseColor("#2563EB"))
+                .setContentTitle(cleanTitle)
+                .setContentText(cleanTitle)
+                .setStyle(
+                    NotificationCompat.BigTextStyle()
+                        .setBigContentTitle(cleanTitle)
+                        .bigText(cleanTitle)
+                )
+                .setPriority(NotificationCompat.PRIORITY_HIGH)
+                .setContentIntent(openIntent)
+                .setAutoCancel(true)
+                .setGroup("news_group")
+                .setGroupSummary(false)
 
-        if (!withSound) {
-            builder.setSilent(true)
-            builder.setSound(null)
-            builder.setVibrate(null)
-        } else {
-            builder.setSound(soundUri)
-            builder.setVibrate(longArrayOf(0, 250, 150, 250))
-        }
-
-        if (displayCount > 1) {
-            builder.setGroup("news_group")
-            builder.setGroupSummary(true)
-            val inboxStyle = NotificationCompat.InboxStyle()
-                .setBigContentTitle(mainTitle)
-                .setSummaryText("$displayCount أخبار دراسية جديدة")
-            // Consecutive news list protected against SystemUI Binder 1MB transaction overflow
-            titles.take(25).forEach { title ->
-                val safeTitle = if (title.length > 120) title.take(117) + "..." else title
-                inboxStyle.addLine("• $safeTitle")
+            if (microThumbnail != null) {
+                itemNotification.setLargeIcon(microThumbnail)
             }
-            builder.setStyle(inboxStyle)
-            builder.setContentText(titles.take(3).joinToString(" • "))
-        } else {
-            // Single news item: use BigTextStyle to allow title to wrap fully to multiple lines without truncation
-            builder.setContentText(mainTitle)
-            builder.setStyle(
-                NotificationCompat.BigTextStyle()
-                    .setBigContentTitle(mainTitle)
-                    .bigText(mainTitle)
-            )
+
+            if (!withSound) {
+                itemNotification.setSilent(true)
+                itemNotification.setSound(null)
+                itemNotification.setVibrate(null)
+            } else {
+                itemNotification.setSound(soundUri)
+                itemNotification.setVibrate(longArrayOf(0, 250, 150, 250))
+                itemNotification.setSilent(false)
+            }
+
+            try {
+                nm.notify(notifId, itemNotification.build())
+            } catch (e: SecurityException) {
+                e.printStackTrace()
+            }
         }
 
-        // Ultra-compact micro-thumbnail (text line size ~48x48px) - Zero Main-Thread Network Delay!
-        if (microThumbnail != null) {
-            builder.setLargeIcon(microThumbnail)
-        }
+        // For Android 7.0+ notification shade grouping, post the group summary notification
+        if (recentTitles.size > 1) {
+            val summaryBuilder = NotificationCompat.Builder(context, targetChannelId)
+                .setSmallIcon(R.drawable.ic_notification)
+                .setColor(android.graphics.Color.parseColor("#2563EB"))
+                .setContentTitle("أخبار دراسية جديدة")
+                .setContentText("${recentTitles.size} أخبار دراسية جديدة")
+                .setPriority(NotificationCompat.PRIORITY_HIGH)
+                .setContentIntent(openIntent)
+                .setAutoCancel(true)
+                .setGroup("news_group")
+                .setGroupSummary(true)
+                .setSilent(true)
 
-        // Sound & Vibration backwards compatibility:
-        if (withSound && soundUri != null) {
-            builder.setSound(soundUri)
-            builder.setVibrate(longArrayOf(0, 250, 150, 250))
-            builder.setSilent(false)
-        } else {
-            builder.setSilent(true)
-        }
-
-        try {
-            // Use SUMMARY_NOTIFICATION_ID so all updates overwrite cleanly into ONE notification
-            NotificationManagerCompat.from(context).notify(SUMMARY_NOTIFICATION_ID, builder.build())
-        } catch (e: SecurityException) {
-            e.printStackTrace()
+            try {
+                nm.notify(SUMMARY_NOTIFICATION_ID, summaryBuilder.build())
+            } catch (e: SecurityException) {
+                e.printStackTrace()
+            }
         }
     }
 
@@ -238,7 +238,7 @@ object NotificationHelper {
                         chId == CHANNEL_SOUND_ID || 
                         chId == CHANNEL_SILENT_ID ||
                         group == "news_group" ||
-                        active.id >= 5000) {
+                        active.id >= 1000) {
                         manager.cancel(active.id)
                     }
                 }

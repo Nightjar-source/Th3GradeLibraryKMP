@@ -149,6 +149,8 @@ class MainActivity : ComponentActivity() {
                         if (renderer.pageCount > 0) {
                             renderer.openPage(0).use { page ->
                                 val bmp = Bitmap.createBitmap(maxWidth, maxHeight, Bitmap.Config.ARGB_8888)
+                                val canvas = android.graphics.Canvas(bmp)
+                                canvas.drawColor(android.graphics.Color.WHITE)
                                 page.render(bmp, null, null, android.graphics.pdf.PdfRenderer.Page.RENDER_MODE_FOR_DISPLAY)
                                 return bmp
                             }

@@ -167,11 +167,11 @@ fun AppSettingsModal(
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
+                        .elasticOverscroll()
                         .verticalScroll(rememberScrollState())
                         .padding(start = 20.dp, end = 20.dp)
                 ) {
-                    val topSafeInset = WindowInsets.statusBars.add(WindowInsets.captionBar).asPaddingValues().calculateTopPadding()
-                    Spacer(modifier = Modifier.height(topSafeInset + 16.dp))
+                    Spacer(modifier = Modifier.height(20.dp))
 
                     Row(
                         modifier = Modifier
@@ -468,45 +468,140 @@ fun AppSettingsModal(
                         )
                     }
 
-                    Spacer(modifier = Modifier.height(12.dp))
+                    Spacer(modifier = Modifier.height(14.dp))
 
-                    // Button: Download All Books and Notes Now
+                    // Material 3 Expressive Card: Download All Books and Notes
                     val platformContext = coil3.compose.LocalPlatformContext.current
                     val isBatchDownloading by com.Nightjar.Th3GradeLibraryKMP.network.BookDownloadManager.isBatchDownloading.collectAsState()
                     val batchProgress by com.Nightjar.Th3GradeLibraryKMP.network.BookDownloadManager.batchProgress.collectAsState()
+                    val animatedBatchProgress by androidx.compose.animation.core.animateFloatAsState(
+                        targetValue = batchProgress.coerceIn(0f, 1f),
+                        animationSpec = tween(durationMillis = 250, easing = androidx.compose.animation.core.LinearOutSlowInEasing),
+                        label = "BatchProgressAnimation"
+                    )
 
-                    Button(
-                        onClick = {
-                            if (!isBatchDownloading) {
-                                val all = com.Nightjar.Th3GradeLibraryKMP.network.CloudCatalogManager.getAllCatalogItems()
-                                com.Nightjar.Th3GradeLibraryKMP.network.BookDownloadManager.downloadAll(platformContext, all)
-                                com.Nightjar.Th3GradeLibraryKMP.ui.ToastManager.showToast("بدأ تنزيل المناهج بالكامل للعمل أوفلاين...")
-                            } else {
-                                com.Nightjar.Th3GradeLibraryKMP.network.BookDownloadManager.cancelAll()
-                                com.Nightjar.Th3GradeLibraryKMP.ui.ToastManager.showToast("تم إيقاف التنزيل الجماعي")
-                            }
-                        },
+                    Surface(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(horizontal = 20.dp)
-                            .height(48.dp),
-                        shape = RoundedCornerShape(14.dp),
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = if (isBatchDownloading) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary
+                            .padding(horizontal = 4.dp),
+                        shape = RoundedCornerShape(20.dp),
+                        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.65f),
+                        tonalElevation = 2.dp,
+                        border = androidx.compose.foundation.BorderStroke(
+                            1.dp,
+                            MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.15f)
                         )
                     ) {
-                        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.Center) {
-                            Icon(
-                                imageVector = if (isBatchDownloading) Icons.Default.Close else Icons.Default.Download,
-                                contentDescription = null,
-                                modifier = Modifier.size(20.dp)
-                            )
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Text(
-                                text = if (isBatchDownloading) "إلغاء التنزيل الجماعي (${(batchProgress * 100).toInt()}%)" else "تحميل كافة الكتب والملازم الآن (أوفلاين)",
-                                fontSize = 12.sp,
-                                fontWeight = FontWeight.Bold
-                            )
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(16.dp)
+                        ) {
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Box(
+                                    modifier = Modifier
+                                        .size(42.dp)
+                                        .clip(CircleShape)
+                                        .background(if (isBatchDownloading) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.primary.copy(alpha = 0.15f)),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Icon(
+                                        imageVector = if (isBatchDownloading) Icons.Default.CloudDownload else Icons.Default.Download,
+                                        contentDescription = null,
+                                        tint = MaterialTheme.colorScheme.primary,
+                                        modifier = Modifier.size(22.dp)
+                                    )
+                                }
+                                Spacer(modifier = Modifier.width(12.dp))
+                                Column(modifier = Modifier.weight(1f)) {
+                                    Text(
+                                        text = "تحميل المناهج بالكامل أوفلاين",
+                                        fontWeight = FontWeight.Bold,
+                                        fontSize = 15.sp,
+                                        color = MaterialTheme.colorScheme.onSurface
+                                    )
+                                    Text(
+                                        text = if (isBatchDownloading) "جاري التحميل بأقصى سرعة بالخلفية..." else "تنزيل كافة الكتب والملازم دفعة واحدة للعمل بدون إنترنت",
+                                        fontSize = 11.sp,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                }
+                            }
+
+                            if (isBatchDownloading) {
+                                Spacer(modifier = Modifier.height(14.dp))
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Text(
+                                        text = "نسبة الإنجاز الإجمالية",
+                                        fontSize = 12.sp,
+                                        color = MaterialTheme.colorScheme.primary,
+                                        fontWeight = FontWeight.Medium
+                                    )
+                                    Text(
+                                        text = "${(animatedBatchProgress * 100).toInt()}%",
+                                        fontSize = 13.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        color = MaterialTheme.colorScheme.primary
+                                    )
+                                }
+                                Spacer(modifier = Modifier.height(6.dp))
+                                LinearProgressIndicator(
+                                    progress = { animatedBatchProgress },
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .height(8.dp)
+                                        .clip(RoundedCornerShape(4.dp)),
+                                    color = MaterialTheme.colorScheme.primary,
+                                    trackColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.12f)
+                                )
+                                Spacer(modifier = Modifier.height(14.dp))
+                            } else {
+                                Spacer(modifier = Modifier.height(12.dp))
+                            }
+
+                            Button(
+                                onClick = {
+                                    if (!isBatchDownloading) {
+                                        val all = com.Nightjar.Th3GradeLibraryKMP.network.CloudCatalogManager.getAllCatalogItems()
+                                        com.Nightjar.Th3GradeLibraryKMP.network.BookDownloadManager.downloadAll(platformContext, all)
+                                        com.Nightjar.Th3GradeLibraryKMP.ui.ToastManager.showToast("بدأ تنزيل المناهج بالكامل للعمل أوفلاين...")
+                                    } else {
+                                        com.Nightjar.Th3GradeLibraryKMP.network.BookDownloadManager.cancelAll()
+                                        com.Nightjar.Th3GradeLibraryKMP.ui.ToastManager.showToast("تم إيقاف التنزيل الجماعي")
+                                    }
+                                },
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .height(44.dp),
+                                shape = RoundedCornerShape(12.dp),
+                                colors = ButtonDefaults.buttonColors(
+                                    containerColor = if (isBatchDownloading) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary
+                                )
+                            ) {
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.Center
+                                ) {
+                                    Icon(
+                                        imageVector = if (isBatchDownloading) Icons.Default.Close else Icons.Default.Download,
+                                        contentDescription = null,
+                                        modifier = Modifier.size(18.dp)
+                                    )
+                                    Spacer(modifier = Modifier.width(8.dp))
+                                    Text(
+                                        text = if (isBatchDownloading) "إلغاء التنزيل الجماعي" else "بدء تنزيل جميع الملفات الآن",
+                                        fontSize = 13.sp,
+                                        fontWeight = FontWeight.Bold
+                                    )
+                                }
+                            }
                         }
                     }
 
@@ -565,10 +660,10 @@ fun NewsSettingsModal(
                     modifier = Modifier
                         .fillMaxWidth()
                         .animateContentSize()
+                        .elasticOverscroll()
                         .verticalScroll(rememberScrollState())
                 ) {
-                    val topSafeInset = WindowInsets.statusBars.add(WindowInsets.captionBar).asPaddingValues().calculateTopPadding()
-                    Spacer(modifier = Modifier.height(topSafeInset + 16.dp))
+                    Spacer(modifier = Modifier.height(20.dp))
 
                     Row(
                         modifier = Modifier

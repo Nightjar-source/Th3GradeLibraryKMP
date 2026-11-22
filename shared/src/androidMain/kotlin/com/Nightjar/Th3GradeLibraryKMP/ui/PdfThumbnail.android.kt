@@ -40,14 +40,21 @@ actual fun rememberPdfCoverThumbnail(item: BookItem): ImageBitmap? {
                     if (permanentCover.exists() && permanentCover.length() > 512L) {
                         val decoded = android.graphics.BitmapFactory.decodeFile(permanentCover.absolutePath)
                         if (decoded != null) {
-                            val imgBmp = decoded.asImageBitmap()
-                            synchronized(thumbnailLruCache) {
-                                thumbnailLruCache.put(cacheKey, imgBmp)
+                            // Automatically detect and invalidate old corrupt covers that were saved with pitch black backgrounds:
+                            val isCorruptedBlack = decoded.width > 20 && decoded.height > 20 && 
+                                decoded.getPixel(5, 5) == -16777216 && decoded.getPixel(decoded.width - 5, 5) == -16777216
+                            if (isCorruptedBlack) {
+                                permanentCover.delete()
+                            } else {
+                                val imgBmp = decoded.asImageBitmap()
+                                synchronized(thumbnailLruCache) {
+                                    thumbnailLruCache.put(cacheKey, imgBmp)
+                                }
+                                withContext(Dispatchers.Main) {
+                                    bitmap = imgBmp
+                                }
+                                return@withContext
                             }
-                            withContext(Dispatchers.Main) {
-                                bitmap = imgBmp
-                            }
-                            return@withContext
                         }
                     }
 
@@ -59,6 +66,9 @@ actual fun rememberPdfCoverThumbnail(item: BookItem): ImageBitmap? {
                                     val width = 360
                                     val height = (360 * page.height / page.width).coerceAtLeast(480)
                                     val bmp = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
+                                    // Ensure solid pure white background so transparent PDF pages never turn black
+                                    val canvas = android.graphics.Canvas(bmp)
+                                    canvas.drawColor(android.graphics.Color.WHITE)
                                     page.render(bmp, null, null, PdfRenderer.Page.RENDER_MODE_FOR_DISPLAY)
                                     
                                     // Save permanently in user data directory (Offline forever)
