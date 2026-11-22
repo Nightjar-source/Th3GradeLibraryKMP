@@ -3,27 +3,26 @@ package com.Nightjar.Th3GradeLibraryKMP.ui
 import com.Nightjar.Th3GradeLibraryKMP.theme.expressiveButtonMorph
 import com.Nightjar.Th3GradeLibraryKMP.theme.contrastingTextColor
 import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
-import androidx.compose.animation.expandVertically
-import androidx.compose.animation.shrinkVertically
 import androidx.compose.animation.core.spring
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.horizontalScroll
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.rememberOverscrollEffect
 import androidx.compose.foundation.border
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Delete
-import androidx.compose.material.icons.filled.Download
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -47,6 +46,9 @@ import androidx.compose.ui.graphics.BlendMode
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.composed
 import androidx.compose.ui.layout.layout
+import kotlinx.coroutines.launch
+
+private val SheetHorizontalInset = 20.dp
 
 fun Modifier.horizontalFadingEdges(
     scrollState: androidx.compose.foundation.ScrollState,
@@ -101,6 +103,7 @@ fun getGradientForColor(colorHex: String): Brush {
     }
 }
 
+@OptIn(androidx.compose.material3.ExperimentalMaterial3Api::class)
 @Composable
 fun AppSettingsModal(
     isOpen: Boolean,
@@ -132,78 +135,79 @@ fun AppSettingsModal(
         "#9C27B0"  // Purple
     )
 
+    // ── Backup design: custom bottom sheet (no ModalBottomSheet) with smooth spring entrances ──
     AnimatedVisibility(
         visible = isOpen,
-        enter = fadeIn(),
-        exit = fadeOut(),
+        enter = fadeIn(animationSpec = tween(300)),
+        exit = fadeOut(animationSpec = tween(220)),
         modifier = Modifier.zIndex(800f)
     ) {
         Box(
             modifier = Modifier
                 .fillMaxSize()
                 .background(Color.Black.copy(alpha = 0.5f))
-                .clickable { onClose() },
-            contentAlignment = Alignment.BottomCenter
+                .clickable { onClose() }
         ) {
-            Box(
-                modifier = Modifier
-                    .widthIn(max = 480.dp) // Responsive capsule for tablets/DeX
-                    .fillMaxWidth()
-                    .windowInsetsPadding(WindowInsets.safeDrawing.only(WindowInsetsSides.Horizontal))
-                    .clickable(enabled = false) {}
-                    .clip(RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp))
-                    .background(MaterialTheme.colorScheme.surface)
-                    .animateEnterExit(
-                        enter = slideInVertically(
-                            initialOffsetY = { it },
-                            animationSpec = androidx.compose.animation.core.spring(dampingRatio = 0.8f, stiffness = androidx.compose.animation.core.Spring.StiffnessLow)
-                        ),
-                        exit = slideOutVertically(
-                            targetOffsetY = { it },
-                            animationSpec = androidx.compose.animation.core.spring(dampingRatio = 0.9f, stiffness = androidx.compose.animation.core.Spring.StiffnessMedium)
-                        )
-                    )
+            AnimatedVisibility(
+                visible = isOpen,
+                enter = slideInVertically(
+                    initialOffsetY = { it },
+                    animationSpec = spring(dampingRatio = 0.8f, stiffness = Spring.StiffnessLow)
+                ) + fadeIn(animationSpec = tween(300)),
+                exit = slideOutVertically(
+                    targetOffsetY = { it },
+                    animationSpec = spring(dampingRatio = 0.9f, stiffness = Spring.StiffnessMedium)
+                ) + fadeOut(animationSpec = tween(220)),
+                modifier = Modifier.align(Alignment.BottomCenter)
             ) {
-                Column(
+                Box(
                     modifier = Modifier
+                        .widthIn(max = 480.dp) // Responsive capsule for tablets/DeX
                         .fillMaxWidth()
-                        .verticalScroll(rememberScrollState())
-                        .padding(start = 20.dp, end = 20.dp)
+                        .windowInsetsPadding(WindowInsets.safeDrawing.only(WindowInsetsSides.Horizontal))
+                        .clickable(enabled = false) {}
+                        .clip(RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp))
+                        .background(MaterialTheme.colorScheme.surface)
                 ) {
-                    val topSafeInset = WindowInsets.statusBars.add(WindowInsets.captionBar).asPaddingValues().calculateTopPadding()
-                    Spacer(modifier = Modifier.height(topSafeInset + 16.dp))
-
-                    Row(
+                    Column(
                         modifier = Modifier
-                            .fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
+                            .fillMaxWidth()
+                            .verticalScroll(rememberScrollState())
+                            .padding(start = 20.dp, end = 20.dp)
                     ) {
-                        Text(
-                            text = "المظهر واللون",
-                            fontSize = 18.sp, // Compact title
-                            fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.onSurface
-                        )
-                        IconButton(
-                            onClick = onClose,
-                            modifier = Modifier
-                                .size(36.dp) // Compact close button
-                                .background(MaterialTheme.colorScheme.surfaceVariant, CircleShape)
-                        ) {
-                            Icon(Icons.Default.Close, contentDescription = "Close", modifier = Modifier.size(20.dp))
-                        }
-                    }
+                        val topSafeInset = WindowInsets.statusBars.add(WindowInsets.captionBar).asPaddingValues().calculateTopPadding()
+                        Spacer(modifier = Modifier.height(topSafeInset + 16.dp))
 
-                    Spacer(modifier = Modifier.height(16.dp)) // Compact height
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(
+                                text = "المظهر واللون",
+                                fontSize = 18.sp, // Compact title
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.onSurface
+                            )
+                            IconButton(
+                                onClick = onClose,
+                                modifier = Modifier
+                                    .size(36.dp) // Compact close button
+                                    .background(MaterialTheme.colorScheme.surfaceVariant, CircleShape)
+                            ) {
+                                Icon(Icons.Default.Close, contentDescription = "Close", modifier = Modifier.size(20.dp))
+                            }
+                        }
+
+                        Spacer(modifier = Modifier.height(16.dp)) // Compact height
 
                     // Theme Settings
-                    Text("وضع الإضاءة", fontWeight = FontWeight.Bold, fontSize = 13.sp, color = MaterialTheme.colorScheme.primary, modifier = Modifier.padding(horizontal = 20.dp))
+                    Text("وضع الإضاءة", fontWeight = FontWeight.Bold, fontSize = 13.sp, color = MaterialTheme.colorScheme.primary, modifier = Modifier.padding(horizontal = SheetHorizontalInset))
                     Spacer(modifier = Modifier.height(8.dp))
                     BoxWithConstraints(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(horizontal = 20.dp)
+                            .padding(horizontal = SheetHorizontalInset)
                             .height(48.dp)
                             .background(MaterialTheme.colorScheme.surfaceVariant, RoundedCornerShape(12.dp))
                     ) {
@@ -263,23 +267,23 @@ fun AppSettingsModal(
                     // Pure White Mode (Light only)
                     AnimatedVisibility(
                         visible = isLightThemeActive,
-                        enter = expandVertically(spring(dampingRatio = 0.8f, stiffness = 400f)) + fadeIn(),
-                        exit = shrinkVertically(spring(dampingRatio = 0.8f, stiffness = 400f)) + fadeOut()
+                        enter = androidx.compose.animation.expandVertically(spring(dampingRatio = 0.8f, stiffness = 400f)) + fadeIn(),
+                        exit = androidx.compose.animation.shrinkVertically(spring(dampingRatio = 0.8f, stiffness = 400f)) + fadeOut()
                     ) {
                         Column {
-                            Text("الوضع الأبيض الصافي", fontWeight = FontWeight.Bold, fontSize = 13.sp, color = MaterialTheme.colorScheme.primary, modifier = Modifier.padding(horizontal = 20.dp))
+                            Text("الوضع الأبيض الصافي", fontWeight = FontWeight.Bold, fontSize = 13.sp, color = MaterialTheme.colorScheme.primary, modifier = Modifier.padding(horizontal = SheetHorizontalInset))
                             Spacer(modifier = Modifier.height(6.dp))
                             Text(
                                 "استخدام خلفية بيضاء ناصعة تماماً للوضع الفاتح لتسهيل القراءة وتوفير مظهر فخم.",
                                 fontSize = 11.sp,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                modifier = Modifier.padding(horizontal = 20.dp)
+                                modifier = Modifier.padding(horizontal = SheetHorizontalInset)
                             )
                             Spacer(modifier = Modifier.height(10.dp))
                             Row(
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .padding(horizontal = 20.dp)
+                                    .padding(horizontal = SheetHorizontalInset)
                                     .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f), RoundedCornerShape(12.dp))
                                     .padding(horizontal = 16.dp, vertical = 10.dp),
                                 horizontalArrangement = Arrangement.SpaceBetween,
@@ -301,23 +305,23 @@ fun AppSettingsModal(
                     // Pure Black Mode (Dark only)
                     AnimatedVisibility(
                         visible = isDarkThemeActive,
-                        enter = expandVertically(spring(dampingRatio = 0.8f, stiffness = 400f)) + fadeIn(),
-                        exit = shrinkVertically(spring(dampingRatio = 0.8f, stiffness = 400f)) + fadeOut()
+                        enter = androidx.compose.animation.expandVertically(spring(dampingRatio = 0.8f, stiffness = 400f)) + fadeIn(),
+                        exit = androidx.compose.animation.shrinkVertically(spring(dampingRatio = 0.8f, stiffness = 400f)) + fadeOut()
                     ) {
                         Column {
-                            Text("الوضع الأسود النقي", fontWeight = FontWeight.Bold, fontSize = 13.sp, color = MaterialTheme.colorScheme.primary, modifier = Modifier.padding(horizontal = 20.dp))
+                            Text("الوضع الأسود النقي", fontWeight = FontWeight.Bold, fontSize = 13.sp, color = MaterialTheme.colorScheme.primary, modifier = Modifier.padding(horizontal = SheetHorizontalInset))
                             Spacer(modifier = Modifier.height(6.dp))
                             Text(
                                 "استخدام لون أسود صرف للخلفيات لتوفير طاقة البطارية في شاشات OLED وإعطاء مظهر فخم.",
                                 fontSize = 11.sp,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                modifier = Modifier.padding(horizontal = 20.dp)
+                                modifier = Modifier.padding(horizontal = SheetHorizontalInset)
                             )
                             Spacer(modifier = Modifier.height(10.dp))
                             Row(
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .padding(horizontal = 20.dp)
+                                    .padding(horizontal = SheetHorizontalInset)
                                     .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f), RoundedCornerShape(12.dp))
                                     .padding(horizontal = 16.dp, vertical = 10.dp),
                                 horizontalArrangement = Arrangement.SpaceBetween,
@@ -337,20 +341,20 @@ fun AppSettingsModal(
                     }
 
                     // Material You
-                    Text("ألوان متريال ديزاين 3", fontWeight = FontWeight.Bold, fontSize = 13.sp, color = MaterialTheme.colorScheme.primary, modifier = Modifier.padding(horizontal = 20.dp))
+                    Text("ألوان متريال ديزاين 3", fontWeight = FontWeight.Bold, fontSize = 13.sp, color = MaterialTheme.colorScheme.primary, modifier = Modifier.padding(horizontal = SheetHorizontalInset))
                     Spacer(modifier = Modifier.height(6.dp))
                     Text(
                         "استخراج الألوان من نظام أندرويد 12+ (Dynamic Colors) لتعطي تباين وتناسق مريح للعين.",
                         fontSize = 11.sp,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.padding(horizontal = 20.dp)
+                        modifier = Modifier.padding(horizontal = SheetHorizontalInset)
                     )
                     Spacer(modifier = Modifier.height(10.dp))
 
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(horizontal = 20.dp)
+                            .padding(horizontal = SheetHorizontalInset)
                             .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f), RoundedCornerShape(12.dp))
                             .padding(horizontal = 16.dp, vertical = 10.dp),
                         horizontalArrangement = Arrangement.SpaceBetween,
@@ -368,23 +372,11 @@ fun AppSettingsModal(
                     // Manual color options
                     AnimatedVisibility(
                         visible = !settings.useMaterialYou,
-                        enter = expandVertically(
-                            animationSpec = spring(
-                                dampingRatio = 0.82f,
-                                stiffness = androidx.compose.animation.core.Spring.StiffnessLow
-                            ),
-                            clip = false
-                        ) + fadeIn(androidx.compose.animation.core.tween(300)),
-                        exit = shrinkVertically(
-                            animationSpec = spring(
-                                dampingRatio = 0.85f,
-                                stiffness = androidx.compose.animation.core.Spring.StiffnessLow
-                            ),
-                            clip = false
-                        ) + fadeOut(androidx.compose.animation.core.tween(220))
+                        enter = androidx.compose.animation.expandVertically(spring(dampingRatio = 0.8f, stiffness = 400f)) + fadeIn(),
+                        exit = androidx.compose.animation.shrinkVertically(spring(dampingRatio = 0.8f, stiffness = 400f)) + fadeOut()
                     ) {
                         Column {
-                            Text("اختر لونك المفضل يدوياً:", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(horizontal = 20.dp))
+                            Text("اختر لونك المفضل يدوياً:", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(horizontal = SheetHorizontalInset))
                             Spacer(modifier = Modifier.height(8.dp))
                             val colorScrollState = rememberScrollState()
                             Row(
@@ -427,99 +419,15 @@ fun AppSettingsModal(
                         }
                     }
                     
-                    Spacer(modifier = Modifier.height(20.dp))
-                    HorizontalDivider(color = MaterialTheme.colorScheme.surfaceVariant)
-                    Spacer(modifier = Modifier.height(16.dp))
-
-                    // --- Downloads & Offline Management Section ---
-                    Text(
-                        "إدارة التنزيلات والمحتوى الأوفلاين",
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 13.sp,
-                        color = MaterialTheme.colorScheme.primary,
-                        modifier = Modifier.padding(horizontal = 20.dp)
-                    )
-                    Spacer(modifier = Modifier.height(6.dp))
-                    Text(
-                        "التحكم في التنزيل التلقائي لجميع المقررات أو تنزيلها دفعة واحدة لتعمل بدون إنترنت.",
-                        fontSize = 11.sp,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.padding(horizontal = 20.dp)
-                    )
-                    Spacer(modifier = Modifier.height(10.dp))
-
-                    // Switch: Auto Download On Update
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 20.dp)
-                            .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f), RoundedCornerShape(12.dp))
-                            .padding(horizontal = 16.dp, vertical = 10.dp),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Column(modifier = Modifier.weight(1f).padding(end = 12.dp)) {
-                            Text("تنزيل المقررات تلقائياً عند التحديث", fontWeight = FontWeight.Medium, fontSize = 13.sp)
-                            Text("تحميل الكتب والملازم الجديدة في الخلفية تلقائياً", fontSize = 10.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                        }
-                        Switch(
-                            checked = settings.autoDownloadOnUpdate,
-                            onCheckedChange = { onUpdateSettings(settings.copy(autoDownloadOnUpdate = it)) }
-                        )
-                    }
-
-                    Spacer(modifier = Modifier.height(12.dp))
-
-                    // Button: Download All Books and Notes Now
-                    val platformContext = coil3.compose.LocalPlatformContext.current
-                    val isBatchDownloading by com.Nightjar.Th3GradeLibraryKMP.network.BookDownloadManager.isBatchDownloading.collectAsState()
-                    val batchProgress by com.Nightjar.Th3GradeLibraryKMP.network.BookDownloadManager.batchProgress.collectAsState()
-
-                    Button(
-                        onClick = {
-                            if (!isBatchDownloading) {
-                                val all = com.Nightjar.Th3GradeLibraryKMP.network.CloudCatalogManager.getAllCatalogItems()
-                                com.Nightjar.Th3GradeLibraryKMP.network.BookDownloadManager.downloadAll(platformContext, all)
-                                com.Nightjar.Th3GradeLibraryKMP.ui.ToastManager.showToast("بدأ تنزيل المناهج بالكامل للعمل أوفلاين...")
-                            } else {
-                                com.Nightjar.Th3GradeLibraryKMP.network.BookDownloadManager.cancelAll()
-                                com.Nightjar.Th3GradeLibraryKMP.ui.ToastManager.showToast("تم إيقاف التنزيل الجماعي")
-                            }
-                        },
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 20.dp)
-                            .height(48.dp),
-                        shape = RoundedCornerShape(14.dp),
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = if (isBatchDownloading) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary
-                        )
-                    ) {
-                        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.Center) {
-                            Icon(
-                                imageVector = if (isBatchDownloading) Icons.Default.Close else Icons.Default.Download,
-                                contentDescription = null,
-                                modifier = Modifier.size(20.dp)
-                            )
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Text(
-                                text = if (isBatchDownloading) "إلغاء التنزيل الجماعي (${(batchProgress * 100).toInt()}%)" else "تحميل كافة الكتب والملازم الآن (أوفلاين)",
-                                fontSize = 12.sp,
-                                fontWeight = FontWeight.Bold
-                            )
-                        }
-                    }
-
-                    val bottomSafeInset = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
-                    Spacer(modifier = Modifier.height(bottomSafeInset + 20.dp))
+                    Spacer(modifier = Modifier.windowInsetsPadding(androidx.compose.foundation.layout.WindowInsets.safeDrawing.only(androidx.compose.foundation.layout.WindowInsetsSides.Bottom)).height(16.dp))
                 } // Close Column
-
-
-            }
-        }
-    }
+                } // Box sheet
+            } // AnimatedVisibility — sheet
+        } // Box scrim
+    } // AnimatedVisibility — scrim
 }
 
+@OptIn(androidx.compose.material3.ExperimentalMaterial3Api::class)
 @Composable
 fun NewsSettingsModal(
     isOpen: Boolean,
@@ -528,72 +436,71 @@ fun NewsSettingsModal(
     onUpdateSettings: (AppSettings) -> Unit,
     onRequestClearCache: () -> Unit
 ) {
-
+    // ── Backup design: custom bottom sheet (no ModalBottomSheet) with smooth spring entrances ──
     AnimatedVisibility(
         visible = isOpen,
-        enter = fadeIn(),
-        exit = fadeOut(),
+        enter = fadeIn(animationSpec = tween(300)),
+        exit = fadeOut(animationSpec = tween(220)),
         modifier = Modifier.zIndex(800f)
     ) {
         Box(
             modifier = Modifier
                 .fillMaxSize()
                 .background(Color.Black.copy(alpha = 0.5f))
-                .clickable { onClose() },
-            contentAlignment = Alignment.BottomCenter
+                .clickable { onClose() }
         ) {
-            Box(
-                modifier = Modifier
-                    .widthIn(max = 480.dp) // Responsive capsule for tablets/DeX
-                    .fillMaxWidth()
-                    .windowInsetsPadding(WindowInsets.safeDrawing.only(WindowInsetsSides.Horizontal))
-                    .clickable(enabled = false) {}
-                    .clip(RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp))
-                    .background(MaterialTheme.colorScheme.surface)
-                    .animateEnterExit(
-                        enter = slideInVertically(
-                            initialOffsetY = { it },
-                            animationSpec = androidx.compose.animation.core.spring(dampingRatio = 0.8f, stiffness = androidx.compose.animation.core.Spring.StiffnessLow)
-                        ),
-                        exit = slideOutVertically(
-                            targetOffsetY = { it },
-                            animationSpec = androidx.compose.animation.core.spring(dampingRatio = 0.9f, stiffness = androidx.compose.animation.core.Spring.StiffnessMedium)
-                        )
-                    )
+            AnimatedVisibility(
+                visible = isOpen,
+                enter = slideInVertically(
+                    initialOffsetY = { it },
+                    animationSpec = spring(dampingRatio = 0.8f, stiffness = Spring.StiffnessLow)
+                ) + fadeIn(animationSpec = tween(300)),
+                exit = slideOutVertically(
+                    targetOffsetY = { it },
+                    animationSpec = spring(dampingRatio = 0.9f, stiffness = Spring.StiffnessMedium)
+                ) + fadeOut(animationSpec = tween(220)),
+                modifier = Modifier.align(Alignment.BottomCenter)
             ) {
-                Column(
+                Box(
                     modifier = Modifier
+                        .widthIn(max = 480.dp)
                         .fillMaxWidth()
-                        .animateContentSize()
-                        .verticalScroll(rememberScrollState())
+                        .windowInsetsPadding(WindowInsets.safeDrawing.only(WindowInsetsSides.Horizontal))
+                        .clickable(enabled = false) {}
+                        .clip(RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp))
+                        .background(MaterialTheme.colorScheme.surface)
                 ) {
-                    val topSafeInset = WindowInsets.statusBars.add(WindowInsets.captionBar).asPaddingValues().calculateTopPadding()
-                    Spacer(modifier = Modifier.height(topSafeInset + 16.dp))
-
-                    Row(
+                    Column(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(horizontal = 20.dp),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
+                            .verticalScroll(rememberScrollState())
+                            .padding(start = 20.dp, end = 20.dp)
                     ) {
-                        Text(
-                            text = "إعدادات الأخبار والمزامنة",
-                            fontSize = 18.sp, // Compact title
-                            fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.onSurface
-                        )
-                        IconButton(
-                            onClick = onClose,
-                            modifier = Modifier
-                                .size(36.dp) // Compact close button
-                                .background(MaterialTheme.colorScheme.surfaceVariant, CircleShape)
-                        ) {
-                            Icon(Icons.Default.Close, contentDescription = "Close", modifier = Modifier.size(20.dp))
-                        }
-                    }
+                        val topSafeInset = WindowInsets.statusBars.add(WindowInsets.captionBar).asPaddingValues().calculateTopPadding()
+                        Spacer(modifier = Modifier.height(topSafeInset + 16.dp))
 
-                    Spacer(modifier = Modifier.height(16.dp))
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(
+                                text = "إعدادات الأخبار والمزامنة",
+                                fontSize = 18.sp, // Compact title
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.onSurface
+                            )
+                            IconButton(
+                                onClick = onClose,
+                                modifier = Modifier
+                                    .size(36.dp) // Compact close button
+                                    .background(MaterialTheme.colorScheme.surfaceVariant, CircleShape)
+                            ) {
+                                Icon(Icons.Default.Close, contentDescription = "Close", modifier = Modifier.size(20.dp))
+                            }
+                        }
+
+                        Spacer(modifier = Modifier.height(16.dp))
 
                     val isBatteryIgnored = remember { com.Nightjar.Th3GradeLibraryKMP.network.SyncEngine.platformActionHandler?.isBatteryOptimizationIgnored() ?: false }
                     var batteryStateIgnored by remember { mutableStateOf(isBatteryIgnored) }
@@ -611,11 +518,11 @@ fun NewsSettingsModal(
 
                     AnimatedVisibility(
                         visible = !batteryStateIgnored || !autoRevokeIgnored,
-                        enter = expandVertically(spring(dampingRatio = 0.8f, stiffness = 400f)) + fadeIn(),
-                        exit = shrinkVertically(spring(dampingRatio = 0.8f, stiffness = 400f)) + fadeOut()
+                        enter = slideInVertically(initialOffsetY = { it / 8 }, animationSpec = spring(dampingRatio = 0.85f, stiffness = 320f)) + fadeIn(animationSpec = spring(dampingRatio = 0.85f, stiffness = 320f)),
+                        exit = slideOutVertically(targetOffsetY = { it / 8 }, animationSpec = spring(dampingRatio = 0.85f, stiffness = 320f)) + fadeOut(animationSpec = spring(dampingRatio = 0.85f, stiffness = 320f))
                     ) {
                         Card(
-                            modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp),
+                            modifier = Modifier.fillMaxWidth().padding(horizontal = SheetHorizontalInset),
                             colors = CardDefaults.cardColors(
                                 containerColor = MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.2f)
                             ),
@@ -643,8 +550,8 @@ fun NewsSettingsModal(
                                 
                                 AnimatedVisibility(
                                     visible = !batteryStateIgnored,
-                                    enter = expandVertically() + fadeIn(),
-                                    exit = shrinkVertically() + fadeOut()
+                                    enter = slideInVertically(initialOffsetY = { it / 8 }, animationSpec = spring(dampingRatio = 0.85f, stiffness = 320f)) + fadeIn(animationSpec = spring(dampingRatio = 0.85f, stiffness = 320f)),
+                                    exit = slideOutVertically(targetOffsetY = { it / 8 }, animationSpec = spring(dampingRatio = 0.85f, stiffness = 320f)) + fadeOut(animationSpec = spring(dampingRatio = 0.85f, stiffness = 320f))
                                 ) {
                                     // تخطي الخمول
                                     Row(
@@ -673,8 +580,8 @@ fun NewsSettingsModal(
                                 
                                 AnimatedVisibility(
                                     visible = !batteryStateIgnored && !autoRevokeIgnored,
-                                    enter = expandVertically() + fadeIn(),
-                                    exit = shrinkVertically() + fadeOut()
+                                    enter = slideInVertically(initialOffsetY = { it / 8 }, animationSpec = spring(dampingRatio = 0.85f, stiffness = 320f)) + fadeIn(animationSpec = spring(dampingRatio = 0.85f, stiffness = 320f)),
+                                    exit = slideOutVertically(targetOffsetY = { it / 8 }, animationSpec = spring(dampingRatio = 0.85f, stiffness = 320f)) + fadeOut(animationSpec = spring(dampingRatio = 0.85f, stiffness = 320f))
                                 ) {
                                     Column {
                                         Spacer(modifier = Modifier.height(8.dp))
@@ -685,8 +592,8 @@ fun NewsSettingsModal(
                                 
                                 AnimatedVisibility(
                                     visible = !autoRevokeIgnored,
-                                    enter = expandVertically() + fadeIn(),
-                                    exit = shrinkVertically() + fadeOut()
+                                    enter = slideInVertically(initialOffsetY = { it / 8 }, animationSpec = spring(dampingRatio = 0.85f, stiffness = 320f)) + fadeIn(animationSpec = spring(dampingRatio = 0.85f, stiffness = 320f)),
+                                    exit = slideOutVertically(targetOffsetY = { it / 8 }, animationSpec = spring(dampingRatio = 0.85f, stiffness = 320f)) + fadeOut(animationSpec = spring(dampingRatio = 0.85f, stiffness = 320f))
                                 ) {
                                     // منع السبات
                                     Row(
@@ -717,17 +624,17 @@ fun NewsSettingsModal(
                     }
 
                     // Sync intervals
-                    Text("مزامنة الأخبار بالخلفية", fontWeight = FontWeight.Bold, fontSize = 13.sp, color = MaterialTheme.colorScheme.primary, modifier = Modifier.padding(horizontal = 20.dp))
+                    Text("مزامنة الأخبار بالخلفية", fontWeight = FontWeight.Bold, fontSize = 13.sp, color = MaterialTheme.colorScheme.primary, modifier = Modifier.padding(horizontal = SheetHorizontalInset))
                     Spacer(modifier = Modifier.height(6.dp))
                     Text(
                         "سيتم تحديث الأخبار ومزامنتها آلياً حسب التوقيت المناسب لك.",
                         fontSize = 11.sp,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.padding(horizontal = 20.dp)
+                        modifier = Modifier.padding(horizontal = SheetHorizontalInset)
                     )
                     Spacer(modifier = Modifier.height(10.dp))
 
-                    Column(verticalArrangement = Arrangement.spacedBy(6.dp), modifier = Modifier.padding(horizontal = 20.dp)) {
+                    Column(verticalArrangement = Arrangement.spacedBy(6.dp), modifier = Modifier.padding(horizontal = SheetHorizontalInset)) {
                         Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                             OptionGridButton("15 دقيقة", settings.syncInterval == "15m", { onUpdateSettings(settings.copy(syncInterval = "15m")) }, Modifier.weight(1f))
                             OptionGridButton("نصف ساعة", settings.syncInterval == "30m", { onUpdateSettings(settings.copy(syncInterval = "30m")) }, Modifier.weight(1f))
@@ -741,16 +648,16 @@ fun NewsSettingsModal(
                     }
 
                     Spacer(modifier = Modifier.height(16.dp))
-                    HorizontalDivider(color = MaterialTheme.colorScheme.surfaceVariant, modifier = Modifier.padding(horizontal = 20.dp))
+                    HorizontalDivider(color = MaterialTheme.colorScheme.surfaceVariant, modifier = Modifier.padding(horizontal = SheetHorizontalInset))
                     Spacer(modifier = Modifier.height(16.dp))
 
                     // Notification Sound
-                    Text("التنبيهات والأصوات", fontWeight = FontWeight.Bold, fontSize = 13.sp, color = MaterialTheme.colorScheme.primary, modifier = Modifier.padding(horizontal = 20.dp))
+                    Text("التنبيهات والأصوات", fontWeight = FontWeight.Bold, fontSize = 13.sp, color = MaterialTheme.colorScheme.primary, modifier = Modifier.padding(horizontal = SheetHorizontalInset))
                     Spacer(modifier = Modifier.height(10.dp))
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(horizontal = 20.dp)
+                            .padding(horizontal = SheetHorizontalInset)
                             .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f), RoundedCornerShape(12.dp))
                             .padding(horizontal = 16.dp, vertical = 10.dp),
                         horizontalArrangement = Arrangement.SpaceBetween,
@@ -764,21 +671,21 @@ fun NewsSettingsModal(
                     }
 
                     Spacer(modifier = Modifier.height(16.dp))
-                    HorizontalDivider(color = MaterialTheme.colorScheme.surfaceVariant, modifier = Modifier.padding(horizontal = 20.dp))
+                    HorizontalDivider(color = MaterialTheme.colorScheme.surfaceVariant, modifier = Modifier.padding(horizontal = SheetHorizontalInset))
                     Spacer(modifier = Modifier.height(16.dp))
 
                     // Cache intervals
-                    Text("التخزين المؤقت وحذف الأخبار (الكاش)", fontWeight = FontWeight.Bold, fontSize = 13.sp, color = MaterialTheme.colorScheme.primary, modifier = Modifier.padding(horizontal = 20.dp))
+                    Text("التخزين المؤقت وحذف الأخبار (الكاش)", fontWeight = FontWeight.Bold, fontSize = 13.sp, color = MaterialTheme.colorScheme.primary, modifier = Modifier.padding(horizontal = SheetHorizontalInset))
                     Spacer(modifier = Modifier.height(6.dp))
                     Text(
                         "تجنب امتلاء ذاكرة الهاتف بحذف الأخبار القديمة تلقائياً.",
                         fontSize = 11.sp,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.padding(horizontal = 20.dp)
+                        modifier = Modifier.padding(horizontal = SheetHorizontalInset)
                     )
                     Spacer(modifier = Modifier.height(10.dp))
 
-                    Column(verticalArrangement = Arrangement.spacedBy(6.dp), modifier = Modifier.padding(horizontal = 20.dp)) {
+                    Column(verticalArrangement = Arrangement.spacedBy(6.dp), modifier = Modifier.padding(horizontal = SheetHorizontalInset)) {
                         Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                             OptionGridButton("كل أسبوع", settings.cacheClearInterval == "7d", { onUpdateSettings(settings.copy(cacheClearInterval = "7d")) }, Modifier.weight(1f))
                             OptionGridButton("كل شهر", settings.cacheClearInterval == "1m", { onUpdateSettings(settings.copy(cacheClearInterval = "1m")) }, Modifier.weight(1f))
@@ -805,14 +712,12 @@ fun NewsSettingsModal(
                             }
                         }
                     }
-                    val bottomSafeInset = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
-                    Spacer(modifier = Modifier.height(bottomSafeInset + 20.dp))
+                    Spacer(modifier = Modifier.windowInsetsPadding(androidx.compose.foundation.layout.WindowInsets.safeDrawing.only(androidx.compose.foundation.layout.WindowInsetsSides.Bottom)).height(16.dp))
                 } // Close Column
-
-
-            }
-        }
-    }
+                } // Box sheet
+            } // AnimatedVisibility — sheet
+        } // Box scrim
+    } // AnimatedVisibility — scrim
 }
 
 

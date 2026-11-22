@@ -70,7 +70,6 @@ jobs:
             androidApp/build/outputs/apk/release/androidApp-release.apk
 
       - name: Create Release
-        continue-on-error: true
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ steps.release_info.outputs.tag }}
@@ -90,7 +89,6 @@ jobs:
             مرشحات وملخصات مركزة: مراجعات سريعة لليالي الامتحانات تساعدك على ضمان الدرجات العالية.
             إمكانية القراءة دون إنترنت: تحميل مباشر للملفات بصيغة PDF لتصفحها في أي وقت ومكان بسهولة تامة.
           files: |
-            androidApp/build/outputs/apk/release/Th3GradeLibrary_${{ steps.release_info.outputs.tag }}.apk
-            androidApp/build/outputs/apk/release/كتب_وملازم_الثالث_متوسط_${{ steps.release_info.outputs.tag }}.apk
+            androidApp/build/outputs/apk/release/*.apk
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
