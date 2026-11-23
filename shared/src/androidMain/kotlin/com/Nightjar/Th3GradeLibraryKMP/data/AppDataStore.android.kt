@@ -99,7 +99,7 @@ actual object AppDataStore {
                         cache[key] = fromSp
                         return fromSp
                     }
-                    val permanentFile = java.io.File(ctx.filesDir, "files/news_permanent_archive.json")
+                    val permanentFile = java.io.File(ctx.filesDir, "news_archive/news_permanent_archive.json")
                     if (permanentFile.exists()) {
                         val fromFile = permanentFile.readText()
                         if (fromFile.isNotEmpty()) {
@@ -135,10 +135,10 @@ actual object AppDataStore {
             val ctx = getSafeContext()
             if (ctx != null) {
                 val sp = ctx.getSharedPreferences("${ctx.packageName}_preferences", Context.MODE_PRIVATE)
-                sp.edit().putString(key, value).apply()
+                sp.edit().putString(key, value).commit()
                 if (key == "app_news_cache") {
                     try {
-                        val file = java.io.File(ctx.filesDir, "files/news_permanent_archive.json")
+                        val file = java.io.File(ctx.filesDir, "news_archive/news_permanent_archive.json")
                         file.parentFile?.mkdirs()
                         file.writeText(value)
                     } catch (_: Throwable) {}

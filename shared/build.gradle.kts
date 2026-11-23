@@ -48,7 +48,7 @@ kotlin {
         }
         
         androidMain.dependencies {
-            implementation(platform("androidx.compose:compose-bom:2026.11.01"))
+            implementation(project.dependencies.platform("androidx.compose:compose-bom:2026.11.01"))
             implementation("androidx.compose.foundation:foundation")
             implementation("androidx.compose.foundation:foundation-layout")
             implementation("androidx.compose.material3:material3")

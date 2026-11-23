@@ -863,6 +863,16 @@ class MainActivity : ComponentActivity() {
     private fun handleIntent(intent: Intent?) {
         if (intent == null) return
         
+        val targetPage = intent.getStringExtra("page")
+        val uriPage = intent.data?.getQueryParameter("page")
+
+        // 1. If explicit page is "news", ALWAYS route to News Screen directly
+        if (targetPage == "news" || uriPage == "news") {
+            NotificationHelper.clearNewsNotifications(this)
+            pageState.value = "news"
+            return
+        }
+
         val browserUrl = intent.getStringExtra("open_browser_url")
         val isFromFirebase = intent.hasExtra("google.message_id") ||
                 intent.hasExtra("gcm.notification.title") ||
@@ -870,7 +880,7 @@ class MainActivity : ComponentActivity() {
                 intent.hasExtra("gcm.n.e") ||
                 (intent.getStringExtra("from")?.contains("topic") == true)
 
-        // 1. RSS News item with web link -> open in CustomTab / browser as requested
+        // 2. RSS News item with web link -> open in CustomTab / browser as requested
         if (!browserUrl.isNullOrEmpty() && !isFromFirebase) {
             NotificationHelper.clearNewsNotifications(this)
             pageState.value = "news"
@@ -895,8 +905,8 @@ class MainActivity : ComponentActivity() {
             return
         }
 
-        // 2. Manual Firebase Console Announcement -> save to user data and open in NotificationDetailScreen
-        if (isFromFirebase || intent.getStringExtra("page") == "notification_detail") {
+        // 3. Manual Firebase Console Announcement / Notification Details
+        if (isFromFirebase || targetPage == "notification_detail" || uriPage == "notification_detail") {
             NotificationHelper.clearNewsNotifications(this)
             
             val fcmTitle = intent.getStringExtra("gcm.notification.title") 
@@ -914,12 +924,13 @@ class MainActivity : ComponentActivity() {
                 ?: ""
             
             if (fcmTitle.isNotBlank() || fcmBody.isNotBlank()) {
-                com.Nightjar.Th3GradeLibraryKMP.network.SyncEngine.recordDirectAnnouncement(
+                val created = com.Nightjar.Th3GradeLibraryKMP.network.SyncEngine.recordDirectAnnouncement(
                     title = fcmTitle,
                     content = fcmBody,
                     imageUrl = fcmImage,
                     link = fcmLink
                 )
+                com.Nightjar.Th3GradeLibraryKMP.network.SyncEngine.lastDirectAnnouncement = created
             }
             pageState.value = "notification_detail"
             return

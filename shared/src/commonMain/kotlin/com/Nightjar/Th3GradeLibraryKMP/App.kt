@@ -376,8 +376,11 @@ fun AppContent(
             }
         } else if (initialPage != null) {
             if (initialPage == "notification_detail") {
+                SyncEngine.reloadFromPersistence()
                 val news = SyncEngine.newsList.value
-                val matched = news.firstOrNull { it.isAnnouncement } ?: news.firstOrNull()
+                val matched = SyncEngine.lastDirectAnnouncement
+                    ?: news.firstOrNull { it.isAnnouncement || it.isDeveloperAnnouncement }
+                    ?: news.firstOrNull()
                 if (matched != null) {
                     activeNotificationItem = matched
                 }
@@ -676,15 +679,14 @@ fun AppContent(
                                             val matched = SyncEngine.newsList.value.firstOrNull { it.link == url || it.title == title }
                                             val hasWebUrl = url.isNotBlank() && (url.startsWith("http://") || url.startsWith("https://"))
                                             val isAnnouncement = matched?.isDeveloperAnnouncement == true ||
-                                                    (matched?.isAnnouncement == true && !hasWebUrl) ||
+                                                    matched?.isAnnouncement == true ||
                                                     url.startsWith("dev_") ||
                                                     url.startsWith("admin_") ||
-                                                    url.startsWith("app://")
+                                                    url.startsWith("app://") ||
+                                                    url.startsWith("th3books://")
 
-                                            if (hasWebUrl && !isAnnouncement) {
-                                                platformActionHandler.openCustomTab(url, appSettings.primaryColor)
-                                            } else if (isAnnouncement && matched != null) {
-                                                // In-app administrative notice / rich card
+                                            if (isAnnouncement && matched != null) {
+                                                // In-app administrative notice / rich card / announcement
                                                 activeNotificationItem = matched
                                                 navigateTo("notification_detail")
                                             } else if (url.isNotBlank() && (url.startsWith("http://") || url.startsWith("https://"))) {
@@ -735,6 +737,9 @@ fun AppContent(
                                     )
                                     "notification_detail" -> {
                                         val notif = activeNotificationItem
+                                            ?: SyncEngine.lastDirectAnnouncement
+                                            ?: SyncEngine.newsList.value.firstOrNull { it.isAnnouncement || it.isDeveloperAnnouncement }
+                                            ?: SyncEngine.newsList.value.firstOrNull()
                                         if (notif != null) {
                                             com.Nightjar.Th3GradeLibraryKMP.ui.NotificationDetailScreen(
                                                 item = notif,
@@ -745,7 +750,7 @@ fun AppContent(
                                                 bottomPadding = if (bottomBannerAd != null) 96.dp else 40.dp
                                             )
                                         } else {
-                                            navigateTo("home")
+                                            navigateTo("news")
                                         }
                                     }
                                     "pdf" -> {

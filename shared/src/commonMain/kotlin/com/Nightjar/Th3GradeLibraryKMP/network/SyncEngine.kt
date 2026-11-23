@@ -39,6 +39,7 @@ object SyncEngine {
 
     private val _newsList = MutableStateFlow<List<NewsItem>>(emptyList())
     val newsList = _newsList.asStateFlow()
+    var lastDirectAnnouncement: NewsItem? = null
 
     private val _appSettings = MutableStateFlow(AppSettings())
     val appSettings = _appSettings.asStateFlow()
@@ -295,7 +296,8 @@ object SyncEngine {
                         it.copy(formattedDate = formatNewsDate(it.pubDate))
                     } else it
                 }
-                _newsList.value = list
+                val sorted = list.sortedByDescending { parseNewsDateToMillis(it.pubDate) }
+                _newsList.value = sorted
             }
         } catch (e: Exception) {
             e.printStackTrace()
@@ -314,21 +316,29 @@ object SyncEngine {
     }
 
     private fun saveLocalNews(list: List<NewsItem>) {
-        _newsList.value = list
+        val sorted = list.sortedByDescending { parseNewsDateToMillis(it.pubDate) }
+        _newsList.value = sorted
         try {
-            settings.putString("app_news_cache", json.encodeToString(list))
+            settings.putString("app_news_cache", json.encodeToString(sorted))
         } catch (e: Exception) {
             e.printStackTrace()
         }
     }
 
-    fun recordDirectAnnouncement(title: String, content: String, imageUrl: String, link: String) {
-        try {
-            val id = if (link.isNotBlank()) link else ("announcement_" + title.hashCode() + "_" + (ClockSystem.currentTimeMillis() / 1000))
-            val nowStr = ClockSystem.currentTimeMillis().toString()
+    fun recordDirectAnnouncement(title: String, content: String, imageUrl: String, link: String): NewsItem? {
+        return try {
+            val id = if (link.isNotBlank() && !link.startsWith("th3books://")) link else ("announcement_" + title.hashCode() + "_" + (ClockSystem.currentTimeMillis() / 1000))
+            val nowMs = ClockSystem.currentTimeMillis()
+            val nowStr = nowMs.toString()
+            loadLocalNews()
             val existing = _newsList.value.toMutableList()
-            val alreadyPresent = existing.any { it.title == title && it.contentSnippet == content }
-            if (!alreadyPresent) {
+            val alreadyPresent = existing.find { 
+                it.id == id || (title.isNotBlank() && it.title == title && it.contentSnippet == content) 
+            }
+            if (alreadyPresent != null) {
+                lastDirectAnnouncement = alreadyPresent
+                alreadyPresent
+            } else {
                 val item = NewsItem(
                     id = id,
                     title = title,
@@ -340,9 +350,12 @@ object SyncEngine {
                     isAnnouncement = true
                 )
                 existing.add(0, item)
-                saveLocalNews(existing)
+                val sorted = existing.sortedByDescending { parseNewsDateToMillis(it.pubDate) }
+                saveLocalNews(sorted)
+                lastDirectAnnouncement = item
+                item
             }
-        } catch (_: Exception) {}
+        } catch (_: Exception) { null }
     }
 
     private fun extractDomain(url: String): String {
@@ -396,32 +409,72 @@ object SyncEngine {
     }
 
     fun formatNewsDate(pubDate: String): String = try {
-        val dParts = pubDate.split(" ")
-        if (dParts.size >= 5) {
-            val day = dParts[1]
-            val month = when (dParts[2].lowercase()) {
-                "jan" -> "1"; "feb" -> "2"; "mar" -> "3"; "apr" -> "4"
-                "may" -> "5"; "jun" -> "6"; "jul" -> "7"; "aug" -> "8"
-                "sep" -> "9"; "oct" -> "10"; "nov" -> "11"; "dec" -> "12"
-                else -> "1"
-            }
-            val year = dParts[3]
-            val timeParts = dParts[4].split(":")
-            var hour = timeParts[0].toIntOrNull() ?: 12
-            val min = timeParts[1]
-            
-            // تعديل التوقيت ليكون بتوقيت العراق (+3)
-            hour += 3
-            if (hour >= 24) hour -= 24
-            
+        val num = pubDate.toLongOrNull()
+        if (num != null) {
+            val sec = (num / 1000L)
+            val timeInDay = (sec % 86400L)
+            var hour = ((timeInDay / 3600L) + 3).toInt() % 24
+            val min = ((timeInDay % 3600L) / 60L).toInt()
             val amPm = if (hour >= 12) "م" else "ص"
             if (hour > 12) hour -= 12
             if (hour == 0) hour = 12
-            "$day-$month-$year  $hour:$min $amPm"
-        } else pubDate
+            val minStr = if (min < 10) "0$min" else "$min"
+            "الآن  $hour:$minStr $amPm"
+        } else {
+            val dParts = pubDate.split(" ")
+            if (dParts.size >= 5) {
+                val day = dParts[1]
+                val month = when (dParts[2].lowercase()) {
+                    "jan" -> "1"; "feb" -> "2"; "mar" -> "3"; "apr" -> "4"
+                    "may" -> "5"; "jun" -> "6"; "jul" -> "7"; "aug" -> "8"
+                    "sep" -> "9"; "oct" -> "10"; "nov" -> "11"; "dec" -> "12"
+                    else -> "1"
+                }
+                val year = dParts[3]
+                val timeParts = dParts[4].split(":")
+                var hour = timeParts[0].toIntOrNull() ?: 12
+                val min = timeParts[1]
+                
+                // تعديل التوقيت ليكون بتوقيت العراق (+3)
+                hour += 3
+                if (hour >= 24) hour -= 24
+                
+                val amPm = if (hour >= 12) "م" else "ص"
+                if (hour > 12) hour -= 12
+                if (hour == 0) hour = 12
+                "$day-$month-$year  $hour:$min $amPm"
+            } else if (pubDate.contains("-") && pubDate.contains(":")) {
+                val p = pubDate.split(" ")
+                val ymd = p[0]
+                val t = p.getOrNull(1)?.split(":") ?: listOf("12", "00")
+                var h = t[0].toIntOrNull() ?: 12
+                val m = t.getOrNull(1) ?: "00"
+                val amPm = if (h >= 12) "م" else "ص"
+                if (h > 12) h -= 12
+                if (h == 0) h = 12
+                "$ymd  $h:$m $amPm"
+            } else pubDate
+        }
     } catch (e: Exception) { pubDate }
 
     fun parseNewsDateToMillis(pubDate: String): Long = try {
+        val num = pubDate.toLongOrNull()
+        if (num != null) return num
+
+        if (pubDate.contains("-") && pubDate.contains(":")) {
+            val parts = pubDate.split(" ")
+            val ymd = parts[0].split("-")
+            val hms = parts.getOrNull(1)?.split(":") ?: listOf("0", "0", "0")
+            val y = ymd.getOrNull(0)?.toIntOrNull() ?: 2026
+            val m = ymd.getOrNull(1)?.toIntOrNull() ?: 1
+            val d = ymd.getOrNull(2)?.toIntOrNull() ?: 1
+            val h = hms.getOrNull(0)?.toIntOrNull() ?: 0
+            val min = hms.getOrNull(1)?.toIntOrNull() ?: 0
+            val s = hms.getOrNull(2)?.toIntOrNull() ?: 0
+            val daysApprox = (y - 1970) * 365L + ((y - 1970) / 4) + (m - 1) * 30L + d
+            return (daysApprox * 86400L + h * 3600L + min * 60L + s) * 1000L
+        }
+
         val dParts = pubDate.split(" ")
         if (dParts.size >= 5) {
             val day = dParts[1].toIntOrNull() ?: 1

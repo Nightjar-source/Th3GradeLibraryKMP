@@ -181,19 +181,24 @@ class AppFirebaseMessagingService : FirebaseMessagingService() {
                     isAnnouncement = isAnnouncement
                 )
                 existingList.add(0, newItem)
+                val sorted = existingList.sortedByDescending { SyncEngine.parseNewsDateToMillis(it.pubDate) }
+                val encodedJson = json.encodeToString(sorted)
                 // Retain all items permanently in user data without arbitrary limits
-                AppDataStore.putString("app_news_cache", json.encodeToString(existingList))
+                AppDataStore.putString("app_news_cache", encodedJson)
                 try {
                     val permanentDir = java.io.File(filesDir, "news_archive")
                     if (!permanentDir.exists()) permanentDir.mkdirs()
                     val archiveFile = java.io.File(permanentDir, "news_permanent_archive.json")
-                    archiveFile.writeText(json.encodeToString(existingList))
+                    archiveFile.writeText(encodedJson)
                 } catch (_: Exception) {}
-                AppDataStore.putString("Top_Link", link.ifEmpty { id })
-                if (pubDate.isNotEmpty()) AppDataStore.putString("Top_Time", pubDate)
+                if (!isAnnouncement) {
+                    AppDataStore.putString("Top_Link", link.ifEmpty { id })
+                    if (pubDate.isNotEmpty()) AppDataStore.putString("Top_Time", pubDate)
+                }
                 val now = System.currentTimeMillis()
                 AppDataStore.putLong("last_cloud_fcm_heartbeat", now)
                 SyncEngine.saveSettings(SyncEngine.appSettings.value.copy(lastSync = now))
+                SyncEngine.lastDirectAnnouncement = newItem
                 SyncEngine.reloadFromPersistence()
                 true
             } else {
@@ -291,6 +296,7 @@ class AppFirebaseMessagingService : FirebaseMessagingService() {
                 }
                 putExtra("title", title)
                 putExtra("content", content)
+                putExtra("image_url", imageUrl)
                 data = Uri.parse(if (link.isNotEmpty()) "th3books://library?page=notification_detail&link=" + Uri.encode(link) else "th3books://library?page=notification_detail")
             }
         }
@@ -317,13 +323,21 @@ class AppFirebaseMessagingService : FirebaseMessagingService() {
             .setCategory(if (!isNews) NotificationCompat.CATEGORY_MESSAGE else NotificationCompat.CATEGORY_RECOMMENDATION)
             .setAutoCancel(true)
             .setContentIntent(pendingIntent)
-            .setGroup(GROUP_KEY)
-            .setGroupAlertBehavior(NotificationCompat.GROUP_ALERT_SUMMARY)
 
-        // Child notification stays silent in a group so summary sounds ONCE
-        notificationBuilder.setSilent(true)
-        notificationBuilder.setSound(null)
-        notificationBuilder.setVibrate(null)
+        if (isNews) {
+            notificationBuilder.setGroup(GROUP_KEY)
+            notificationBuilder.setGroupAlertBehavior(NotificationCompat.GROUP_ALERT_SUMMARY)
+            notificationBuilder.setSilent(true)
+            notificationBuilder.setSound(null)
+            notificationBuilder.setVibrate(null)
+        } else {
+            // Announcements & Admin alerts fire with their own sound immediately
+            if (soundEnabled && soundUri != null) {
+                notificationBuilder.setSound(soundUri)
+                notificationBuilder.setVibrate(longArrayOf(0, 250, 150, 250))
+                notificationBuilder.setSilent(false)
+            }
+        }
 
         // Ensure full headline text wraps nicely without truncation (BigTextStyle on single notifications)
         if (cleanContent.isNotBlank()) {
@@ -350,30 +364,32 @@ class AppFirebaseMessagingService : FirebaseMessagingService() {
         val notificationId = NOTIFICATION_ID_BASE + (cleanTitle.hashCode() and 0x7FFF)
         notificationManager.notify(notificationId, notificationBuilder.build())
 
-        // Post group summary so the OS bundles all individual news cards neatly in the notification shade with ONE sound
-        val summaryBuilder = NotificationCompat.Builder(this, channelId)
-            .setSmallIcon(R.drawable.ic_notification)
-            .setColor(android.graphics.Color.parseColor("#2563EB"))
-            .setContentTitle("أخبار دراسية جديدة")
-            .setContentText("أخبار دراسية جديدة")
-            .setPriority(NotificationCompat.PRIORITY_HIGH)
-            .setContentIntent(pendingIntent)
-            .setAutoCancel(true)
-            .setGroup(GROUP_KEY)
-            .setGroupSummary(true)
-            .setGroupAlertBehavior(NotificationCompat.GROUP_ALERT_SUMMARY)
+        // Post group summary ONLY for standard news batching so multiple news cards sound ONCE
+        if (isNews) {
+            val summaryBuilder = NotificationCompat.Builder(this, channelId)
+                .setSmallIcon(R.drawable.ic_notification)
+                .setColor(android.graphics.Color.parseColor("#2563EB"))
+                .setContentTitle("أخبار دراسية جديدة")
+                .setContentText("أخبار دراسية جديدة")
+                .setPriority(NotificationCompat.PRIORITY_HIGH)
+                .setContentIntent(pendingIntent)
+                .setAutoCancel(true)
+                .setGroup(GROUP_KEY)
+                .setGroupSummary(true)
+                .setGroupAlertBehavior(NotificationCompat.GROUP_ALERT_SUMMARY)
 
-        if (soundEnabled && soundUri != null) {
-            summaryBuilder.setSound(soundUri)
-            summaryBuilder.setVibrate(longArrayOf(0, 250, 150, 250))
-            summaryBuilder.setSilent(false)
-        } else {
-            summaryBuilder.setSilent(true)
+            if (soundEnabled && soundUri != null) {
+                summaryBuilder.setSound(soundUri)
+                summaryBuilder.setVibrate(longArrayOf(0, 250, 150, 250))
+                summaryBuilder.setSilent(false)
+            } else {
+                summaryBuilder.setSilent(true)
+            }
+
+            try {
+                notificationManager.notify(NotificationHelper.SUMMARY_NOTIFICATION_ID, summaryBuilder.build())
+            } catch (_: Exception) {}
         }
-
-        try {
-            notificationManager.notify(NotificationHelper.SUMMARY_NOTIFICATION_ID, summaryBuilder.build())
-        } catch (_: Exception) {}
     }
 
     private fun createChannels(manager: NotificationManager) {
