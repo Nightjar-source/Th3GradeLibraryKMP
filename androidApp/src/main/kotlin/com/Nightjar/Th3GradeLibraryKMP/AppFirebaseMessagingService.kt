@@ -183,6 +183,12 @@ class AppFirebaseMessagingService : FirebaseMessagingService() {
                 existingList.add(0, newItem)
                 // Retain all items permanently in user data without arbitrary limits
                 AppDataStore.putString("app_news_cache", json.encodeToString(existingList))
+                try {
+                    val permanentDir = java.io.File(filesDir, "news_archive")
+                    if (!permanentDir.exists()) permanentDir.mkdirs()
+                    val archiveFile = java.io.File(permanentDir, "news_permanent_archive.json")
+                    archiveFile.writeText(json.encodeToString(existingList))
+                } catch (_: Exception) {}
                 AppDataStore.putString("Top_Link", link.ifEmpty { id })
                 if (pubDate.isNotEmpty()) AppDataStore.putString("Top_Time", pubDate)
                 val now = System.currentTimeMillis()
@@ -274,13 +280,9 @@ class AppFirebaseMessagingService : FirebaseMessagingService() {
         val intent = Intent(this, MainActivity::class.java).apply {
             flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
             if (isNews) {
-                if (link.startsWith("http")) {
-                    putExtra("open_browser_url", link)
-                    data = Uri.parse(link)
-                } else {
-                    putExtra("page", "news")
-                    data = Uri.parse("th3books://library?page=news")
-                }
+                // Strict requirement: News notification ALWAYS opens the in-app News Screen directly
+                putExtra("page", "news")
+                data = Uri.parse("th3books://library?page=news")
             } else {
                 putExtra("page", "notification_detail")
                 if (link.isNotEmpty()) {
@@ -316,15 +318,12 @@ class AppFirebaseMessagingService : FirebaseMessagingService() {
             .setAutoCancel(true)
             .setContentIntent(pendingIntent)
             .setGroup(GROUP_KEY)
+            .setGroupAlertBehavior(NotificationCompat.GROUP_ALERT_SUMMARY)
 
-        if (!soundEnabled && isNews) {
-            notificationBuilder.setSilent(true)
-            notificationBuilder.setSound(null)
-            notificationBuilder.setVibrate(null)
-        } else if (soundUri != null) {
-            notificationBuilder.setSound(soundUri)
-            notificationBuilder.setVibrate(longArrayOf(0, 250, 150, 250))
-        }
+        // Child notification stays silent in a group so summary sounds ONCE
+        notificationBuilder.setSilent(true)
+        notificationBuilder.setSound(null)
+        notificationBuilder.setVibrate(null)
 
         // Ensure full headline text wraps nicely without truncation (BigTextStyle on single notifications)
         if (cleanContent.isNotBlank()) {
@@ -348,20 +347,10 @@ class AppFirebaseMessagingService : FirebaseMessagingService() {
             notificationBuilder.setLargeIcon(thumbnailBitmap)
         }
 
-        // Android 7.0 & 7.1 legacy sound fallback
-        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) {
-            if (soundEnabled && soundUri != null) {
-                notificationBuilder.setSound(soundUri)
-                notificationBuilder.setVibrate(longArrayOf(0, 250, 150, 250))
-            } else {
-                notificationBuilder.setSilent(true)
-            }
-        }
-
         val notificationId = NOTIFICATION_ID_BASE + (cleanTitle.hashCode() and 0x7FFF)
         notificationManager.notify(notificationId, notificationBuilder.build())
 
-        // Post group summary so the OS bundles all individual news cards neatly in the notification shade
+        // Post group summary so the OS bundles all individual news cards neatly in the notification shade with ONE sound
         val summaryBuilder = NotificationCompat.Builder(this, channelId)
             .setSmallIcon(R.drawable.ic_notification)
             .setColor(android.graphics.Color.parseColor("#2563EB"))
@@ -372,7 +361,16 @@ class AppFirebaseMessagingService : FirebaseMessagingService() {
             .setAutoCancel(true)
             .setGroup(GROUP_KEY)
             .setGroupSummary(true)
-            .setSilent(true)
+            .setGroupAlertBehavior(NotificationCompat.GROUP_ALERT_SUMMARY)
+
+        if (soundEnabled && soundUri != null) {
+            summaryBuilder.setSound(soundUri)
+            summaryBuilder.setVibrate(longArrayOf(0, 250, 150, 250))
+            summaryBuilder.setSilent(false)
+        } else {
+            summaryBuilder.setSilent(true)
+        }
+
         try {
             notificationManager.notify(NotificationHelper.SUMMARY_NOTIFICATION_ID, summaryBuilder.build())
         } catch (_: Exception) {}

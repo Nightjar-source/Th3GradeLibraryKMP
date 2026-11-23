@@ -76,7 +76,41 @@ actual object AppDataStore {
         }
     }
 
+    fun forceRefresh() {
+        try {
+            val ctx = getSafeContext()
+            if (ctx != null) {
+                val sp = ctx.getSharedPreferences("${ctx.packageName}_preferences", Context.MODE_PRIVATE)
+                sp.all.forEach { (k, v) -> if (v != null) cache[k] = v }
+            }
+        } catch (_: Throwable) {}
+    }
+
     actual fun getString(key: String, defaultValue: String): String {
+        // Critical: For inter-process shared state like app_news_cache, ALWAYS read fresh from disk/SP
+        // to instantly reflect FCM messages delivered to background services!
+        if (key == "app_news_cache") {
+            try {
+                val ctx = getSafeContext()
+                if (ctx != null) {
+                    val sp = ctx.getSharedPreferences("${ctx.packageName}_preferences", Context.MODE_PRIVATE)
+                    val fromSp = sp.getString(key, null)
+                    if (!fromSp.isNullOrEmpty()) {
+                        cache[key] = fromSp
+                        return fromSp
+                    }
+                    val permanentFile = java.io.File(ctx.filesDir, "files/news_permanent_archive.json")
+                    if (permanentFile.exists()) {
+                        val fromFile = permanentFile.readText()
+                        if (fromFile.isNotEmpty()) {
+                            cache[key] = fromFile
+                            return fromFile
+                        }
+                    }
+                }
+            } catch (_: Throwable) {}
+        }
+
         val mem = cache[key] as? String
         if (mem != null) return mem
         return try {

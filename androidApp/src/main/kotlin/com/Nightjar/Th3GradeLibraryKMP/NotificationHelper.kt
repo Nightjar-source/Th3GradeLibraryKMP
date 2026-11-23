@@ -161,8 +161,10 @@ object NotificationHelper {
         val nm = NotificationManagerCompat.from(context)
 
         // Strict User Experience: Deliver EACH news article as its own individual notification card
-        // with the full article headline (BigTextStyle), avoiding single-line bulleted (•) grouping.
+        // with the full article headline (BigTextStyle), bundled cleanly by Android with ONE single sound.
         val recentTitles = titles.take(10)
+        val isMultiple = recentTitles.size > 1
+
         recentTitles.forEach { rawTitle ->
             val cleanTitle = rawTitle.replace("أخبار الثالث متوسط:", "").replace("أخبار الثالث متوسط", "").trim().ifBlank { rawTitle }
             val notifId = 2000 + (cleanTitle.hashCode() and 0x7FFF)
@@ -182,19 +184,21 @@ object NotificationHelper {
                 .setAutoCancel(true)
                 .setGroup("news_group")
                 .setGroupSummary(false)
+                .setGroupAlertBehavior(NotificationCompat.GROUP_ALERT_SUMMARY)
 
             if (microThumbnail != null) {
                 itemNotification.setLargeIcon(microThumbnail)
             }
 
-            if (!withSound) {
-                itemNotification.setSilent(true)
-                itemNotification.setSound(null)
-                itemNotification.setVibrate(null)
-            } else {
+            // Single item sounds directly; multiple items sound ONCE via group summary
+            if (!isMultiple && withSound && soundUri != null) {
                 itemNotification.setSound(soundUri)
                 itemNotification.setVibrate(longArrayOf(0, 250, 150, 250))
                 itemNotification.setSilent(false)
+            } else {
+                itemNotification.setSilent(true)
+                itemNotification.setSound(null)
+                itemNotification.setVibrate(null)
             }
 
             try {
@@ -205,7 +209,8 @@ object NotificationHelper {
         }
 
         // For Android 7.0+ notification shade grouping, post the group summary notification
-        if (recentTitles.size > 1) {
+        // plays sound ONCE for the entire batch
+        if (isMultiple) {
             val summaryBuilder = NotificationCompat.Builder(context, targetChannelId)
                 .setSmallIcon(R.drawable.ic_notification)
                 .setColor(android.graphics.Color.parseColor("#2563EB"))
@@ -216,7 +221,15 @@ object NotificationHelper {
                 .setAutoCancel(true)
                 .setGroup("news_group")
                 .setGroupSummary(true)
-                .setSilent(true)
+                .setGroupAlertBehavior(NotificationCompat.GROUP_ALERT_SUMMARY)
+
+            if (withSound && soundUri != null) {
+                summaryBuilder.setSound(soundUri)
+                summaryBuilder.setVibrate(longArrayOf(0, 250, 150, 250))
+                summaryBuilder.setSilent(false)
+            } else {
+                summaryBuilder.setSilent(true)
+            }
 
             try {
                 nm.notify(SUMMARY_NOTIFICATION_ID, summaryBuilder.build())

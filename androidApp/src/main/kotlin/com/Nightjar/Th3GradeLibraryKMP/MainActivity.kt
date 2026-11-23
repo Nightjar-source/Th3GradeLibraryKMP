@@ -842,12 +842,16 @@ class MainActivity : ComponentActivity() {
 
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
+        com.Nightjar.Th3GradeLibraryKMP.data.AppDataStore.forceRefresh()
+        SyncEngine.reloadFromPersistence()
         handleIntent(intent)
     }
 
     override fun onResume() {
         super.onResume()
         SyncEngine.checkNotificationPermission()
+        com.Nightjar.Th3GradeLibraryKMP.data.AppDataStore.forceRefresh()
+        SyncEngine.reloadFromPersistence()
         AppFirebaseMessagingService.getAndClearUnnotifiedNews()
     }
 

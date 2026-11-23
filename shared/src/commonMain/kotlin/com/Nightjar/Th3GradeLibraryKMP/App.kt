@@ -401,6 +401,7 @@ fun AppContent(
         SyncEngine.isUserOnNewsScreen = (page == "news")
         if (page == "news") {
             platformActionHandler.clearNewsNotifications()
+            SyncEngine.reloadFromPersistence()
         }
         // Auto-dismiss floating notice when transitioning between screens or entering reader
         com.Nightjar.Th3GradeLibraryKMP.ui.ToastManager.clearToast()
