@@ -621,17 +621,13 @@ fun LazyGridItemScope.ContentCard(
                         val hasBundledCover = item.coverResName.isNotBlank() && item.coverResName != "app_icon" && item.id != "b_abood"
 
                         if (hasCloudCover || hasBundledCover) {
-                            val coverData = remember(item, cloudCoverUrl) {
-                                if (hasCloudCover) {
-                                    cloudCoverUrl
-                                } else if (item.coverResName.startsWith("http://") || item.coverResName.startsWith("https://")) {
-                                    item.coverResName
-                                } else {
-                                    try {
-                                        com.Nightjar.Th3GradeLibraryKMP.generated.resources.Res.getUri("drawable/${item.coverResName}." + if (item.coverResName in listOf("ayajaaa", "english", "englishactivity", "kss1")) "jpg" else "png")
-                                    } catch (_: Throwable) {
-                                        null
-                                    }
+                            val remoteUrl = if (hasCloudCover) cloudCoverUrl!! else if (item.coverResName.startsWith("http://") || item.coverResName.startsWith("https://")) item.coverResName else null
+                            val persistentCover = if (remoteUrl != null) rememberPersistentCloudCover(item, remoteUrl) else null
+                            val coverData = persistentCover ?: remember(item) {
+                                try {
+                                    com.Nightjar.Th3GradeLibraryKMP.generated.resources.Res.getUri("drawable/${item.coverResName}." + if (item.coverResName in listOf("ayajaaa", "english", "englishactivity", "kss1")) "jpg" else "png")
+                                } catch (_: Throwable) {
+                                    null
                                 }
                             }
 
@@ -912,12 +908,10 @@ fun LazyGridItemScope.ContentCard(
                         val hasCloudCover = !cloudCoverUrl.isNullOrBlank()
                         val hasBundledCover = item.coverResName.isNotBlank() && item.coverResName != "app_icon" && item.id != "b_abood"
 
-                        val coverData: Any? = remember(item, cloudCoverUrl) {
-                            if (hasCloudCover) {
-                                cloudCoverUrl
-                            } else if (item.coverResName.startsWith("http://") || item.coverResName.startsWith("https://")) {
-                                item.coverResName
-                            } else if (hasBundledCover) {
+                        val remoteUrl = if (hasCloudCover) cloudCoverUrl!! else if (item.coverResName.startsWith("http://") || item.coverResName.startsWith("https://")) item.coverResName else null
+                        val persistentCover = if (remoteUrl != null) rememberPersistentCloudCover(item, remoteUrl) else null
+                        val coverData: Any? = persistentCover ?: remember(item, hasBundledCover) {
+                            if (hasBundledCover) {
                                 try {
                                     com.Nightjar.Th3GradeLibraryKMP.generated.resources.Res.getUri("drawable/${item.coverResName}." + if (item.coverResName in listOf("ayajaaa", "english", "englishactivity", "kss1")) "jpg" else "png")
                                 } catch (_: Throwable) {

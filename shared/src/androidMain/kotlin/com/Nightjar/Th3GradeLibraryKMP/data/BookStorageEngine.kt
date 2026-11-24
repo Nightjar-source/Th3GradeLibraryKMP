@@ -49,6 +49,10 @@ actual object BookStorageEngine {
         return File(getCoversDir(context), "cover_${item.id}_v2.jpg")
     }
 
+    fun getPermanentUrlCoverFile(context: Context, item: BookItem, coverUrl: String): File {
+        return File(getCoversDir(context), "cover_${item.id}_url_${coverUrl.hashCode()}.jpg")
+    }
+
     actual fun isDownloaded(context: Any, item: BookItem): Boolean {
         val ctx = context as Context
         val file = getPermanentFile(ctx, item)
@@ -66,12 +70,12 @@ actual object BookStorageEngine {
             val ctx = context as Context
             val file = getPermanentFile(ctx, item)
             if (!file.exists() || file.length() <= 1024L) return false
-            val metaSize = com.Nightjar.Th3GradeLibraryKMP.network.CloudCatalogManager.getMeta(item)?.file_size ?: -1L
-            if (metaSize > 0L && kotlin.math.abs(file.length() - metaSize) > 4096L) {
-                true
-            } else {
-                false
-            }
+            val meta = com.Nightjar.Th3GradeLibraryKMP.network.CloudCatalogManager.getMeta(item)
+            val metaSize = meta?.file_size ?: -1L
+            val pdfChanged = metaSize > 0L && kotlin.math.abs(file.length() - metaSize) > 4096L
+            val coverUrl = meta?.cover_url?.takeIf { it.isNotBlank() }
+            val coverChanged = coverUrl != null && !getPermanentUrlCoverFile(ctx, item, coverUrl).let { it.exists() && it.length() > 512L }
+            pdfChanged || coverChanged
         } catch (_: Exception) {
             false
         }

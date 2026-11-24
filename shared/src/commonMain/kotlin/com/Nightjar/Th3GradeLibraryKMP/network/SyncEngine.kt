@@ -704,7 +704,6 @@ object SyncEngine {
                         if (limitDays != null) {
                             val cutoffMs = System.currentTimeMillis() - (limitDays.toLong() * 24 * 60 * 60 * 1000L)
                             combined.filter { item ->
-                                if (item.isAnnouncement) return@filter true
                                 val parsed = try { parseNewsDateToMillis(item.pubDate) } catch (_: Exception) { 0L }
                                 parsed == 0L || parsed >= cutoffMs
                             }

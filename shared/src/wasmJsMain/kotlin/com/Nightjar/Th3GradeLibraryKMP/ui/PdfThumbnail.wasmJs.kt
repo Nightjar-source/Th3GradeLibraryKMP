@@ -6,3 +6,6 @@ import com.Nightjar.Th3GradeLibraryKMP.data.BookItem
 
 @Composable
 actual fun rememberPdfCoverThumbnail(item: BookItem): ImageBitmap? = null
+
+@Composable
+actual fun rememberPersistentCloudCover(item: BookItem, coverUrl: String): Any? = coverUrl

@@ -271,17 +271,13 @@ fun BookAccordionItem(
                 val hasBundledCover = item.coverResName.isNotBlank() && item.coverResName != "app_icon" && item.id != "b_abood"
 
                 if (hasCloudCover || hasBundledCover) {
-                    val coverData = remember(item, cloudCoverUrl) {
-                        if (hasCloudCover) {
-                            cloudCoverUrl
-                        } else if (item.coverResName.startsWith("http://") || item.coverResName.startsWith("https://")) {
-                            item.coverResName
-                        } else {
-                            try {
-                                Res.getUri("drawable/${item.coverResName}." + if (item.coverResName in listOf("ayajaaa", "english", "englishactivity", "kss1")) "jpg" else "png")
-                            } catch (_: Throwable) {
-                                null
-                            }
+                    val remoteUrl = if (hasCloudCover) cloudCoverUrl!! else if (item.coverResName.startsWith("http://") || item.coverResName.startsWith("https://")) item.coverResName else null
+                    val persistentCover = if (remoteUrl != null) rememberPersistentCloudCover(item, remoteUrl) else null
+                    val coverData = persistentCover ?: remember(item) {
+                        try {
+                            Res.getUri("drawable/${item.coverResName}." + if (item.coverResName in listOf("ayajaaa", "english", "englishactivity", "kss1")) "jpg" else "png")
+                        } catch (_: Throwable) {
+                            null
                         }
                     }
 

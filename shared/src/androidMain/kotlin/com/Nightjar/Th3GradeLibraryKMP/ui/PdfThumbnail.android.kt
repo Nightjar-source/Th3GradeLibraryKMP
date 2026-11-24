@@ -89,3 +89,56 @@ actual fun rememberPdfCoverThumbnail(item: BookItem): ImageBitmap? {
     }
     return bitmap
 }
+
+@Composable
+actual fun rememberPersistentCloudCover(item: BookItem, coverUrl: String): Any? {
+    val context = LocalContext.current.applicationContext
+    val localFile = remember(item.id, coverUrl) {
+        BookStorageEngine.getPermanentUrlCoverFile(context, item, coverUrl)
+    }
+    var coverSource by remember(item.id, coverUrl) {
+        mutableStateOf<Any>(if (localFile.exists() && localFile.length() > 512L) localFile else coverUrl)
+    }
+
+    LaunchedEffect(item.id, coverUrl) {
+        if (localFile.exists() && localFile.length() > 512L) {
+            coverSource = localFile
+            return@LaunchedEffect
+        }
+        withContext(Dispatchers.IO) {
+            try {
+                val coversDir = BookStorageEngine.getCoversDir(context)
+                val tempFile = java.io.File(coversDir, "tmp_cover_${item.id}_${System.currentTimeMillis()}.jpg")
+                val conn = java.net.URL(coverUrl).openConnection() as java.net.HttpURLConnection
+                conn.connectTimeout = 10000
+                conn.readTimeout = 15000
+                conn.setRequestProperty("User-Agent", "Mozilla/5.0")
+                conn.connect()
+                if (conn.responseCode in 200..299) {
+                    conn.inputStream.use { input ->
+                        tempFile.outputStream().use { output ->
+                            input.copyTo(output, 16 * 1024)
+                        }
+                    }
+                    if (tempFile.exists() && tempFile.length() > 512L) {
+                        coversDir.listFiles()?.forEach { old ->
+                            if (old.name.startsWith("cover_${item.id}_url_") && old.name != localFile.name) {
+                                try { old.delete() } catch (_: Exception) {}
+                            }
+                        }
+                        if (localFile.exists()) localFile.delete()
+                        tempFile.renameTo(localFile)
+                        if (localFile.exists() && localFile.length() > 512L) {
+                            withContext(Dispatchers.Main) {
+                                coverSource = localFile
+                            }
+                        }
+                    } else {
+                        tempFile.delete()
+                    }
+                }
+            } catch (_: Exception) {}
+        }
+    }
+    return coverSource
+}
