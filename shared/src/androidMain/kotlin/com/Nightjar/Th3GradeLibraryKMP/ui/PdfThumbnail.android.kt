@@ -13,8 +13,8 @@ import com.Nightjar.Th3GradeLibraryKMP.data.BookStorageEngine
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
-// Strictly bounded LRU Cache in memory (max 30 thumbnails ~ 15MB max) with automatic memory eviction
-private val thumbnailLruCache = object : LruCache<String, ImageBitmap>(30) {}
+// Strictly bounded LRU Cache in memory (max 60 thumbnails ~ 15MB max) with automatic memory eviction
+private val thumbnailLruCache = object : LruCache<String, ImageBitmap>(60) {}
 
 @Composable
 actual fun rememberPdfCoverThumbnail(item: BookItem): ImageBitmap? {
@@ -41,8 +41,11 @@ actual fun rememberPdfCoverThumbnail(item: BookItem): ImageBitmap? {
                         val decoded = android.graphics.BitmapFactory.decodeFile(permanentCover.absolutePath)
                         if (decoded != null) {
                             // Automatically detect and invalidate old corrupt covers that were saved with pitch black backgrounds:
-                            val isCorruptedBlack = decoded.width > 20 && decoded.height > 20 && 
-                                decoded.getPixel(5, 5) == -16777216 && decoded.getPixel(decoded.width - 5, 5) == -16777216
+                            val w = decoded.width
+                            val h = decoded.height
+                            val isCorruptedBlack = w > 20 && h > 20 && 
+                                (decoded.getPixel(5, 5) == -16777216 && decoded.getPixel(w - 5, 5) == -16777216) ||
+                                (decoded.getPixel(w / 2, 5) == -16777216 && decoded.getPixel(5, h / 2) == -16777216)
                             if (isCorruptedBlack) {
                                 permanentCover.delete()
                             } else {
@@ -73,6 +76,7 @@ actual fun rememberPdfCoverThumbnail(item: BookItem): ImageBitmap? {
                                     
                                     // Save permanently in user data directory (Offline forever)
                                     try {
+                                        permanentCover.parentFile?.mkdirs()
                                         permanentCover.outputStream().use { out ->
                                             bmp.compress(Bitmap.CompressFormat.JPEG, 90, out)
                                         }

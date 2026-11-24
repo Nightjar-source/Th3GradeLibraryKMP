@@ -595,7 +595,7 @@ actual fun PdfViewerScreen(
                             if (orientation == "vertical") {
                                 VerticalPager(
                                     state = pagerState,
-                                    beyondViewportPageCount = 1,
+                                    beyondViewportPageCount = 2,
                                     modifier = Modifier.fillMaxSize(),
                                     contentPadding = PaddingValues(0.dp),
                                     pageSpacing = 0.dp
@@ -632,7 +632,7 @@ actual fun PdfViewerScreen(
                             } else {
                                 HorizontalPager(
                                     state = pagerState,
-                                    beyondViewportPageCount = 1,
+                                    beyondViewportPageCount = 2,
                                     modifier = Modifier.fillMaxSize(),
                                     contentPadding = PaddingValues(0.dp),
                                     pageSpacing = 0.dp
@@ -1150,32 +1150,38 @@ fun AndroidPdfPage(
         if (bitmap != null) {
             onPageReady()
 
-            // Asynchronous prefetch of next page on capable devices to eliminate scrolling lag
+            // Asynchronous prefetch of adjacent pages (forward and backward) on multi-core devices
             val cores = Runtime.getRuntime().availableProcessors()
             val maxMemoryMb = (Runtime.getRuntime().maxMemory() / (1024 * 1024)).toInt()
-            if (cores >= 6 && maxMemoryMb >= 384 && pageIndex + 1 < renderer.pageCount) {
-                val nextKey = "pdf_${if (bookId.isNotEmpty()) bookId else renderer.hashCode().toString()}_page_${pageIndex + 1}"
-                if (PdfBitmapCache.cache.get(nextKey) == null) {
-                    val prefetchDispatcher = if (cores >= 8) Dispatchers.Default else Dispatchers.IO
-                    scope.launch(prefetchDispatcher) {
-                        try {
-                            pdfMutex.withLock {
-                                currentCoroutineContext().ensureActive()
-                                val nextPage = renderer.openPage(pageIndex + 1)
-                                try {
-                                    val prefetchScale = if (maxMemoryMb >= 512 && cores >= 8) 2.2f else 1.5f
-                                    val nextW = (nextPage.width * prefetchScale).toInt()
-                                    val nextH = (nextPage.height * prefetchScale).toInt()
-                                    val nextBmp = Bitmap.createBitmap(nextW, nextH, Bitmap.Config.ARGB_8888)
-                                    val canvas = android.graphics.Canvas(nextBmp)
-                                    canvas.drawColor(android.graphics.Color.WHITE)
-                                    nextPage.render(nextBmp, null, null, PdfRenderer.Page.RENDER_MODE_FOR_DISPLAY)
-                                    PdfBitmapCache.cache.put(nextKey, nextBmp)
-                                } finally {
-                                    try { nextPage.close() } catch (_: Exception) {}
+            if (cores >= 4) {
+                val prefetchTargets = listOfNotNull(
+                    if (pageIndex + 1 < renderer.pageCount) pageIndex + 1 else null,
+                    if (pageIndex - 1 >= 0) pageIndex - 1 else null
+                )
+                val prefetchDispatcher = if (cores >= 6) Dispatchers.Default else Dispatchers.IO
+                val prefetchScale = if (maxMemoryMb >= 512 && cores >= 8) 2.2f else 1.5f
+                for (targetIdx in prefetchTargets) {
+                    val targetKey = "pdf_${if (bookId.isNotEmpty()) bookId else renderer.hashCode().toString()}_page_$targetIdx"
+                    if (PdfBitmapCache.cache.get(targetKey) == null) {
+                        scope.launch(prefetchDispatcher) {
+                            try {
+                                pdfMutex.withLock {
+                                    currentCoroutineContext().ensureActive()
+                                    val prePage = renderer.openPage(targetIdx)
+                                    try {
+                                        val preW = (prePage.width * prefetchScale).toInt()
+                                        val preH = (prePage.height * prefetchScale).toInt()
+                                        val preBmp = Bitmap.createBitmap(preW, preH, Bitmap.Config.ARGB_8888)
+                                        val canvas = android.graphics.Canvas(preBmp)
+                                        canvas.drawColor(android.graphics.Color.WHITE)
+                                        prePage.render(preBmp, null, null, PdfRenderer.Page.RENDER_MODE_FOR_DISPLAY)
+                                        PdfBitmapCache.cache.put(targetKey, preBmp)
+                                    } finally {
+                                        try { prePage.close() } catch (_: Exception) {}
+                                    }
                                 }
-                            }
-                        } catch (_: Exception) {}
+                            } catch (_: Exception) {}
+                        }
                     }
                 }
             }

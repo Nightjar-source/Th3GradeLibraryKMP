@@ -332,6 +332,10 @@ fun AppContent(
         } else if (selectedItem != null) {
             isNavigatingBack = true
             viewModel.clearSelectedItem()
+            scope.launch {
+                kotlinx.coroutines.delay(450)
+                platformActionHandler.showInterstitialAd {}
+            }
         } else if (page == "list") {
             isNavigatingBack = true
             navigateTo("home")
@@ -633,9 +637,7 @@ fun AppContent(
                                             navigateTo("list")
                                         },
                                         onNavigateToPdf = {
-                                            platformActionHandler.showInterstitialAd {
-                                                viewModel.selectItem(it, SyncEngine.lastReadPages.value[it.id])
-                                            }
+                                            viewModel.selectItem(it, SyncEngine.lastReadPages.value[it.id])
                                         },
                                         isDark = isDark,
                                         onToggleViewMode = { SyncEngine.saveGridView(!isGridView) },
@@ -658,9 +660,7 @@ fun AppContent(
                                             navigateTo("list")
                                         },
                                         onNavigateToPdf = {
-                                            platformActionHandler.showInterstitialAd {
-                                                viewModel.selectItem(it, SyncEngine.lastReadPages.value[it.id])
-                                            }
+                                            viewModel.selectItem(it, SyncEngine.lastReadPages.value[it.id])
                                         },
                                         isDark = isDark,
                                         onToggleViewMode = { SyncEngine.saveGridView(!isGridView) },
@@ -710,9 +710,7 @@ fun AppContent(
                                         activeTargetId = activeTargetId,
                                         isDark = isDark,
                                         onNavigateToPdf = { item, pageIdx ->
-                                            platformActionHandler.showInterstitialAd {
-                                                viewModel.selectItem(item, pageIdx, fromBookmarks = true)
-                                            }
+                                            viewModel.selectItem(item, pageIdx, fromBookmarks = true)
                                         },
                                         bottomPadding = listBottomPadding,
                                         onScrollableStateChanged = { canCurrentPageScroll = it },
@@ -1268,19 +1266,34 @@ fun AppContent(
                 }
 
         // --- Unified Top Dynamic Island Notification & Alert Capsule (Library Screen Only for Book Downloads) ---
-        val isLibraryScreen = (page == "home" || page == "list")
+        val isLibraryScreen = (page == "list")
+        val isDownloadMessage = remember {
+            { text: String ->
+                text.contains("تنزيل") || text.contains("تحميل") || text.contains("%") ||
+                text.contains("اكتمل تنزيل") || text.contains("اكتملت جميع تنزيلات")
+            }
+        }
         val rootActiveNotice by com.Nightjar.Th3GradeLibraryKMP.network.BookDownloadManager.activeNoticeMessage.collectAsState()
         val currentToast = toastMessage
-        // Download notice strictly restricted to Library screen, toasts available everywhere
+        // Download notice strictly restricted to Library screen (page == "list"), general toasts available everywhere
         val effectiveDownloadNotice = if (isLibraryScreen) rootActiveNotice else null
-        val activeIslandText = effectiveDownloadNotice ?: currentToast
+        val effectiveToast = if (!isLibraryScreen && currentToast != null && isDownloadMessage(currentToast)) null else currentToast
+        val activeIslandText = effectiveDownloadNotice ?: effectiveToast
         val isIslandVisible = activeIslandText != null && !isDrawerOpen
 
-        val dynamicTopPadding = when {
-            page == "pdf" -> if (isWide) 76.dp else 84.dp
+        val targetDynamicTopPadding = when {
+            page == "pdf" -> if (isWide) 80.dp else 88.dp
             isWide -> 52.dp
-            else -> 58.dp
+            else -> 60.dp
         }
+        val dynamicTopPadding by animateDpAsState(
+            targetValue = targetDynamicTopPadding,
+            animationSpec = spring(
+                dampingRatio = Spring.DampingRatioLowBouncy,
+                stiffness = Spring.StiffnessMediumLow
+            ),
+            label = "toastDynamicTopPadding"
+        )
 
         Box(
             modifier = Modifier
@@ -1299,19 +1312,28 @@ fun AppContent(
             androidx.compose.animation.AnimatedVisibility(
                 visible = isIslandVisible,
                 enter = slideInVertically(
-                    initialOffsetY = { -it },
-                    animationSpec = spring(dampingRatio = 0.78f, stiffness = 340f)
-                ) + fadeIn(tween(180)) + scaleIn(initialScale = 0.90f),
+                    initialOffsetY = { -it * 2 },
+                    animationSpec = spring(dampingRatio = 0.76f, stiffness = 320f)
+                ) + fadeIn(tween(220, easing = LinearOutSlowInEasing)) + scaleIn(initialScale = 0.82f, animationSpec = spring(dampingRatio = 0.76f, stiffness = 320f)),
                 exit = slideOutVertically(
-                    targetOffsetY = { -it },
-                    animationSpec = spring(dampingRatio = 0.88f, stiffness = 380f)
-                ) + fadeOut(tween(150)) + scaleOut(targetScale = 0.92f)
+                    targetOffsetY = { -it * 2 },
+                    animationSpec = spring(dampingRatio = 0.86f, stiffness = 360f)
+                ) + fadeOut(tween(180, easing = FastOutLinearInEasing)) + scaleOut(targetScale = 0.85f, animationSpec = spring(dampingRatio = 0.86f, stiffness = 360f))
             ) {
                 val islandText = activeIslandText ?: ""
-                val isDownloading = islandText.contains("%") || islandText.contains("جاري تنزيل") || islandText.contains("جاري تحميل")
-                val isCompleted = islandText.contains("اكتمل") || islandText.contains("✓")
-                val isPaused = islandText.contains("إيقاف") || islandText.contains("مؤقتاً")
-                val isFailed = islandText.contains("تعذر") || islandText.contains("فشل") || islandText.contains("✕")
+
+                var dragOffsetY by remember { mutableStateOf(0f) }
+                var dragOffsetX by remember { mutableStateOf(0f) }
+                val animatedOffsetX by animateFloatAsState(
+                    targetValue = dragOffsetX,
+                    animationSpec = spring(dampingRatio = Spring.DampingRatioLowBouncy, stiffness = Spring.StiffnessMedium),
+                    label = "islandDragOffsetX"
+                )
+                val animatedOffsetY by animateFloatAsState(
+                    targetValue = dragOffsetY,
+                    animationSpec = spring(dampingRatio = Spring.DampingRatioLowBouncy, stiffness = Spring.StiffnessMedium),
+                    label = "islandDragOffsetY"
+                )
 
                 Surface(
                     shape = RoundedCornerShape(26.dp),
@@ -1326,12 +1348,26 @@ fun AppContent(
                         .wrapContentWidth()
                         .widthIn(min = 160.dp, max = 520.dp)
                         .padding(horizontal = 16.dp)
+                        .graphicsLayer {
+                            translationX = animatedOffsetX
+                            translationY = animatedOffsetY.coerceAtMost(24f)
+                            val dismissProgress = (kotlin.math.abs(animatedOffsetX) / 90f).coerceIn(0f, 1f).coerceAtLeast(
+                                (-animatedOffsetY / 45f).coerceIn(0f, 1f)
+                            )
+                            alpha = 1f - dismissProgress * 0.75f
+                        }
+                        .animateContentSize(
+                            animationSpec = spring(
+                                dampingRatio = Spring.DampingRatioLowBouncy,
+                                stiffness = 320f
+                            )
+                        )
                         .border(
                             width = 1.dp,
                             color = when {
-                                isCompleted -> Color(0xFF10B981).copy(alpha = 0.65f)
-                                isPaused -> Color(0xFFF59E0B).copy(alpha = 0.65f)
-                                isFailed -> MaterialTheme.colorScheme.error.copy(alpha = 0.65f)
+                                islandText.contains("اكتمل") || islandText.contains("✓") -> Color(0xFF10B981).copy(alpha = 0.65f)
+                                islandText.contains("إيقاف") || islandText.contains("مؤقتاً") -> Color(0xFFF59E0B).copy(alpha = 0.65f)
+                                islandText.contains("تعذر") || islandText.contains("فشل") || islandText.contains("✕") -> MaterialTheme.colorScheme.error.copy(alpha = 0.65f)
                                 rootActiveNotice != null -> MaterialTheme.colorScheme.primary.copy(alpha = 0.55f)
                                 else -> MaterialTheme.colorScheme.outline.copy(alpha = 0.25f)
                             },
@@ -1345,78 +1381,114 @@ fun AppContent(
                             com.Nightjar.Th3GradeLibraryKMP.network.BookDownloadManager.clearActiveNotice()
                         }
                         .pointerInput(Unit) {
-                            detectDragGestures { change, dragAmount ->
-                                if (dragAmount.y < -12f || kotlin.math.abs(dragAmount.x) > 18f) {
-                                    change.consume()
-                                    com.Nightjar.Th3GradeLibraryKMP.ui.ToastManager.clearToast()
-                                    com.Nightjar.Th3GradeLibraryKMP.network.BookDownloadManager.clearActiveNotice()
+                            detectDragGestures(
+                                onDragStart = {
+                                    dragOffsetX = 0f
+                                    dragOffsetY = 0f
+                                },
+                                onDragEnd = {
+                                    if (dragOffsetY < -20f || kotlin.math.abs(dragOffsetX) > 50f) {
+                                        com.Nightjar.Th3GradeLibraryKMP.ui.ToastManager.clearToast()
+                                        com.Nightjar.Th3GradeLibraryKMP.network.BookDownloadManager.clearActiveNotice()
+                                    }
+                                    dragOffsetX = 0f
+                                    dragOffsetY = 0f
+                                },
+                                onDragCancel = {
+                                    dragOffsetX = 0f
+                                    dragOffsetY = 0f
+                                },
+                                onDrag = { change, dragAmount ->
+                                    dragOffsetX += dragAmount.x
+                                    dragOffsetY += dragAmount.y
+                                    if (dragOffsetY < -36f || kotlin.math.abs(dragOffsetX) > 80f) {
+                                        change.consume()
+                                        com.Nightjar.Th3GradeLibraryKMP.ui.ToastManager.clearToast()
+                                        com.Nightjar.Th3GradeLibraryKMP.network.BookDownloadManager.clearActiveNotice()
+                                        dragOffsetX = 0f
+                                        dragOffsetY = 0f
+                                    }
                                 }
-                            }
+                            )
                         }
                 ) {
-                    Row(
-                        modifier = Modifier
-                            .animateContentSize(
-                                animationSpec = spring(
-                                    dampingRatio = 0.82f,
-                                    stiffness = 320f
+                    androidx.compose.animation.AnimatedContent(
+                        targetState = islandText,
+                        transitionSpec = {
+                            (fadeIn(tween(200, easing = LinearOutSlowInEasing)) +
+                             scaleIn(initialScale = 0.92f, animationSpec = spring(dampingRatio = 0.8f, stiffness = 340f)) +
+                             slideInVertically(initialOffsetY = { it / 3 }, animationSpec = spring(dampingRatio = 0.8f, stiffness = 340f)))
+                                .togetherWith(
+                                    fadeOut(tween(150, easing = FastOutLinearInEasing)) +
+                                    scaleOut(targetScale = 0.92f) +
+                                    slideOutVertically(targetOffsetY = { -it / 3 })
                                 )
+                        },
+                        label = "islandContentAnim"
+                    ) { currentIslandText ->
+                        val currentIsDownloading = currentIslandText.contains("%") || currentIslandText.contains("جاري تنزيل") || currentIslandText.contains("جاري تحميل")
+                        val currentIsCompleted = currentIslandText.contains("اكتمل") || currentIslandText.contains("✓")
+                        val currentIsPaused = currentIslandText.contains("إيقاف") || currentIslandText.contains("مؤقتاً")
+                        val currentIsFailed = currentIslandText.contains("تعذر") || currentIslandText.contains("فشل") || currentIslandText.contains("✕")
+
+                        Row(
+                            modifier = Modifier
+                                .padding(horizontal = 20.dp, vertical = 11.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.Center
+                        ) {
+                            if (currentIsDownloading) {
+                                CircularProgressIndicator(
+                                    modifier = Modifier.size(18.dp),
+                                    color = MaterialTheme.colorScheme.primary,
+                                    strokeWidth = 2.4.dp
+                                )
+                                Spacer(modifier = Modifier.width(10.dp))
+                            } else if (currentIsCompleted) {
+                                Icon(
+                                    imageVector = Icons.Default.CheckCircle,
+                                    contentDescription = null,
+                                    tint = Color(0xFF10B981),
+                                    modifier = Modifier.size(20.dp)
+                                )
+                                Spacer(modifier = Modifier.width(10.dp))
+                            } else if (currentIsPaused) {
+                                Icon(
+                                    imageVector = Icons.Default.PauseCircle,
+                                    contentDescription = null,
+                                    tint = Color(0xFFF59E0B),
+                                    modifier = Modifier.size(20.dp)
+                                )
+                                Spacer(modifier = Modifier.width(10.dp))
+                            } else if (currentIsFailed) {
+                                Icon(
+                                    imageVector = Icons.Default.Error,
+                                    contentDescription = null,
+                                    tint = MaterialTheme.colorScheme.error,
+                                    modifier = Modifier.size(20.dp)
+                                )
+                                Spacer(modifier = Modifier.width(10.dp))
+                            } else {
+                                Icon(
+                                    imageVector = Icons.Default.Info,
+                                    contentDescription = null,
+                                    tint = if (rootActiveNotice != null) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.inversePrimary,
+                                    modifier = Modifier.size(20.dp)
+                                )
+                                Spacer(modifier = Modifier.width(10.dp))
+                            }
+                            Text(
+                                text = currentIslandText,
+                                style = MaterialTheme.typography.bodyMedium.copy(
+                                    fontWeight = FontWeight.Bold,
+                                    fontSize = 13.5.sp,
+                                    textAlign = TextAlign.Center
+                                ),
+                                color = if (rootActiveNotice != null) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.inverseOnSurface,
+                                maxLines = 2,
+                                overflow = TextOverflow.Ellipsis
                             )
-                            .padding(horizontal = 20.dp, vertical = 11.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.Center
-                    ) {
-                        if (isDownloading) {
-                            CircularProgressIndicator(
-                                modifier = Modifier.size(18.dp),
-                                color = MaterialTheme.colorScheme.primary,
-                                strokeWidth = 2.4.dp
-                            )
-                            Spacer(modifier = Modifier.width(10.dp))
-                        } else if (isCompleted) {
-                            Icon(
-                                imageVector = Icons.Default.CheckCircle,
-                                contentDescription = null,
-                                tint = Color(0xFF10B981),
-                                modifier = Modifier.size(20.dp)
-                            )
-                            Spacer(modifier = Modifier.width(10.dp))
-                        } else if (isPaused) {
-                            Icon(
-                                imageVector = Icons.Default.PauseCircle,
-                                contentDescription = null,
-                                tint = Color(0xFFF59E0B),
-                                modifier = Modifier.size(20.dp)
-                            )
-                            Spacer(modifier = Modifier.width(10.dp))
-                        } else if (isFailed) {
-                            Icon(
-                                imageVector = Icons.Default.Error,
-                                contentDescription = null,
-                                tint = MaterialTheme.colorScheme.error,
-                                modifier = Modifier.size(20.dp)
-                            )
-                            Spacer(modifier = Modifier.width(10.dp))
-                        } else {
-                            Icon(
-                                imageVector = Icons.Default.Info,
-                                contentDescription = null,
-                                tint = if (rootActiveNotice != null) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.inversePrimary,
-                                modifier = Modifier.size(20.dp)
-                            )
-                            Spacer(modifier = Modifier.width(10.dp))
                         }
-                        Text(
-                            text = islandText,
-                            style = MaterialTheme.typography.bodyMedium.copy(
-                                fontWeight = FontWeight.Bold,
-                                fontSize = 13.5.sp,
-                                textAlign = TextAlign.Center
-                            ),
-                            color = if (rootActiveNotice != null) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.inverseOnSurface,
-                            maxLines = 2,
-                            overflow = TextOverflow.Ellipsis
-                        )
                     }
                 }
             }
@@ -1908,10 +1980,10 @@ fun AppContent(
             visible = isDrawerOpen,
             enter = fadeIn(tween(180)),
             exit = fadeOut(tween(140)),
-            modifier = Modifier.zIndex(1200f).then(
+            modifier = Modifier.zIndex(2000f).then(
                 if (LocalSharedTransitionScope.current != null) {
                     with(LocalSharedTransitionScope.current!!) {
-                        Modifier.renderInSharedTransitionScopeOverlay(zIndexInOverlay = 150f)
+                        Modifier.renderInSharedTransitionScopeOverlay(zIndexInOverlay = 200f)
                     }
                 } else Modifier
             )

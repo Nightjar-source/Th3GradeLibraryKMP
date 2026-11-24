@@ -20,10 +20,12 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.border
+import androidx.compose.animation.core.tween
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Download
+import androidx.compose.material.icons.filled.StopCircle
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -171,7 +173,21 @@ fun AppSettingsModal(
                         .verticalScroll(rememberScrollState())
                         .padding(start = 20.dp, end = 20.dp)
                 ) {
-                    Spacer(modifier = Modifier.height(20.dp))
+                    // Drag handle pill — replaces large empty gap above title
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(top = 10.dp, bottom = 6.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .width(40.dp)
+                                .height(4.dp)
+                                .clip(RoundedCornerShape(2.dp))
+                                .background(MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.35f))
+                        )
+                    }
 
                     Row(
                         modifier = Modifier
@@ -181,21 +197,21 @@ fun AppSettingsModal(
                     ) {
                         Text(
                             text = "المظهر واللون",
-                            fontSize = 18.sp, // Compact title
+                            fontSize = 18.sp,
                             fontWeight = FontWeight.Bold,
                             color = MaterialTheme.colorScheme.onSurface
                         )
                         IconButton(
                             onClick = onClose,
                             modifier = Modifier
-                                .size(36.dp) // Compact close button
+                                .size(36.dp)
                                 .background(MaterialTheme.colorScheme.surfaceVariant, CircleShape)
                         ) {
                             Icon(Icons.Default.Close, contentDescription = "Close", modifier = Modifier.size(20.dp))
                         }
                     }
 
-                    Spacer(modifier = Modifier.height(16.dp)) // Compact height
+                    Spacer(modifier = Modifier.height(14.dp))
 
                     // Theme Settings
                     Text("وضع الإضاءة", fontWeight = FontWeight.Bold, fontSize = 13.sp, color = MaterialTheme.colorScheme.primary, modifier = Modifier.padding(horizontal = 20.dp))
@@ -663,7 +679,21 @@ fun NewsSettingsModal(
                         .elasticOverscroll()
                         .verticalScroll(rememberScrollState())
                 ) {
-                    Spacer(modifier = Modifier.height(20.dp))
+                    // Drag handle pill — replaces large empty gap above title
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(top = 10.dp, bottom = 6.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .width(40.dp)
+                                .height(4.dp)
+                                .clip(RoundedCornerShape(2.dp))
+                                .background(MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.35f))
+                        )
+                    }
 
                     Row(
                         modifier = Modifier
@@ -674,21 +704,21 @@ fun NewsSettingsModal(
                     ) {
                         Text(
                             text = "إعدادات الأخبار والمزامنة",
-                            fontSize = 18.sp, // Compact title
+                            fontSize = 18.sp,
                             fontWeight = FontWeight.Bold,
                             color = MaterialTheme.colorScheme.onSurface
                         )
                         IconButton(
                             onClick = onClose,
                             modifier = Modifier
-                                .size(36.dp) // Compact close button
+                                .size(36.dp)
                                 .background(MaterialTheme.colorScheme.surfaceVariant, CircleShape)
                         ) {
                             Icon(Icons.Default.Close, contentDescription = "Close", modifier = Modifier.size(20.dp))
                         }
                     }
 
-                    Spacer(modifier = Modifier.height(16.dp))
+                    Spacer(modifier = Modifier.height(14.dp))
 
                     val isBatteryIgnored = remember { com.Nightjar.Th3GradeLibraryKMP.network.SyncEngine.platformActionHandler?.isBatteryOptimizationIgnored() ?: false }
                     var batteryStateIgnored by remember { mutableStateOf(isBatteryIgnored) }
