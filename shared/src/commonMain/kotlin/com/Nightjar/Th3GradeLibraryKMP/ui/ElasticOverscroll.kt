@@ -34,6 +34,11 @@ fun Modifier.elasticOverscroll(
     bottomEnabled: Boolean = true
 ): Modifier = composed {
     val systemStretch = LocalSystemStretchOverscroll.current
+    if (systemStretch) {
+        // Native Android 12+ (API 31+) provides the real EdgeEffect stretch overscroll natively.
+        // Stand aside completely so Compose's built-in Stretch Overscroll operates at both top and bottom edges!
+        return@composed this
+    }
     val isLowEnd = com.Nightjar.Th3GradeLibraryKMP.theme.LocalIsLowEndDevice.current
     if (isLowEnd) return@composed this
 

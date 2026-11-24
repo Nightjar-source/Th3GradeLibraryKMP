@@ -509,7 +509,7 @@ fun AppContent(
                     Box(
                         modifier = Modifier
                             .fillMaxSize()
-                            .zIndex(10f)
+                            .zIndex(if (page == "pdf") 500f else 10f)
                     ) {
                         val screenEntranceSeenMap = remember { mutableMapOf<String, androidx.compose.runtime.snapshots.SnapshotStateMap<String, Boolean>>() }
                         val saveableStateHolder = androidx.compose.runtime.saveable.rememberSaveableStateHolder()
@@ -550,7 +550,7 @@ fun AppContent(
                                 }
                             }
                             val pageContentPadding = PaddingValues(
-                                end = if (isWide && (targetPage in listOf("home", "list", "news", "bookmarks", "shortcuts", "about") || targetPage == "pdf")) 90.dp else 0.dp
+                                end = if (isWide && targetPage in listOf("home", "list", "news", "bookmarks", "shortcuts", "about")) 90.dp else 0.dp
                             )
                             val innerHorizontalInsets = if (targetPage != "pdf") WindowInsets.safeDrawing.only(WindowInsetsSides.Horizontal) else WindowInsets(0, 0, 0, 0)
                             Box(

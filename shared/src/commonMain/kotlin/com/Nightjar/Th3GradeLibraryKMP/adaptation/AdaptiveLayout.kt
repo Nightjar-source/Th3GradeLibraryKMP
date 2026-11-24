@@ -53,8 +53,8 @@ object AdaptiveLayout {
         widthClass: WindowWidthSizeClass
     ): Dp = currentStatusBar + topBarHeight(heightClass, widthClass) + topBarPaddingV(heightClass) * 2
 
-    /** قفزة إضافية بين شريط العنوان وأول بيكسل من المحتوى (تمنع التداخل تماماً). */
-    const val TOP_BAR_CONTENT_GAP_DP = 12
+    /** قفزة إضافية بين شريط العنوان وأول بيكسل من المحتوى (تمنع التداخل تماماً، أقل من 7 دي بي ديناميكياً). */
+    const val TOP_BAR_CONTENT_GAP_DP = 6
 
     /** المساحة العلوية للمحتوى — محسوبة ديناميكياً من Insets النظام دائماً. */
     fun contentTopPadding(

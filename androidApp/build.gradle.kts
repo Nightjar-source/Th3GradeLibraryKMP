@@ -21,8 +21,8 @@ android {
         applicationId = "com.Nightjar.Th3GradeLibraryKMP"
         minSdk = libs.versions.android.minSdk.get().toInt()
         targetSdk = libs.versions.android.targetSdk.get().toInt()
-        versionCode = 12127
-        versionName = "1.5.13"
+        versionCode = 12128
+        versionName = "1.5.14"
     }
     
     val keystoreProperties = Properties()
@@ -90,6 +90,7 @@ android {
 }
 
 dependencies {
+    implementation(platform("androidx.compose:compose-bom:2026.11.01"))
     implementation(project(":shared"))
     implementation(libs.androidx.activity.compose)
     implementation(libs.androidx.core.splashscreen)

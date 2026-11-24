@@ -175,8 +175,19 @@ fun AppSettingsModal(
                             .verticalScroll(rememberScrollState())
                             .padding(start = 4.dp, end = 4.dp)
                     ) {
-                        val topSafeInset = WindowInsets.statusBars.add(WindowInsets.captionBar).asPaddingValues().calculateTopPadding()
-                        Spacer(modifier = Modifier.height(topSafeInset + 16.dp))
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(vertical = 8.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .size(width = 36.dp, height = 4.dp)
+                                    .clip(CircleShape)
+                                    .background(MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.35f))
+                            )
+                        }
 
                         Row(
                             modifier = Modifier.fillMaxWidth(),
@@ -476,8 +487,19 @@ fun NewsSettingsModal(
                             .verticalScroll(rememberScrollState())
                             .padding(start = 4.dp, end = 4.dp)
                     ) {
-                        val topSafeInset = WindowInsets.statusBars.add(WindowInsets.captionBar).asPaddingValues().calculateTopPadding()
-                        Spacer(modifier = Modifier.height(topSafeInset + 16.dp))
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(vertical = 8.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .size(width = 36.dp, height = 4.dp)
+                                    .clip(CircleShape)
+                                    .background(MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.35f))
+                            )
+                        }
 
                         Row(
                             modifier = Modifier.fillMaxWidth(),
