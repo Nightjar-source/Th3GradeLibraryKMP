@@ -40,24 +40,14 @@ actual fun rememberPdfCoverThumbnail(item: BookItem): ImageBitmap? {
                     if (permanentCover.exists() && permanentCover.length() > 512L) {
                         val decoded = android.graphics.BitmapFactory.decodeFile(permanentCover.absolutePath)
                         if (decoded != null) {
-                            // Automatically detect and invalidate old corrupt covers that were saved with pitch black backgrounds:
-                            val w = decoded.width
-                            val h = decoded.height
-                            val isCorruptedBlack = w > 20 && h > 20 && 
-                                (decoded.getPixel(5, 5) == -16777216 && decoded.getPixel(w - 5, 5) == -16777216) ||
-                                (decoded.getPixel(w / 2, 5) == -16777216 && decoded.getPixel(5, h / 2) == -16777216)
-                            if (isCorruptedBlack) {
-                                permanentCover.delete()
-                            } else {
-                                val imgBmp = decoded.asImageBitmap()
-                                synchronized(thumbnailLruCache) {
-                                    thumbnailLruCache.put(cacheKey, imgBmp)
-                                }
-                                withContext(Dispatchers.Main) {
-                                    bitmap = imgBmp
-                                }
-                                return@withContext
+                            val imgBmp = decoded.asImageBitmap()
+                            synchronized(thumbnailLruCache) {
+                                thumbnailLruCache.put(cacheKey, imgBmp)
                             }
+                            withContext(Dispatchers.Main) {
+                                bitmap = imgBmp
+                            }
+                            return@withContext
                         }
                     }
 

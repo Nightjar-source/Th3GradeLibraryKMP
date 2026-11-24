@@ -677,10 +677,16 @@ object SyncEngine {
                         }
                     }
 
-                    // Merge new items on top, de-duplicate by normalized key
+                    // Reload latest local news/announcements so background FCM pushes are never lost
+                    loadLocalNews()
+                    // Merge new items on top, de-duplicate by normalized key (preserving all distinct announcements)
                     val combined = (newUniqueItems + _newsList.value).distinctBy {
-                        val norm = normalizeUrl(it.link)
-                        if (norm.isNotEmpty()) norm else (it.title.ifBlank { it.id })
+                        if (it.isAnnouncement || it.link.startsWith("th3books://")) {
+                            "${it.id}_${it.title}_${it.contentSnippet.hashCode()}"
+                        } else {
+                            val norm = normalizeUrl(it.link)
+                            if (norm.isNotEmpty()) norm else (it.title.ifBlank { it.id })
+                        }
                     }
 
                     // Retain all items permanently in user data without arbitrary count limits

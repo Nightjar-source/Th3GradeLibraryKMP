@@ -293,14 +293,18 @@ actual fun PdfViewerScreen(
             var pfd: ParcelFileDescriptor? = null
             try {
                 if (!isActive) return@LaunchedEffect
-                pfd = ParcelFileDescriptor.open(file, ParcelFileDescriptor.MODE_READ_ONLY)
+                val openedRenderer = withContext(Dispatchers.IO) {
+                    pfd = ParcelFileDescriptor.open(file, ParcelFileDescriptor.MODE_READ_ONLY)
+                    PdfRenderer(pfd!!)
+                }
                 if (!isActive) {
-                    pfd?.close()
+                    try { openedRenderer.close() } catch (_: Exception) {}
+                    try { pfd?.close() } catch (_: Exception) {}
                     return@LaunchedEffect
                 }
-                pdfRenderer = PdfRenderer(pfd)
+                pdfRenderer = openedRenderer
             } catch (initEx: Exception) {
-                pfd?.close()
+                try { pfd?.close() } catch (_: Exception) {}
                 throw initEx
             }
         } catch (e: Exception) {

@@ -670,7 +670,7 @@ actual object BookDownloadManager {
 
         scope.launch {
             try {
-                val undownloaded = items.filter { !BookStorageEngine.isDownloaded(ctx, it) }
+                val undownloaded = items.filter { !BookStorageEngine.isDownloaded(ctx, it) || BookStorageEngine.isUpdateAvailable(ctx, it) }
                 val totalCount = undownloaded.size
                 if (totalCount == 0) {
                     postActiveNotice("جميع كتب وملازم الثالث متوسط محملة بالفعل وجاهزة أوفلاين ✓", 5000L)

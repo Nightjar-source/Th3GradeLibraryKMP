@@ -46,7 +46,7 @@ actual object BookStorageEngine {
     }
 
     fun getPermanentCoverFile(context: Context, item: BookItem): File {
-        return File(getCoversDir(context), "cover_${item.id}.jpg")
+        return File(getCoversDir(context), "cover_${item.id}_v2.jpg")
     }
 
     actual fun isDownloaded(context: Any, item: BookItem): Boolean {
