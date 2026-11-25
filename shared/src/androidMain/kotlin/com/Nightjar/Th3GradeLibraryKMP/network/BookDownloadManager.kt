@@ -520,7 +520,18 @@ actual object BookDownloadManager {
                                         permanentFile.delete()
                                     }
                                     tempTarget.renameTo(permanentFile)
+                                    // Clear old cached covers & PDF pages so the updated cover/page 0 renders fresh
                                     try {
+                                        val oldPdfCover = BookStorageEngine.getPermanentCoverFile(ctx, item)
+                                        if (oldPdfCover.exists()) oldPdfCover.delete()
+                                        val metaCoverUrl = CloudCatalogManager.getMeta(item)?.cover_url?.takeIf { it.isNotBlank() }
+                                        BookStorageEngine.getCoversDir(ctx).listFiles()?.forEach { f ->
+                                            if (f.name.startsWith("cover_${item.id}_")) {
+                                                if (metaCoverUrl == null || f.name != BookStorageEngine.getPermanentUrlCoverFile(ctx, item, metaCoverUrl).name) {
+                                                    try { f.delete() } catch (_: Exception) {}
+                                                }
+                                            }
+                                        }
                                         com.Nightjar.Th3GradeLibraryKMP.ui.PdfBitmapCache.evictBook(item.id)
                                     } catch (_: Exception) {}
                                     updateState(item.id, ItemDownloadState(status = DownloadStatus.COMPLETED, progress = 1f))

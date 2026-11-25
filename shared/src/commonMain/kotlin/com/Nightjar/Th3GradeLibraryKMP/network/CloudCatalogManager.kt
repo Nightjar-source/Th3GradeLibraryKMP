@@ -15,8 +15,8 @@ import kotlinx.serialization.json.Json
 
 @Serializable
 data class CloudBookEntry(
-    val id: String,
-    val title: String,
+    val id: String = "",
+    val title: String = "",
     val cover_res: String = "",
     val cover_url: String = "",
     val pdf_path: String = "",
@@ -31,16 +31,31 @@ data class CloudBookEntry(
     val backup_url_3: String = "",
     val backup_url_4: String = ""
 ) {
+    fun resolvedId(): String {
+        if (id.isNotBlank()) return id.trim()
+        val fromPath = pdf_path.substringAfterLast("/").substringBeforeLast(".").trim()
+        if (fromPath.isNotBlank()) return "auto_$fromPath"
+        if (stream_url.isNotBlank()) return "auto_${stream_url.hashCode()}"
+        if (title.isNotBlank()) return "auto_${title.hashCode()}"
+        return "auto_item"
+    }
+
+    fun resolvedTitle(): String {
+        if (title.isNotBlank()) return title.trim()
+        return if (is_note) "ملزمة دراسية" else "كتاب دراسي"
+    }
+
     fun toBookItem(): BookItem {
+        val rId = resolvedId()
         return BookItem(
-            id = id,
-            title = title,
+            id = rId,
+            title = resolvedTitle(),
             coverResName = cover_res,
-            pdfPath = pdf_path.ifBlank { if (is_note) "files/notes/$id.pdf" else "files/books/$id.pdf" },
+            pdfPath = pdf_path.ifBlank { if (is_note) "files/notes/$rId.pdf" else "files/books/$rId.pdf" },
             isNote = is_note,
-            author = author,
-            colorStart = color_start,
-            colorEnd = color_end
+            author = author.ifBlank { if (is_note) "ملزمة" else "كتاب" },
+            colorStart = color_start.ifBlank { "#2563eb" },
+            colorEnd = color_end.ifBlank { "#1d4ed8" }
         )
     }
 }
@@ -146,7 +161,7 @@ object CloudCatalogManager {
     fun getEntry(item: BookItem): CloudBookEntry? {
         val current = _manifest.value
         val list = if (item.isNote) current.notes else current.books
-        return list.firstOrNull { it.id == item.id }
+        return list.firstOrNull { it.resolvedId() == item.id }
     }
 
     // Full backwards-compatibility alias for UI and DownloadManager
@@ -157,19 +172,20 @@ object CloudCatalogManager {
      */
     fun convertToDirectUrl(url: String): String {
         if (url.isBlank()) return ""
-        if (url.contains("drive.google.com") && url.contains("/d/")) {
-            val fileId = url.substringAfter("/d/").substringBefore("/").substringBefore("?")
+        val trimmed = url.trim()
+        if (trimmed.contains("drive.google.com") && trimmed.contains("/d/")) {
+            val fileId = trimmed.substringAfter("/d/").substringBefore("/").substringBefore("?")
             if (fileId.isNotBlank()) {
-                return "https://drive.usercontent.google.com/download?id=$fileId&export=download"
+                return "https://drive.usercontent.google.com/download?id=$fileId&export=download&confirm=t"
             }
         }
-        if (url.contains("drive.google.com") && url.contains("id=")) {
-            val fileId = url.substringAfter("id=").substringBefore("&")
+        if ((trimmed.contains("drive.google.com") || trimmed.contains("drive.usercontent.google.com")) && trimmed.contains("id=")) {
+            val fileId = trimmed.substringAfter("id=").substringBefore("&")
             if (fileId.isNotBlank()) {
-                return "https://drive.usercontent.google.com/download?id=$fileId&export=download"
+                return "https://drive.usercontent.google.com/download?id=$fileId&export=download&confirm=t"
             }
         }
-        return url
+        return trimmed
     }
 
     fun getAllCatalogItems(): List<BookItem> {
@@ -180,32 +196,28 @@ object CloudCatalogManager {
 
     /**
      * Resolves all available candidate stream/download URLs in priority order:
-     * 1. Primary: Hugging Face high-speed edge CDN (backup_hf_url or dataset mirror)
-     * 2. Secondary: Official Ministry of Education / Declared stream_url
-     * 3. Multi-tier: Any custom declared 3rd / 4th direct mirrors or GitHub backups
+     * 1. Explicit stream_url / backup_hf_url
+     * 2. Custom mirrors (backup_url_3, backup_url_4, backup_github_url)
+     * 3. Fallback Hugging Face dataset mirror
      */
     fun getStreamCandidateUrls(item: BookItem): List<String> {
         val entry = getEntry(item)
         val candidates = mutableListOf<String>()
         val filename = entry?.pdf_path?.substringAfterLast("/")?.takeIf { it.isNotBlank() }
-            ?: (if (item.isNote) "notes/${item.id}.pdf" else "books/${item.id}.pdf").substringAfterLast("/")
+            ?: item.pdfPath.substringAfterLast("/").takeIf { it.isNotBlank() }
+            ?: "${item.id}.pdf"
         val folder = if (item.isNote) "notes" else "books"
 
-        // 1. Primary: Hugging Face dataset mirror (Fastest, verified 100% available with zero downtime)
         val hfBackup = entry?.backup_hf_url
         if (!hfBackup.isNullOrBlank()) {
             candidates.add(convertToDirectUrl(hfBackup))
-        } else if (!filename.isNullOrBlank()) {
-            candidates.add("https://huggingface.co/datasets/Larber/th3grade-books/resolve/main/$folder/$filename")
         }
 
-        // 2. Secondary: Official Ministry or declared stream_url (if available)
         val primary = entry?.stream_url
         if (!primary.isNullOrBlank()) {
             candidates.add(convertToDirectUrl(primary))
         }
 
-        // 3. Multi-tier Custom Mirrors (3rd / 4th backups, Google Drive, Archive, CDN)
         val b3 = entry?.backup_url_3
         if (!b3.isNullOrBlank()) candidates.add(convertToDirectUrl(b3))
 
@@ -216,6 +228,9 @@ object CloudCatalogManager {
         if (!githubBackup.isNullOrBlank()) {
             candidates.add(convertToDirectUrl(githubBackup))
         }
+
+        // Last-resort fallback: Hugging Face dataset mirror
+        candidates.add("https://huggingface.co/datasets/Larber/th3grade-books/resolve/main/$folder/$filename")
 
         return candidates.distinct().filter { it.isNotBlank() && it.startsWith("http") }
     }
