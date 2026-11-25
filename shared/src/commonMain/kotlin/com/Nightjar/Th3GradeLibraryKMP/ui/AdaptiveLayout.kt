@@ -58,7 +58,8 @@ data class AppAdaptiveConfig(
     val maxReadingWidth: Dp,
     val maxContentWidth: Dp,
     val sideRailPaddingEnd: Dp,
-    val topBarHeight: Dp
+    val topBarHeight: Dp,
+    val isTabletop: Boolean = false
 ) {
     /**
      * Computes grid columns for the Library Screen
@@ -165,7 +166,9 @@ fun rememberAppAdaptiveConfig(): AppAdaptiveConfig {
     val screenWidthDp = with(density) { windowInfo.containerSize.width.toDp() }
     val screenHeightDp = with(density) { windowInfo.containerSize.height.toDp() }
 
-    return remember(windowSizeClass, widthClass, heightClass, screenWidthDp, screenHeightDp) {
+    val isTabletop = adaptiveInfo.windowPosture.isTabletop
+
+    return remember(windowSizeClass, widthClass, heightClass, screenWidthDp, screenHeightDp, isTabletop) {
         val isAtLeastMedium = windowSizeClass.isWidthAtLeastBreakpoint(WindowSizeClass.WIDTH_DP_MEDIUM_LOWER_BOUND) || screenWidthDp >= 600.dp
         val isAtLeastExpanded = windowSizeClass.isWidthAtLeastBreakpoint(WindowSizeClass.WIDTH_DP_EXPANDED_LOWER_BOUND) || screenWidthDp >= 840.dp
         val isLarge = screenWidthDp in 1200.dp..1599.dp
@@ -207,7 +210,8 @@ fun rememberAppAdaptiveConfig(): AppAdaptiveConfig {
             maxReadingWidth = 840.dp,
             maxContentWidth = 1200.dp,
             sideRailPaddingEnd = sidePadding,
-            topBarHeight = topBarH
+            topBarHeight = topBarH,
+            isTabletop = isTabletop
         )
     }
 }

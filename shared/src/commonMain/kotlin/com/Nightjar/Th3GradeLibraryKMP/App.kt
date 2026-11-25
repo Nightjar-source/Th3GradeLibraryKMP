@@ -198,6 +198,20 @@ fun AppContent(
 
     val viewModel: AppViewModel = viewModel()
 
+    // Synchronous frame-0 initialization for instant external shortcut / deep-link cold starts
+    remember(initialBookId, initialIsNote, initialPage, initialSearchQuery) {
+        if (initialBookId != null || initialPage != null || initialSearchQuery != null || isProcessDeath) {
+            viewModel.initLaunchState(
+                isProcessDeath = isProcessDeath,
+                initialPage = initialPage,
+                initialSearchQuery = initialSearchQuery,
+                initialBookId = initialBookId,
+                initialIsNote = initialIsNote
+            )
+        }
+        true
+    }
+
     LaunchedEffect(isProcessDeath, initialPage, initialSearchQuery, initialBookId, initialIsNote) {
         viewModel.initLaunchState(
             isProcessDeath = isProcessDeath,

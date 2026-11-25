@@ -102,6 +102,8 @@ object CloudCatalogManager {
     private val _dynamicNotes = MutableStateFlow<List<BookItem>>(emptyList())
     val dynamicNotes = _dynamicNotes.asStateFlow()
 
+    private val _resolvedEntries = MutableStateFlow<Map<String, CloudBookEntry>>(emptyMap())
+
     init {
         updateDynamicLists(_manifest.value)
     }
@@ -120,13 +122,68 @@ object CloudCatalogManager {
         return CloudManifest(version = 2)
     }
 
+    private fun resolveUniqueEntries(entries: List<CloudBookEntry>, isNoteList: Boolean, usedIds: MutableSet<String>): List<Pair<CloudBookEntry, BookItem>> {
+        val prefix = if (isNoteList) "n" else "b"
+        var maxSeq = usedIds
+            .filter { it.startsWith(prefix) }
+            .mapNotNull { it.removePrefix(prefix).removePrefix("_").toIntOrNull() }
+            .maxOrNull() ?: 0
+
+        return entries.map { entry ->
+            var baseId = entry.id.trim()
+            if (baseId.isBlank() && entry.pdf_path.isNotBlank()) {
+                val staticMatch = (com.Nightjar.Th3GradeLibraryKMP.data.AllItems.books + com.Nightjar.Th3GradeLibraryKMP.data.AllItems.notes)
+                    .firstOrNull { it.pdfPath.equals(entry.pdf_path.trim(), ignoreCase = true) }
+                if (staticMatch != null) baseId = staticMatch.id
+            }
+            if (baseId.isBlank() && entry.pdf_path.isNotBlank()) {
+                val fromFile = entry.pdf_path.substringAfterLast("/").substringBeforeLast(".").trim()
+                if (fromFile.isNotBlank()) baseId = "${prefix}_$fromFile"
+            }
+            if (baseId.isBlank()) {
+                maxSeq++
+                baseId = "${prefix}$maxSeq"
+            }
+
+            // Guarantee uniqueness: if colliding with an existing ID, append sub-letter _a, _b, ...
+            var finalId = baseId
+            if (finalId in usedIds && entry.id.isBlank()) {
+                var suffixChar = 'a'
+                while ("${baseId}_$suffixChar" in usedIds && suffixChar <= 'z') {
+                    suffixChar++
+                }
+                finalId = if ("${baseId}_$suffixChar" !in usedIds) "${baseId}_$suffixChar" else "${baseId}_${++maxSeq}"
+            }
+            usedIds.add(finalId)
+
+            val resolvedPath = entry.pdf_path.ifBlank {
+                if (isNoteList || entry.is_note) "files/notes/$finalId.pdf" else "files/books/$finalId.pdf"
+            }
+            val normalizedEntry = entry.copy(
+                id = finalId,
+                title = entry.resolvedTitle(),
+                pdf_path = resolvedPath,
+                is_note = isNoteList || entry.is_note
+            )
+            normalizedEntry to normalizedEntry.toBookItem()
+        }
+    }
+
     private fun updateDynamicLists(m: CloudManifest) {
+        val usedIds = (com.Nightjar.Th3GradeLibraryKMP.data.AllItems.books + com.Nightjar.Th3GradeLibraryKMP.data.AllItems.notes)
+            .map { it.id }
+            .toMutableSet()
+        // Allow explicit manifest entries to override matching static IDs, while generating unique IDs for blank/new entries
+        val resolvedMap = mutableMapOf<String, CloudBookEntry>()
         if (m.books.isNotEmpty()) {
-            _dynamicBooks.value = m.books.map { it.toBookItem() }
+            val resBooks = resolveUniqueEntries(m.books, isNoteList = false, usedIds = usedIds)
+            _dynamicBooks.value = resBooks.map { (e, item) -> resolvedMap[item.id] = e; item }
         }
         if (m.notes.isNotEmpty()) {
-            _dynamicNotes.value = m.notes.map { it.toBookItem() }
+            val resNotes = resolveUniqueEntries(m.notes, isNoteList = true, usedIds = usedIds)
+            _dynamicNotes.value = resNotes.map { (e, item) -> resolvedMap[item.id] = e; item }
         }
+        _resolvedEntries.value = resolvedMap
     }
 
     /**
@@ -164,6 +221,7 @@ object CloudCatalogManager {
     }
 
     fun getEntry(item: BookItem): CloudBookEntry? {
+        _resolvedEntries.value[item.id]?.let { return it }
         val current = _manifest.value
         val list = if (item.isNote) current.notes else current.books
         return list.firstOrNull { it.resolvedId() == item.id }

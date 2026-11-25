@@ -523,20 +523,21 @@ private fun BookmarkPageRow(
                     animatedVisibilityScope = effectiveVisibilityScope,
                     enter = androidx.compose.animation.fadeIn(
                         animationSpec = tween(
-                            durationMillis = 120,
+                            durationMillis = 150,
+                            delayMillis = 75,
                             easing = LinearEasing
                         )
                     ),
                     exit = androidx.compose.animation.fadeOut(
                         animationSpec = tween(
-                            durationMillis = 100,
+                            durationMillis = 130,
                             easing = LinearEasing
                         )
                     ),
                     renderInOverlayDuringTransition = true,
                     clipInOverlayDuringTransition = OverlayClip(RoundedCornerShape(14.dp)),
                     boundsTransform = { _, _ ->
-                        spring(dampingRatio = 0.86f, stiffness = Spring.StiffnessMediumLow)
+                        spring(dampingRatio = 0.82f, stiffness = 280f)
                     },
                     resizeMode = SharedTransitionScope.ResizeMode.RemeasureToBounds
                 )
