@@ -106,4 +106,17 @@ object AdaptiveLayout {
         }
         return GridCells.Fixed(cols)
     }
+
+    /** المحفوظات: عمود واحد في الشاشات الصغيرة، عمودان في MEDIUM، وحتى 4 أعمدة في EXPANDED. */
+    fun bookmarksColumns(widthClass: WindowWidthSizeClass, screenWidthDp: Dp): GridCells {
+        val cols = when {
+            widthClass == WindowWidthSizeClass.COMPACT || screenWidthDp < 600.dp -> 1
+            widthClass == WindowWidthSizeClass.MEDIUM || screenWidthDp < 840.dp -> 2
+            else -> {
+                val availableWidth = (screenWidthDp - 120.dp).coerceAtLeast(600.dp)
+                (availableWidth / 360.dp).toInt().coerceIn(2, 4)
+            }
+        }
+        return GridCells.Fixed(cols)
+    }
 }

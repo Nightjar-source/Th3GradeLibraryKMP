@@ -157,16 +157,8 @@ fun BookmarksScreen(
                     }
                 }
 
-                val dynamicBookmarkColumns = remember(widthClass, heightClass, screenWidthDp) {
-                    val cols = when {
-                        widthClass == WindowWidthSizeClass.COMPACT || screenWidthDp < 600.dp -> 1
-                        widthClass == WindowWidthSizeClass.MEDIUM || screenWidthDp < 840.dp -> 2
-                        else -> {
-                            val availableWidth = (screenWidthDp - 120.dp).coerceAtLeast(600.dp)
-                            (availableWidth / 360.dp).toInt().coerceIn(2, 4)
-                        }
-                    }
-                    GridCells.Fixed(cols)
+                val dynamicBookmarkColumns = remember(widthClass, screenWidthDp) {
+                    com.Nightjar.Th3GradeLibraryKMP.adaptation.AdaptiveLayout.bookmarksColumns(widthClass, screenWidthDp)
                 }
 
                 LazyVerticalGrid(
@@ -233,12 +225,6 @@ fun BookAccordionItem(
     Column(
         modifier = modifier
             .fillMaxWidth()
-            .animateContentSize(
-                animationSpec = spring(
-                    dampingRatio = Spring.DampingRatioLowBouncy,
-                    stiffness = Spring.StiffnessLow
-                )
-            )
             .liquidGlass(isDark, borderRadius = 20.dp, alpha = 0.96f)
             .clip(RoundedCornerShape(20.dp))
     ) {
@@ -331,10 +317,7 @@ fun BookAccordionItem(
 
             val arrowRotation by animateFloatAsState(
                 targetValue = if (isExpanded) 180f else 0f,
-                animationSpec = tween(
-                    durationMillis = 220,
-                    easing = androidx.compose.animation.core.FastOutSlowInEasing
-                ),
+                animationSpec = spring(dampingRatio = 0.82f, stiffness = 300f),
                 label = "arrow_rotation"
             )
             Icon(
@@ -349,39 +332,42 @@ fun BookAccordionItem(
             )
         }
 
-        // Instant synchronized divider line directly under Header (t=0, smoothly blends with expand)
-        val dividerAlpha by animateFloatAsState(
-            targetValue = if (isExpanded) 1f else 0f,
-            animationSpec = tween(durationMillis = 150, easing = androidx.compose.animation.core.FastOutSlowInEasing),
-            label = "divider_alpha"
-        )
-        if (dividerAlpha > 0.01f) {
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 16.dp)
-                    .height(1.dp)
-                    .graphicsLayer { alpha = dividerAlpha }
-                    .background(
-                        MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.16f),
-                        CircleShape
-                    )
-            )
-        }
-
-        // Expanded Bookmark Rows with Ultra-Moist Fluid Organic Spring (سائل رطب كالحرير)
+        // Fluid and harmonized collapsible dropdown without competing animations or flashes
         AnimatedVisibility(
             visible = isExpanded,
-            enter = fadeIn(tween(180, easing = androidx.compose.animation.core.FastOutSlowInEasing)),
-            exit = fadeOut(tween(140, easing = androidx.compose.animation.core.FastOutSlowInEasing))
+            enter = expandVertically(
+                animationSpec = spring(dampingRatio = 0.82f, stiffness = 300f),
+                expandFrom = Alignment.Top,
+                clip = true
+            ) + fadeIn(
+                animationSpec = tween(durationMillis = 180, delayMillis = 30, easing = androidx.compose.animation.core.FastOutSlowInEasing)
+            ),
+            exit = shrinkVertically(
+                animationSpec = spring(dampingRatio = 0.85f, stiffness = 320f),
+                shrinkTowards = Alignment.Top,
+                clip = true
+            ) + fadeOut(
+                animationSpec = tween(durationMillis = 140, easing = androidx.compose.animation.core.FastOutSlowInEasing)
+            )
         ) {
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(horizontal = 16.dp)
-                    .padding(top = 8.dp, bottom = 12.dp),
+                    .padding(bottom = 12.dp),
                 verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
+                // Synchronized divider at top of expanded content
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(bottom = 4.dp)
+                        .height(1.dp)
+                        .background(
+                            MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.16f),
+                            CircleShape
+                        )
+                )
                 val sharedTransitionScope = LocalSharedTransitionScope.current
 
                 // Render all tracked pages sorted
@@ -425,15 +411,15 @@ fun BookAccordionItem(
                     AnimatedVisibility(
                         visible = isVisible,
                         enter = expandVertically(
-                            animationSpec = spring(dampingRatio = 0.72f, stiffness = 380f),
+                            animationSpec = spring(dampingRatio = 0.82f, stiffness = 300f),
                             expandFrom = Alignment.Top,
-                            clip = false
-                        ),
+                            clip = true
+                        ) + fadeIn(tween(160)),
                         exit = shrinkVertically(
-                            animationSpec = spring(dampingRatio = 0.72f, stiffness = 380f),
+                            animationSpec = spring(dampingRatio = 0.85f, stiffness = 320f),
                             shrinkTowards = Alignment.Top,
-                            clip = false
-                        )
+                            clip = true
+                        ) + fadeOut(tween(120))
                     ) {
                         Row(
                             modifier = Modifier
