@@ -450,9 +450,10 @@ fun AppContent(
             val currentNavBar = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
             val currentStatusBar = WindowInsets.statusBars.add(WindowInsets.captionBar).asPaddingValues().calculateTopPadding()
 
-            // Dynamic per-system insets (landscape/foldables/tablets): never a fixed measurement.
-            val topBarHeightGlobal = com.Nightjar.Th3GradeLibraryKMP.adaptation.AdaptiveLayout.topBarHeight(heightClass, widthClass)
-            val topBarPaddingVGlobal = com.Nightjar.Th3GradeLibraryKMP.adaptation.AdaptiveLayout.topBarPaddingV(heightClass)
+            // Dynamic per-system insets (landscape/foldables/tablets/flex-mode/DeX): never a fixed measurement.
+            val isTabletop = adaptiveInfo.windowPosture.isTabletop
+            val topBarHeightGlobal = com.Nightjar.Th3GradeLibraryKMP.adaptation.AdaptiveLayout.topBarHeight(heightClass, widthClass, isTabletop)
+            val topBarPaddingVGlobal = com.Nightjar.Th3GradeLibraryKMP.adaptation.AdaptiveLayout.topBarPaddingV(heightClass, isTabletop)
             val topBarBlockHeight = currentStatusBar + topBarHeightGlobal + topBarPaddingVGlobal * 2
         
             val listBottomPadding = (if (isWide) 24.dp else 110.dp) + currentNavBar + (if (bottomBannerAd != null) 56.dp else 0.dp)

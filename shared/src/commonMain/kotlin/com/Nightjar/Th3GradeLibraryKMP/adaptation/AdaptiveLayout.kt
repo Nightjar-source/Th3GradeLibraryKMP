@@ -29,29 +29,47 @@ object AdaptiveLayout {
     fun isPhoneLike(widthClass: WindowWidthSizeClass, heightClass: WindowHeightSizeClass): Boolean =
         widthClass == WindowWidthSizeClass.COMPACT || isCompactHeight(heightClass)
 
+    /**
+     * دعم وضع الطي المكتبي / فلكس مود (Foldables Flex / Tabletop Posture):
+     * عندما يكون الجهاز مطوياً في وضع الطاولة (نصف شاشة للأعلى ونصف شاشة للأسفل).
+     */
+    fun isTabletop(posture: androidx.compose.material3.adaptive.WindowPosture): Boolean = posture.isTabletop
+
+    /**
+     * التحقق من النوافذ المنبثقة والعائمة وسامسونج ديكس (Pop-up Window / Freeform / Samsung DeX Windowed):
+     * النوافذ المنبثقة المنفصلة التي يمكن للمستخدم تغيير أبعادها ديناميكياً.
+     */
+    fun isWindowed(widthClass: WindowWidthSizeClass, heightClass: WindowHeightSizeClass): Boolean =
+        widthClass == WindowWidthSizeClass.COMPACT || isCompactHeight(heightClass)
+
     // ── شريط العنوان (Floating Top Bar) ───────────────────────────────────────
     /**
      * الارتفاع المضبوط حسب متريال:
-     *  - الهاتف الأفقي (compact height) → 44.dp (أقل من 46)
-     *  - الهاتف العمودي العادي → 52.dp (أقل من 56 كما طُلب)
-     *  - الشاشات الكبيرة (≥ 600dp عرض، يتضمن >700dp) → 58.dp (ذكي ولا يكبر)
+     *  - الهاتف الأفقي ونوافذ فلكس مود (compact height / tabletop) → 44.dp
+     *  - الهاتف العمودي العادي والنوافذ المنبثقة الصغيرة → 48.dp (أقل من 50 كما طُلب)
+     *  - الشاشات الكبيرة والمكتبية (DeX / Tablets / Foldables 펼친 상태) → 58.dp
      */
-    fun topBarHeight(heightClass: WindowHeightSizeClass, widthClass: WindowWidthSizeClass): Dp = when {
-        isCompactHeight(heightClass) -> 44.dp
-        widthClass == WindowWidthSizeClass.COMPACT -> 48.dp // Below 50dp — less than the 50dp spec in vertical phone mode
+    fun topBarHeight(
+        heightClass: WindowHeightSizeClass,
+        widthClass: WindowWidthSizeClass,
+        isTabletop: Boolean = false
+    ): Dp = when {
+        isTabletop || isCompactHeight(heightClass) -> 44.dp
+        widthClass == WindowWidthSizeClass.COMPACT -> 48.dp
         else -> 58.dp
     }
 
-    /** الحشوة العمودية داخل شريط العنوان العائم حسب ارتفاع النافذة. */
-    fun topBarPaddingV(heightClass: WindowHeightSizeClass): Dp =
-        if (isCompactHeight(heightClass)) 4.dp else 6.dp
+    /** الحشوة العمودية داخل شريط العنوان العائم حسب ارتفاع النافذة وحالة الطي. */
+    fun topBarPaddingV(heightClass: WindowHeightSizeClass, isTabletop: Boolean = false): Dp =
+        if (isTabletop || isCompactHeight(heightClass)) 4.dp else 6.dp
 
     /** الارتفاع الكلي لكتلة شريط العنوان (Inset + ارتفاع + حشوة) — يُستخدم لتموضع المحتوى والبحث. */
     fun topBarBlockHeight(
         currentStatusBar: Dp,
         heightClass: WindowHeightSizeClass,
-        widthClass: WindowWidthSizeClass
-    ): Dp = currentStatusBar + topBarHeight(heightClass, widthClass) + topBarPaddingV(heightClass) * 2
+        widthClass: WindowWidthSizeClass,
+        isTabletop: Boolean = false
+    ): Dp = currentStatusBar + topBarHeight(heightClass, widthClass, isTabletop) + topBarPaddingV(heightClass, isTabletop) * 2
 
     /** قفزة إضافية بين شريط العنوان وأول بيكسل من المحتوى (تمنع التداخل تماماً، أقل من 7 دي بي ديناميكياً). */
     const val TOP_BAR_CONTENT_GAP_DP = 6
@@ -61,8 +79,9 @@ object AdaptiveLayout {
         currentStatusBar: Dp,
         heightClass: WindowHeightSizeClass,
         widthClass: WindowWidthSizeClass,
-        reachabilityZone: Dp = 0.dp
-    ): Dp = topBarBlockHeight(currentStatusBar, heightClass, widthClass) + TOP_BAR_CONTENT_GAP_DP.dp + reachabilityZone
+        reachabilityZone: Dp = 0.dp,
+        isTabletop: Boolean = false
+    ): Dp = topBarBlockHeight(currentStatusBar, heightClass, widthClass, isTabletop) + TOP_BAR_CONTENT_GAP_DP.dp + reachabilityZone
 
     /** منطقة السحب للوصول (One UI Reachability): للهواتف العمودية فقط — ثابتة منطقياً ولا تُطبق أفقياً. */
     fun reachabilityZone(widthClass: WindowWidthSizeClass, heightClass: WindowHeightSizeClass): Dp =
