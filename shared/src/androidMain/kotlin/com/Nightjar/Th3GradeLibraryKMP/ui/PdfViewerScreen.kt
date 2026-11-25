@@ -397,7 +397,7 @@ actual fun PdfViewerScreen(
     val safeCornerRadius = cornerRadius.coerceAtLeast(0.dp)
 
     val hasValidTarget = when {
-        isFromBookmarksEffective -> (initialPage != null)
+        isFromBookmarksEffective -> (initialPage != null && isSaved(initialPage))
         else -> true
     }
 

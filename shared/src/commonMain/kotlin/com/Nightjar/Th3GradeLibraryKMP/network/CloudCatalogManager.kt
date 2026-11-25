@@ -33,6 +33,11 @@ data class CloudBookEntry(
 ) {
     fun resolvedId(): String {
         if (id.isNotBlank()) return id.trim()
+        if (pdf_path.isNotBlank()) {
+            val staticMatch = (com.Nightjar.Th3GradeLibraryKMP.data.AllItems.books + com.Nightjar.Th3GradeLibraryKMP.data.AllItems.notes)
+                .firstOrNull { it.pdfPath.equals(pdf_path.trim(), ignoreCase = true) }
+            if (staticMatch != null) return staticMatch.id
+        }
         val fromPath = pdf_path.substringAfterLast("/").substringBeforeLast(".").trim()
         if (fromPath.isNotBlank()) return "auto_$fromPath"
         if (stream_url.isNotBlank()) return "auto_${stream_url.hashCode()}"

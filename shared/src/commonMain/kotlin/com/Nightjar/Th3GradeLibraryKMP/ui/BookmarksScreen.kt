@@ -439,7 +439,6 @@ fun BookAccordionItem(
                 modifier = Modifier
                     .fillMaxWidth()
                     .clipToBounds()
-                    .wrapContentHeight(Alignment.Top, unbounded = true)
                     .padding(horizontal = 14.dp)
                     .padding(top = 10.dp, bottom = 14.dp),
                 verticalArrangement = Arrangement.spacedBy(8.dp)

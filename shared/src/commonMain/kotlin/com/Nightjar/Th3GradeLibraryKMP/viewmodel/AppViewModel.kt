@@ -73,7 +73,8 @@ class AppViewModel : ViewModel() {
     ) {
         if (hasInitializedLaunchState) {
             if (initialBookId != null) {
-                val target = AllItems.books.firstOrNull { it.id == initialBookId }
+                val target = com.Nightjar.Th3GradeLibraryKMP.network.CloudCatalogManager.getAllCatalogItems().firstOrNull { it.id == initialBookId }
+                    ?: AllItems.books.firstOrNull { it.id == initialBookId }
                     ?: AllItems.notes.firstOrNull { it.id == initialBookId }
                 if (target != null) {
                     com.Nightjar.Th3GradeLibraryKMP.ui.TransitionTargetTracker.activeTargetId = "card_${target.id}"
@@ -110,7 +111,8 @@ class AppViewModel : ViewModel() {
         }
 
         if (initialBookId != null) {
-            val target = AllItems.books.firstOrNull { it.id == initialBookId }
+            val target = com.Nightjar.Th3GradeLibraryKMP.network.CloudCatalogManager.getAllCatalogItems().firstOrNull { it.id == initialBookId }
+                ?: AllItems.books.firstOrNull { it.id == initialBookId }
                 ?: AllItems.notes.firstOrNull { it.id == initialBookId }
             if (target != null) {
                 com.Nightjar.Th3GradeLibraryKMP.ui.TransitionTargetTracker.activeTargetId = "card_${target.id}"
