@@ -145,7 +145,9 @@ fun AppSettingsModal(
             modifier = Modifier
                 .fillMaxSize()
                 .background(Color.Black.copy(alpha = 0.5f))
-                .clickable { onClose() },
+                .clickable { onClose() }
+                .windowInsetsPadding(WindowInsets.statusBars.add(WindowInsets.captionBar).only(WindowInsetsSides.Top))
+                .padding(top = 8.dp),
             contentAlignment = Alignment.BottomCenter
         ) {
             Box(
@@ -167,52 +169,58 @@ fun AppSettingsModal(
                         )
                     )
             ) {
-                Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .elasticOverscroll()
-                        .verticalScroll(rememberScrollState())
-                        .padding(start = 20.dp, end = 20.dp)
-                ) {
-                    // Drag handle pill — replaces large empty gap above title
-                    Box(
+                Column(modifier = Modifier.fillMaxWidth()) {
+                    // Pinned Header (Drag handle pill + Title + Close button) — never pulls away from top
+                    Column(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(top = 10.dp, bottom = 6.dp),
-                        contentAlignment = Alignment.Center
+                            .padding(horizontal = 20.dp)
                     ) {
                         Box(
                             modifier = Modifier
-                                .width(40.dp)
-                                .height(4.dp)
-                                .clip(RoundedCornerShape(2.dp))
-                                .background(MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.35f))
-                        )
-                    }
-
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Text(
-                            text = "المظهر واللون",
-                            fontSize = 18.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.onSurface
-                        )
-                        IconButton(
-                            onClick = onClose,
-                            modifier = Modifier
-                                .size(36.dp)
-                                .background(MaterialTheme.colorScheme.surfaceVariant, CircleShape)
+                                .fillMaxWidth()
+                                .padding(top = 10.dp, bottom = 6.dp),
+                            contentAlignment = Alignment.Center
                         ) {
-                            Icon(Icons.Default.Close, contentDescription = "Close", modifier = Modifier.size(20.dp))
+                            Box(
+                                modifier = Modifier
+                                    .width(40.dp)
+                                    .height(4.dp)
+                                    .clip(RoundedCornerShape(2.dp))
+                                    .background(MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.35f))
+                            )
                         }
+
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(
+                                text = "المظهر واللون",
+                                fontSize = 18.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.onSurface
+                            )
+                            IconButton(
+                                onClick = onClose,
+                                modifier = Modifier
+                                    .size(36.dp)
+                                    .background(MaterialTheme.colorScheme.surfaceVariant, CircleShape)
+                            ) {
+                                Icon(Icons.Default.Close, contentDescription = "Close", modifier = Modifier.size(20.dp))
+                            }
+                        }
+
+                        Spacer(modifier = Modifier.height(10.dp))
                     }
 
-                    Spacer(modifier = Modifier.height(14.dp))
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .verticalScroll(rememberScrollState())
+                            .padding(start = 20.dp, end = 20.dp)
+                    ) {
 
                     // Theme Settings
                     Text("وضع الإضاءة", fontWeight = FontWeight.Bold, fontSize = 13.sp, color = MaterialTheme.colorScheme.primary, modifier = Modifier.padding(horizontal = 20.dp))
@@ -624,7 +632,8 @@ fun AppSettingsModal(
 
                     val bottomSafeInset = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
                     Spacer(modifier = Modifier.height(bottomSafeInset + 20.dp))
-                } // Close Column
+                } // Close Scrollable Body Column
+                } // Close Outer Column
 
 
             }
@@ -651,7 +660,9 @@ fun NewsSettingsModal(
             modifier = Modifier
                 .fillMaxSize()
                 .background(Color.Black.copy(alpha = 0.5f))
-                .clickable { onClose() },
+                .clickable { onClose() }
+                .windowInsetsPadding(WindowInsets.statusBars.add(WindowInsets.captionBar).only(WindowInsetsSides.Top))
+                .padding(top = 8.dp),
             contentAlignment = Alignment.BottomCenter
         ) {
             Box(
@@ -673,53 +684,56 @@ fun NewsSettingsModal(
                         )
                     )
             ) {
-                Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .animateContentSize()
-                        .elasticOverscroll()
-                        .verticalScroll(rememberScrollState())
-                ) {
-                    // Drag handle pill — replaces large empty gap above title
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(top = 10.dp, bottom = 6.dp),
-                        contentAlignment = Alignment.Center
-                    ) {
+                Column(modifier = Modifier.fillMaxWidth()) {
+                    // Pinned Header — never detaches from top on overscroll
+                    Column(modifier = Modifier.fillMaxWidth()) {
                         Box(
                             modifier = Modifier
-                                .width(40.dp)
-                                .height(4.dp)
-                                .clip(RoundedCornerShape(2.dp))
-                                .background(MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.35f))
-                        )
+                                .fillMaxWidth()
+                                .padding(top = 10.dp, bottom = 6.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .width(40.dp)
+                                    .height(4.dp)
+                                    .clip(RoundedCornerShape(2.dp))
+                                    .background(MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.35f))
+                            )
+                        }
+
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 20.dp),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(
+                                text = "إعدادات الأخبار والمزامنة",
+                                fontSize = 18.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.onSurface
+                            )
+                            IconButton(
+                                onClick = onClose,
+                                modifier = Modifier
+                                    .size(36.dp)
+                                    .background(MaterialTheme.colorScheme.surfaceVariant, CircleShape)
+                            ) {
+                                Icon(Icons.Default.Close, contentDescription = "Close", modifier = Modifier.size(20.dp))
+                            }
+                        }
+
+                        Spacer(modifier = Modifier.height(10.dp))
                     }
 
-                    Row(
+                    Column(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(horizontal = 20.dp),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
+                            .animateContentSize()
+                            .verticalScroll(rememberScrollState())
                     ) {
-                        Text(
-                            text = "إعدادات الأخبار والمزامنة",
-                            fontSize = 18.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.onSurface
-                        )
-                        IconButton(
-                            onClick = onClose,
-                            modifier = Modifier
-                                .size(36.dp)
-                                .background(MaterialTheme.colorScheme.surfaceVariant, CircleShape)
-                        ) {
-                            Icon(Icons.Default.Close, contentDescription = "Close", modifier = Modifier.size(20.dp))
-                        }
-                    }
-
-                    Spacer(modifier = Modifier.height(14.dp))
 
                     val isBatteryIgnored = remember { com.Nightjar.Th3GradeLibraryKMP.network.SyncEngine.platformActionHandler?.isBatteryOptimizationIgnored() ?: false }
                     var batteryStateIgnored by remember { mutableStateOf(isBatteryIgnored) }
@@ -933,7 +947,8 @@ fun NewsSettingsModal(
                     }
                     val bottomSafeInset = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
                     Spacer(modifier = Modifier.height(bottomSafeInset + 20.dp))
-                } // Close Column
+                } // Close Scrollable Body Column
+                } // Close Outer Column
 
 
             }

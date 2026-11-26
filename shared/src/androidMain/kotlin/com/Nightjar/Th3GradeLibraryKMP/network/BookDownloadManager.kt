@@ -150,9 +150,8 @@ actual object BookDownloadManager {
             try {
                 val intent = Intent().apply {
                     setClassName(context.packageName, "com.Nightjar.Th3GradeLibraryKMP.BookDownloadForegroundService")
-                    action = "com.Nightjar.Th3GradeLibraryKMP.ACTION_STOP_DOWNLOAD_SERVICE"
                 }
-                context.startService(intent)
+                context.stopService(intent)
             } catch (_: Exception) {}
         }
     }

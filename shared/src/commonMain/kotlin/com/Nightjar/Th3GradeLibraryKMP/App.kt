@@ -22,6 +22,7 @@ import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.gestures.detectVerticalDragGestures
 import androidx.compose.ui.draw.blur
+import androidx.compose.ui.draw.shadow
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.text.BasicTextField
@@ -1349,18 +1350,8 @@ fun AppContent(
                     label = "islandDragOffsetY"
                 )
 
-                Surface(
-                    shape = RoundedCornerShape(26.dp),
-                    color = if (rootActiveNotice != null) {
-                        MaterialTheme.colorScheme.surfaceColorAtElevation(6.dp).copy(alpha = 0.96f)
-                    } else {
-                        MaterialTheme.colorScheme.inverseSurface.copy(alpha = 0.96f)
-                    },
-                    tonalElevation = 10.dp,
-                    shadowElevation = 10.dp,
+                Box(
                     modifier = Modifier
-                        .wrapContentWidth()
-                        .widthIn(min = 160.dp, max = 520.dp)
                         .padding(horizontal = 16.dp)
                         .graphicsLayer {
                             translationX = animatedOffsetX
@@ -1370,6 +1361,20 @@ fun AppContent(
                             )
                             alpha = 1f - dismissProgress * 0.75f
                         }
+                ) {
+                Surface(
+                    shape = CircleShape,
+                    color = if (rootActiveNotice != null) {
+                        MaterialTheme.colorScheme.surfaceColorAtElevation(6.dp).copy(alpha = 0.96f)
+                    } else {
+                        MaterialTheme.colorScheme.inverseSurface.copy(alpha = 0.96f)
+                    },
+                    tonalElevation = 6.dp,
+                    shadowElevation = 0.dp,
+                    modifier = Modifier
+                        .wrapContentWidth()
+                        .widthIn(min = 160.dp, max = 520.dp)
+                        .shadow(elevation = 6.dp, shape = CircleShape, clip = false)
                         .animateContentSize(
                             animationSpec = spring(
                                 dampingRatio = Spring.DampingRatioLowBouncy,
@@ -1385,7 +1390,7 @@ fun AppContent(
                                 rootActiveNotice != null -> MaterialTheme.colorScheme.primary.copy(alpha = 0.55f)
                                 else -> MaterialTheme.colorScheme.outline.copy(alpha = 0.25f)
                             },
-                            shape = RoundedCornerShape(26.dp)
+                            shape = CircleShape
                         )
                         .clickable(
                             interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() },
@@ -1505,6 +1510,7 @@ fun AppContent(
                         }
                     }
                 }
+                }
             }
         }
 
@@ -1526,7 +1532,7 @@ fun AppContent(
         val animatedBannerBottomPadding = rawAnimatedBannerBottomPadding.coerceAtLeast(0.dp)
 
         // --- Bottom Banner Ad (Google AdMob Anchored Adaptive Banner - Positioned cleanly, never occludes modals/drawer/reader) ---
-        var isReaderBannerDismissed by remember { mutableStateOf(false) }
+        var isReaderBannerDismissed by remember(selectedItem?.id) { mutableStateOf(false) }
         val shouldShowBanner = !showOnboarding && bottomBannerAd != null && !(page == "pdf" && isReaderBannerDismissed)
 
         androidx.compose.animation.AnimatedVisibility(

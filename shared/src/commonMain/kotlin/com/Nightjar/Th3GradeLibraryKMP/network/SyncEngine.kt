@@ -559,7 +559,7 @@ object SyncEngine {
             val fetchedItems = channel.items.map { item ->
                 val pubDate = item.pubDate ?: ""
                 val cleanTitle = cleanHtmlEntities(item.title ?: "")
-                val cleanSnippet = cleanHtmlEntities(item.description ?: "")
+                val cleanSnippet = ""
                 val link = item.link ?: ""
                 val id = if (link.isNotBlank()) link else (item.guid ?: ("news_" + cleanTitle.hashCode()))
                 NewsItem(

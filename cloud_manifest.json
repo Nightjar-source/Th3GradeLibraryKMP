@@ -142,22 +142,6 @@
       "stream_url": "https://manahj.edu.iq/upload/upfile/ar/1784.pdf",
       "backup_hf_url": "https://huggingface.co/datasets/Larber/th3grade-books/resolve/main/books/2arab.pdf",
       "backup_github_url": "https://github.com/Nightjar-source/Th3GradeLibraryKMP-Cloud/releases/download/v2.0.0-cloud/2arab.pdf"
-    },
-    {
-      "id": "b_test_sample",
-      "title": "كتاب تجريبي لاختبار التنزيل المباشر 2027",
-      "cover_res": "ajh",
-      "cover_url": "https://images.unsplash.com/photo-1544716278-ca5e3f4abd8c?w=600&auto=format&fit=crop&q=80",
-      "pdf_path": "files/books/b_test_sample.pdf",
-      "is_note": false,
-      "author": "وزارة التربية العراقية",
-      "color_start": "#3b82f6",
-      "color_end": "#1d4ed8",
-      "stream_url": "https://raw.githubusercontent.com/Nightjar-source/Th3GradeLibraryKMP-Cloud/main/sample_test.pdf",
-      "backup_hf_url": "https://huggingface.co/datasets/Larber/th3grade-books/resolve/main/books/sample_test.pdf",
-      "backup_github_url": "https://github.com/Nightjar-source/Th3GradeLibraryKMP-Cloud/releases/download/v2.0.0-cloud/sample_test.pdf",
-      "backup_url_3": "https://drive.google.com/file/d/1sampleFileIdGoogleDrive/view",
-      "backup_url_4": "https://archive.org/download/sample_test_2027/sample_test.pdf"
     }
   ],
   "notes": [

@@ -29,15 +29,18 @@ class BookDownloadForegroundService : Service() {
         // ALWAYS satisfy Android's foreground service contract immediately
         ensureForegroundNotification()
 
-        if (intent?.action == ACTION_STOP) {
-            // Post stop slightly delayed so the Android OS acknowledges startForeground first
+        val hasActiveDownloads = BookDownloadManager.isBatchDownloading.value ||
+            BookDownloadManager.itemStates.value.values.any {
+                it.status == com.Nightjar.Th3GradeLibraryKMP.network.DownloadStatus.DOWNLOADING
+            }
+
+        if (intent == null || intent.action == ACTION_STOP || !hasActiveDownloads) {
             mainHandler.postDelayed({
                 stopSelfSafely()
-            }, 350L)
+            }, 150L)
             return START_NOT_STICKY
         }
-        // Allow the Android OS to resurrect this service if terminated under low memory:
-        return START_STICKY
+        return START_NOT_STICKY
     }
 
     private fun ensureForegroundNotification() {
@@ -81,7 +84,15 @@ class BookDownloadForegroundService : Service() {
 
     override fun onDestroy() {
         super.onDestroy()
-        stopSelfSafely()
+        try {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+                stopForeground(STOP_FOREGROUND_REMOVE)
+            } else {
+                @Suppress("DEPRECATION")
+                stopForeground(true)
+            }
+        } catch (_: Exception) {}
+        isForegroundActive = false
     }
 
     override fun onTaskRemoved(rootIntent: Intent?) {

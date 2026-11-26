@@ -474,23 +474,18 @@ private fun BookmarkPageRow(
     effectiveVisibilityScope: AnimatedVisibilityScope?
 ) {
     var isItemDeletedLocally by remember { mutableStateOf(false) }
-    val coroutineScope = rememberCoroutineScope()
-    val density = LocalDensity.current
     val rowInteractionSource = remember { MutableInteractionSource() }
 
     val rowTargetKey = "bookmark_${item.id}_$pageIndex"
-    val isThisRowActiveTarget = (TransitionTargetTracker.activeTargetId == rowTargetKey)
+    val isReturning = LocalIsReturningFromPdf.current
+    val isTransitionActive = TransitionTargetTracker.isTransitionActive
 
-    // Fluid swipe-to-delete offset animation
-    val swipeOffsetX = remember { Animatable(0f) }
-    val dismissThresholdPx = with(density) { 80.dp.toPx() }
-
-    fun triggerDeletion() {
-        if (isItemDeletedLocally) return
-        isItemDeletedLocally = true
-        coroutineScope.launch {
-            delay(200)
-            SyncEngine.toggleBookmark("${item.id}:$pageIndex")
+    // Deferred removal: wait until shrink animation back from PDF Reader completes before collapsing unstarred row
+    LaunchedEffect(isPageSaved, isTransitionActive, isReturning) {
+        if (!isPageSaved && !isTransitionActive && !isReturning) {
+            isItemDeletedLocally = true
+        } else if (isPageSaved) {
+            isItemDeletedLocally = false
         }
     }
 
@@ -506,17 +501,11 @@ private fun BookmarkPageRow(
             ),
             shrinkTowards = Alignment.Top
         ) + fadeOut(
-            animationSpec = tween(140, easing = FastOutLinearInEasing)
-        ) + slideOutHorizontally(
-            targetOffsetX = { fullWidth -> -fullWidth },
-            animationSpec = spring(
-                dampingRatio = 0.86f,
-                stiffness = Spring.StiffnessMediumLow
-            )
+            animationSpec = tween(160, easing = FastOutLinearInEasing)
         )
     ) {
-        // Shared bounds attached ONLY to the active row transitioning to/from PDF
-        val rowSharedBoundsModifier = if (sharedTransitionScope != null && effectiveVisibilityScope != null && isThisRowActiveTarget) {
+        // Always attach sharedBounds (matching LibraryScreen) so source bounds are known before click!
+        val rowSharedBoundsModifier = if (sharedTransitionScope != null && effectiveVisibilityScope != null) {
             with(sharedTransitionScope) {
                 Modifier.sharedBounds(
                     sharedContentState = rememberSharedContentState(key = rowTargetKey),
@@ -549,31 +538,10 @@ private fun BookmarkPageRow(
                 .fillMaxWidth()
                 .clip(RoundedCornerShape(14.dp))
         ) {
-            // Background revealed during horizontal swipe gesture
-            val currentOffset = swipeOffsetX.value
-            if (abs(currentOffset) > 4f) {
-                Box(
-                    modifier = Modifier
-                        .matchParentSize()
-                        .clip(RoundedCornerShape(14.dp))
-                        .background(MaterialTheme.colorScheme.error.copy(alpha = 0.85f))
-                        .padding(horizontal = 16.dp),
-                    contentAlignment = if (currentOffset < 0) Alignment.CenterEnd else Alignment.CenterStart
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.Delete,
-                        contentDescription = "حذف",
-                        tint = Color.White,
-                        modifier = Modifier.size(20.dp)
-                    )
-                }
-            }
-
-            // Foreground Interactive Bookmark Row
+            // Foreground Interactive Bookmark Row (removal handled via Star toggle inside PDF Reader)
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .offset { IntOffset(swipeOffsetX.value.roundToInt(), 0) }
                     .then(rowSharedBoundsModifier)
                     .expressiveButtonMorph(
                         restRadius = 14.dp,
@@ -588,41 +556,6 @@ private fun BookmarkPageRow(
                         borderWidth = 1.dp,
                         borderColor = if (isDark) Color.White.copy(alpha = 0.12f) else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.16f)
                     )
-                    .pointerInput(pageIndex) {
-                        detectHorizontalDragGestures(
-                            onDragEnd = {
-                                coroutineScope.launch {
-                                    if (abs(swipeOffsetX.value) >= dismissThresholdPx) {
-                                        val target = if (swipeOffsetX.value < 0) -size.width.toFloat() else size.width.toFloat()
-                                        swipeOffsetX.animateTo(
-                                            target,
-                                            spring(dampingRatio = 0.86f, stiffness = Spring.StiffnessMediumLow)
-                                        )
-                                        triggerDeletion()
-                                    } else {
-                                        swipeOffsetX.animateTo(
-                                            0f,
-                                            spring(dampingRatio = 0.82f, stiffness = Spring.StiffnessMediumLow)
-                                        )
-                                    }
-                                }
-                            },
-                            onDragCancel = {
-                                coroutineScope.launch {
-                                    swipeOffsetX.animateTo(
-                                        0f,
-                                        spring(dampingRatio = 0.82f, stiffness = Spring.StiffnessMediumLow)
-                                    )
-                                }
-                            },
-                            onHorizontalDrag = { change, dragAmount ->
-                                change.consume()
-                                coroutineScope.launch {
-                                    swipeOffsetX.snapTo(swipeOffsetX.value + dragAmount)
-                                }
-                            }
-                        )
-                    }
                     .clickable(
                         interactionSource = rowInteractionSource,
                         indication = null
@@ -661,28 +594,6 @@ private fun BookmarkPageRow(
                     softWrap = false,
                     overflow = TextOverflow.Ellipsis
                 )
-
-                // Fluid Delete Action Button (Star / Delete Icon Button)
-                Box(
-                    modifier = Modifier
-                        .size(32.dp)
-                        .clip(CircleShape)
-                        .background(MaterialTheme.colorScheme.onSurface.copy(alpha = if (isDark) 0.08f else 0.05f))
-                        .clickable(
-                            interactionSource = remember { MutableInteractionSource() },
-                            indication = null
-                        ) {
-                            triggerDeletion()
-                        },
-                    contentAlignment = Alignment.Center
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.Close,
-                        contentDescription = "حذف الصفحة من المحفوظات",
-                        tint = MaterialTheme.colorScheme.error.copy(alpha = 0.85f),
-                        modifier = Modifier.size(16.dp)
-                    )
-                }
             }
         }
     }
