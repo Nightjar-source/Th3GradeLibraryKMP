@@ -237,13 +237,20 @@ fun Modifier.screenEntranceStagger(index: Int = 0, itemId: String? = null): Modi
         seenMap?.put(itemKey, true)
     }
 
-    val p = animProgress.value
     this.graphicsLayer {
-        this.alpha = 0.30f + 0.70f * p // Base alpha 0.30f eliminates harsh dark/white flashes!
-        this.translationY = (1f - p) * offsetYPx
-        this.scaleX = 0.985f + 0.015f * p
-        this.scaleY = 0.985f + 0.015f * p
-        this.clip = false
+        val p = animProgress.value.coerceIn(0f, 1f)
+        if (p < 1f) {
+            this.alpha = 0.30f + 0.70f * p // Base alpha 0.30f eliminates harsh dark/white flashes!
+            this.translationY = (1f - p) * offsetYPx
+            this.scaleX = 0.985f + 0.015f * p
+            this.scaleY = 0.985f + 0.015f * p
+            this.clip = false
+        } else {
+            this.alpha = 1f
+            this.translationY = 0f
+            this.scaleX = 1f
+            this.scaleY = 1f
+        }
     }
 }
 

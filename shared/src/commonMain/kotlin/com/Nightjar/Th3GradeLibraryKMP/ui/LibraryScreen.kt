@@ -107,7 +107,7 @@ fun LibraryScreen(
     val adaptiveConfig = LocalAppAdaptiveConfig.current
     val isWide = adaptiveConfig.isWide
 
-    BoxWithConstraints(
+    Box(
         modifier = Modifier
             .fillMaxSize()
             .padding(horizontal = 16.dp)
@@ -548,8 +548,8 @@ fun LazyGridItemScope.ContentCard(
                 ),
                 renderInOverlayDuringTransition = true,
                 clipInOverlayDuringTransition = OverlayClip(RoundedCornerShape(cardCornerRadius)),
-                boundsTransform = { _, _ -> spring(dampingRatio = 0.82f, stiffness = 280f) },
-                resizeMode = SharedTransitionScope.ResizeMode.RemeasureToBounds
+                boundsTransform = { _, _ -> spring(dampingRatio = 0.80f, stiffness = Spring.StiffnessMediumLow) },
+                resizeMode = SharedTransitionScope.ResizeMode.scaleToBounds(ContentScale.Crop, Alignment.Center)
             )
         }
     } else Modifier

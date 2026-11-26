@@ -71,7 +71,7 @@ fun BookmarksScreen(
     onScrollableStateChanged: (Boolean) -> Unit = {},
     lazyGridState: LazyGridState = rememberLazyGridState()
 ) {
-    BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
+    Box(modifier = Modifier.fillMaxSize()) {
         Column(
             modifier = Modifier
                 .fillMaxSize()
@@ -526,9 +526,9 @@ private fun BookmarkPageRow(
                     renderInOverlayDuringTransition = true,
                     clipInOverlayDuringTransition = OverlayClip(RoundedCornerShape(14.dp)),
                     boundsTransform = { _, _ ->
-                        spring(dampingRatio = 0.82f, stiffness = 280f)
+                        spring(dampingRatio = 0.80f, stiffness = Spring.StiffnessMediumLow)
                     },
-                    resizeMode = SharedTransitionScope.ResizeMode.RemeasureToBounds
+                    resizeMode = SharedTransitionScope.ResizeMode.scaleToBounds(androidx.compose.ui.layout.ContentScale.Crop, Alignment.Center)
                 )
             }
         } else Modifier

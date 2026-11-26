@@ -126,6 +126,8 @@ actual object BookDownloadManager {
     }
 
     private val lastActionTimes = java.util.concurrent.ConcurrentHashMap<String, Long>()
+    @Volatile
+    private var lastNotificationDispatchMs = 0L
 
     private fun startForegroundServiceIfNeeded(context: Context) {
         try {
@@ -193,6 +195,11 @@ actual object BookDownloadManager {
             return
         }
 
+        if (justFinishedItem == null) {
+            val nowMs = System.currentTimeMillis()
+            if (nowMs - lastNotificationDispatchMs < 450L) return
+            lastNotificationDispatchMs = nowMs
+        }
         val items = activeJobs.keys.mapNotNull { activeItems[it] }
         if (items.isEmpty()) return
 
@@ -500,15 +507,18 @@ actual object BookDownloadManager {
 
                                             val progress = if (totalBytes > 0) (bytesCopied.toFloat() / totalBytes.toFloat()).coerceIn(0f, 1f) else 0f
                                             val now = System.currentTimeMillis()
-                                            if (now - lastReportTime > 250) {
+                                            if (now - lastReportTime > 300) {
                                                 lastReportTime = now
-                                                updateState(item.id, ItemDownloadState(
-                                                    status = DownloadStatus.DOWNLOADING,
-                                                    progress = progress,
-                                                    bytesDownloaded = bytesCopied,
-                                                    totalBytes = totalBytes
-                                                ))
-                                                updateDynamicProgress(ctx)
+                                                val myJob = coroutineContext[Job]
+                                                if (activeJobs[item.id] === myJob) {
+                                                    updateState(item.id, ItemDownloadState(
+                                                        status = DownloadStatus.DOWNLOADING,
+                                                        progress = progress,
+                                                        bytesDownloaded = bytesCopied,
+                                                        totalBytes = totalBytes
+                                                    ))
+                                                    updateDynamicProgress(ctx)
+                                                }
                                             }
                                         }
                                     }
@@ -558,36 +568,47 @@ actual object BookDownloadManager {
                 }
 
             } catch (ce: CancellationException) {
-                val typeLabel = if (!item.isNote) "الكتاب" else "الملزمة"
-                val pauseMsg = "تم إيقاف تنزيل $typeLabel: ${item.title} مؤقتاً"
-                postActiveNotice(pauseMsg, 4000L)
-                val currentBytes = if (tempTarget.exists()) tempTarget.length() else 0L
-                val currentProgress = _itemStates.value[item.id]?.progress ?: 0f
-                updateState(item.id, ItemDownloadState(status = DownloadStatus.PAUSED, progress = currentProgress, bytesDownloaded = currentBytes))
-                updateNotification(
-                    ctx,
-                    title = "تم إيقاف تحميل: ${item.title}",
-                    text = "تم إيقاف عملية التحميل مؤقتاً ويمكن استئنافها في أي وقت",
-                    progress = -1,
-                    itemId = item.id,
-                    isPaused = true
-                )
+                val myJob = coroutineContext[Job]
+                if (activeJobs[item.id] === myJob) {
+                    val typeLabel = if (!item.isNote) "الكتاب" else "الملزمة"
+                    val pauseMsg = "تم إيقاف تنزيل $typeLabel: ${item.title} مؤقتاً"
+                    postActiveNotice(pauseMsg, 4000L)
+                    val currentBytes = if (tempTarget.exists()) tempTarget.length() else 0L
+                    val currentProgress = _itemStates.value[item.id]?.progress ?: 0f
+                    updateState(item.id, ItemDownloadState(status = DownloadStatus.PAUSED, progress = currentProgress, bytesDownloaded = currentBytes))
+                    updateNotification(
+                        ctx,
+                        title = "تم إيقاف تحميل: ${item.title}",
+                        text = "تم إيقاف عملية التحميل مؤقتاً ويمكن استئنافها في أي وقت",
+                        progress = -1,
+                        itemId = item.id,
+                        isPaused = true
+                    )
+                }
             } catch (e: Exception) {
-                val errReason = if (e.message?.contains("غير متوفر") == true) "الرابط غير متوفر حالياً" else "تعذر التنزيل، يرجى التحقق من الاتصال والمحاولة لاحقاً"
-                updateState(item.id, ItemDownloadState(status = DownloadStatus.FAILED, error = errReason))
-                val typeLabel = if (!item.isNote) "الكتاب" else "الملزمة"
-                val failMsg = "تعذر تنزيل $typeLabel: ${item.title} ($errReason) ✕"
-                postActiveNotice(failMsg, 4000L)
-                updateNotification(
-                    ctx,
-                    title = "فشل تحميل: ${item.title}",
-                    text = errReason,
-                    progress = -1,
-                    itemId = item.id
-                )
+                val myJob = coroutineContext[Job]
+                if (activeJobs[item.id] === myJob) {
+                    val errReason = if (e.message?.contains("غير متوفر") == true) "الرابط غير متوفر حالياً" else "تعذر التنزيل، يرجى التحقق من الاتصال والمحاولة لاحقاً"
+                    updateState(item.id, ItemDownloadState(status = DownloadStatus.FAILED, error = errReason))
+                    val typeLabel = if (!item.isNote) "الكتاب" else "الملزمة"
+                    val failMsg = "تعذر تنزيل $typeLabel: ${item.title} ($errReason) ✕"
+                    postActiveNotice(failMsg, 4000L)
+                    updateNotification(
+                        ctx,
+                        title = "فشل تحميل: ${item.title}",
+                        text = errReason,
+                        progress = -1,
+                        itemId = item.id
+                    )
+                }
             } finally {
-                activeJobs.remove(item.id)
-                tempFiles.remove(item.id)
+                val myJob = coroutineContext[Job]
+                if (myJob != null) {
+                    activeJobs.remove(item.id, myJob)
+                }
+                if (activeJobs[item.id] == null) {
+                    tempFiles.remove(item.id)
+                }
                 stopForegroundServiceIfDone(ctx)
             }
         }

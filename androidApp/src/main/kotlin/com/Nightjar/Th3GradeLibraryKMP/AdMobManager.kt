@@ -24,6 +24,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -104,9 +105,19 @@ fun AdaptiveBannerAd(
 ) {
     var isAdLoaded by remember { mutableStateOf(false) }
 
-    androidx.compose.foundation.layout.BoxWithConstraints(
+    val density = androidx.compose.ui.platform.LocalDensity.current
+    val initialWidthDp = with(density) { androidx.compose.ui.platform.LocalWindowInfo.current.containerSize.width.toDp().value.toInt() }
+    var availableWidthDp by remember { mutableStateOf(initialWidthDp) }
+
+    Box(
         modifier = modifier
             .fillMaxWidth()
+            .onSizeChanged { size ->
+                if (size.width > 0) {
+                    val wDp = with(density) { size.width.toDp().value.toInt() }
+                    if (wDp != availableWidthDp) availableWidthDp = wDp
+                }
+            }
             .then(
                 if (isAdLoaded) Modifier.wrapContentHeight()
                 else Modifier.height(0.dp)
@@ -114,7 +125,6 @@ fun AdaptiveBannerAd(
             .animateContentSize(spring(dampingRatio = androidx.compose.animation.core.Spring.DampingRatioNoBouncy, stiffness = 300f)),
         contentAlignment = androidx.compose.ui.Alignment.Center
     ) {
-        val availableWidthDp = maxWidth.value.toInt()
         // AdMob Adaptive Banner specifications (Standard Material 3 / Google AdMob Responsive Guidelines):
         // 1. In large screens / tablets (availableWidth >= 600dp), cap banner width to standard 468dp / 728dp centered,
         //    preventing awkward giant stretched banners spanning full 1200dp desktop/tablet screens.

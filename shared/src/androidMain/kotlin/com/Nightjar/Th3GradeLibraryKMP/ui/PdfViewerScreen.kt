@@ -26,6 +26,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.draw.clip
@@ -427,9 +428,9 @@ actual fun PdfViewerScreen(
                 renderInOverlayDuringTransition = true,
                 clipInOverlayDuringTransition = OverlayClip(androidx.compose.foundation.shape.RoundedCornerShape(safeCornerRadius)),
                 boundsTransform = { _, _ ->
-                    spring(dampingRatio = 0.82f, stiffness = 280f)
+                    spring(dampingRatio = 0.80f, stiffness = Spring.StiffnessMediumLow)
                 },
-                resizeMode = SharedTransitionScope.ResizeMode.RemeasureToBounds
+                resizeMode = SharedTransitionScope.ResizeMode.scaleToBounds(ContentScale.Crop, Alignment.Center)
             )
         }
     } else if (animatedVisibilityScope != null) {
@@ -1246,14 +1247,18 @@ fun AndroidPdfPage(
 
     val currentBitmap = bitmap
     if (currentBitmap != null) {
-        BoxWithConstraints(
+        val density = androidx.compose.ui.platform.LocalDensity.current
+        var containerSize by remember { mutableStateOf(androidx.compose.ui.unit.IntSize.Zero) }
+        Box(
             modifier = modifier
                 .fillMaxSize()
-                .clipToBounds(),
+                .clipToBounds()
+                .onSizeChanged { containerSize = it },
             contentAlignment = Alignment.Center
         ) {
-            val containerWidth = constraints.maxWidth.toFloat()
-            val containerHeight = constraints.maxHeight.toFloat()
+            if (containerSize.width <= 0 || containerSize.height <= 0) return@Box
+            val containerWidth = containerSize.width.toFloat()
+            val containerHeight = containerSize.height.toFloat()
             
             val bitmapWidth = currentBitmap.width.toFloat()
             val bitmapHeight = currentBitmap.height.toFloat()

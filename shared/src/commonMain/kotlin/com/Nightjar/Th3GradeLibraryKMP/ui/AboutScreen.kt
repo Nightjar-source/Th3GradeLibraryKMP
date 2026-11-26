@@ -53,12 +53,11 @@ fun AboutScreen(
         onScrollableStateChanged(canScroll)
     }
 
-    BoxWithConstraints(
+    val isWide = LocalAppAdaptiveConfig.current.isWide
+    Box(
         modifier = Modifier.fillMaxSize(),
         contentAlignment = Alignment.TopCenter
     ) {
-        val screenWidthDp = with(androidx.compose.ui.platform.LocalDensity.current) { androidx.compose.ui.platform.LocalWindowInfo.current.containerSize.width.toDp() }
-        val isWide = screenWidthDp >= 600.dp
         
         val statusBarHeight = WindowInsets.statusBars.add(WindowInsets.captionBar).asPaddingValues().calculateTopPadding()
         val dynamicTopPadding = if (isWide) statusBarHeight + 52.dp else statusBarHeight + 68.dp

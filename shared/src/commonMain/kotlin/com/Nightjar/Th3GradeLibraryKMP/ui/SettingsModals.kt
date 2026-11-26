@@ -31,6 +31,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Brush
@@ -145,9 +146,7 @@ fun AppSettingsModal(
             modifier = Modifier
                 .fillMaxSize()
                 .background(Color.Black.copy(alpha = 0.5f))
-                .clickable { onClose() }
-                .windowInsetsPadding(WindowInsets.statusBars.add(WindowInsets.captionBar).only(WindowInsetsSides.Top))
-                .padding(top = 8.dp),
+                .clickable { onClose() },
             contentAlignment = Alignment.BottomCenter
         ) {
             Box(
@@ -169,73 +168,73 @@ fun AppSettingsModal(
                         )
                     )
             ) {
-                Column(modifier = Modifier.fillMaxWidth()) {
-                    // Pinned Header (Drag handle pill + Title + Close button) — never pulls away from top
-                    Column(
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .verticalScroll(rememberScrollState())
+                        .padding(start = 20.dp, end = 20.dp)
+                ) {
+                    Spacer(
+                        modifier = Modifier
+                            .windowInsetsPadding(WindowInsets.statusBars.add(WindowInsets.captionBar).only(WindowInsetsSides.Top))
+                            .height(6.dp)
+                    )
+                    // Scrollable Header (Drag handle pill + Title + Close button)
+                    Box(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(horizontal = 20.dp)
+                            .padding(top = 8.dp, bottom = 6.dp),
+                        contentAlignment = Alignment.Center
                     ) {
                         Box(
                             modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(top = 10.dp, bottom = 6.dp),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Box(
-                                modifier = Modifier
-                                    .width(40.dp)
-                                    .height(4.dp)
-                                    .clip(RoundedCornerShape(2.dp))
-                                    .background(MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.35f))
-                            )
-                        }
-
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Text(
-                                text = "المظهر واللون",
-                                fontSize = 18.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = MaterialTheme.colorScheme.onSurface
-                            )
-                            IconButton(
-                                onClick = onClose,
-                                modifier = Modifier
-                                    .size(36.dp)
-                                    .background(MaterialTheme.colorScheme.surfaceVariant, CircleShape)
-                            ) {
-                                Icon(Icons.Default.Close, contentDescription = "Close", modifier = Modifier.size(20.dp))
-                            }
-                        }
-
-                        Spacer(modifier = Modifier.height(10.dp))
+                                .width(40.dp)
+                                .height(4.dp)
+                                .clip(RoundedCornerShape(2.dp))
+                                .background(MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.35f))
+                        )
                     }
 
-                    Column(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .verticalScroll(rememberScrollState())
-                            .padding(start = 20.dp, end = 20.dp)
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
                     ) {
+                        Text(
+                            text = "المظهر واللون",
+                            fontSize = 18.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
+                        IconButton(
+                            onClick = onClose,
+                            modifier = Modifier
+                                .size(36.dp)
+                                .background(MaterialTheme.colorScheme.surfaceVariant, CircleShape)
+                        ) {
+                            Icon(Icons.Default.Close, contentDescription = "Close", modifier = Modifier.size(20.dp))
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(10.dp))
 
                     // Theme Settings
                     Text("وضع الإضاءة", fontWeight = FontWeight.Bold, fontSize = 13.sp, color = MaterialTheme.colorScheme.primary, modifier = Modifier.padding(horizontal = 20.dp))
                     Spacer(modifier = Modifier.height(8.dp))
-                    BoxWithConstraints(
+                    val themeDensity = androidx.compose.ui.platform.LocalDensity.current
+                    var themeTabContainerWidthPx by remember { mutableStateOf(0) }
+                    Box(
                         modifier = Modifier
                             .fillMaxWidth()
                             .padding(horizontal = 20.dp)
                             .height(48.dp)
+                            .onSizeChanged { themeTabContainerWidthPx = it.width }
                             .background(MaterialTheme.colorScheme.surfaceVariant, RoundedCornerShape(12.dp))
                     ) {
                         val options = listOf("light", "dark", "system")
                         val selectedIndex = options.indexOf(settings.theme).takeIf { it >= 0 } ?: 2
 
-                        val tabWidth = maxWidth / 3
+                        val tabWidth = with(themeDensity) { (themeTabContainerWidthPx / 3f).toDp() }
                         val indicatorOffset by androidx.compose.animation.core.animateDpAsState(
                             targetValue = tabWidth * selectedIndex,
                             animationSpec = androidx.compose.animation.core.spring(
@@ -633,7 +632,6 @@ fun AppSettingsModal(
                     val bottomSafeInset = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
                     Spacer(modifier = Modifier.height(bottomSafeInset + 20.dp))
                 } // Close Scrollable Body Column
-                } // Close Outer Column
 
 
             }
@@ -660,9 +658,7 @@ fun NewsSettingsModal(
             modifier = Modifier
                 .fillMaxSize()
                 .background(Color.Black.copy(alpha = 0.5f))
-                .clickable { onClose() }
-                .windowInsetsPadding(WindowInsets.statusBars.add(WindowInsets.captionBar).only(WindowInsetsSides.Top))
-                .padding(top = 8.dp),
+                .clickable { onClose() },
             contentAlignment = Alignment.BottomCenter
         ) {
             Box(
@@ -684,31 +680,39 @@ fun NewsSettingsModal(
                         )
                     )
             ) {
-                Column(modifier = Modifier.fillMaxWidth()) {
-                    // Pinned Header — never detaches from top on overscroll
-                    Column(modifier = Modifier.fillMaxWidth()) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .verticalScroll(rememberScrollState())
+                ) {
+                    Spacer(
+                        modifier = Modifier
+                            .windowInsetsPadding(WindowInsets.statusBars.add(WindowInsets.captionBar).only(WindowInsetsSides.Top))
+                            .height(6.dp)
+                    )
+                    // Scrollable Header (Drag handle + Title + Close button)
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(top = 8.dp, bottom = 6.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
                         Box(
                             modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(top = 10.dp, bottom = 6.dp),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Box(
-                                modifier = Modifier
-                                    .width(40.dp)
-                                    .height(4.dp)
-                                    .clip(RoundedCornerShape(2.dp))
-                                    .background(MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.35f))
-                            )
-                        }
+                                .width(40.dp)
+                                .height(4.dp)
+                                .clip(RoundedCornerShape(2.dp))
+                                .background(MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.35f))
+                        )
+                    }
 
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(horizontal = 20.dp),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 20.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
                             Text(
                                 text = "إعدادات الأخبار والمزامنة",
                                 fontSize = 18.sp,
@@ -948,7 +952,6 @@ fun NewsSettingsModal(
                     val bottomSafeInset = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
                     Spacer(modifier = Modifier.height(bottomSafeInset + 20.dp))
                 } // Close Scrollable Body Column
-                } // Close Outer Column
 
 
             }

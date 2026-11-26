@@ -75,7 +75,7 @@ fun ShortcutsScreen(
     val adaptiveConfig = LocalAppAdaptiveConfig.current
     val isWide = adaptiveConfig.isWide
 
-    BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
+    Box(modifier = Modifier.fillMaxSize()) {
         Column(
             modifier = Modifier
                 .fillMaxSize()

@@ -16,6 +16,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.zIndex
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.foundation.gestures.detectDragGestures
@@ -453,7 +454,7 @@ fun AppContent(
 
     SharedTransitionLayout {
         CompositionLocalProvider(LocalSharedTransitionScope provides this@SharedTransitionLayout) {
-            BoxWithConstraints(
+            Box(
                 modifier = Modifier.fillMaxSize()
             ) {
         val adaptiveConfig = rememberAppAdaptiveConfig()
@@ -1633,10 +1634,13 @@ fun AppContent(
                     horizontalArrangement = Arrangement.Center
                 ) {
                     // 1. Elongated Main Pill with 3 Tabs & Sliding Indicator
-                    BoxWithConstraints(
+                    val pillDensity = androidx.compose.ui.platform.LocalDensity.current
+                    var pillWidthPx by remember { mutableStateOf(0) }
+                    Box(
                         modifier = Modifier
                             .weight(1f)
                             .height(if (isWide) 46.dp else 56.dp)
+                            .onSizeChanged { pillWidthPx = it.width }
                             .border(
                                 width = 1.dp,
                                 brush = Brush.linearGradient(listOf(Color.White.copy(alpha = 0.25f), Color.White.copy(alpha = 0.05f))),
@@ -1645,10 +1649,10 @@ fun AppContent(
                             .liquidGlass(isDark, borderRadius = 28.dp, alpha = 0.92f)
                             .padding(horizontal = 6.dp)
                     ) {
-                        val contentWidth = maxWidth
+                        val contentWidth = with(pillDensity) { (pillWidthPx - with(pillDensity) { 12.dp.roundToPx() }).coerceAtLeast(0).toDp() }
                         val itemWidth = contentWidth / mainNavItems.size
                         var dragOffset by remember { mutableStateOf<Float?>(null) }
-                        val itemWidthPx = with(androidx.compose.ui.platform.LocalDensity.current) { itemWidth.toPx() }
+                        val itemWidthPx = with(pillDensity) { itemWidth.toPx() }
 
                         val indicatorOffset by animateDpAsState(
                             targetValue = if (dragOffset != null) with(androidx.compose.ui.platform.LocalDensity.current) { (dragOffset!! - (itemWidthPx / 2)).toDp() } else itemWidth * selectedIndex,
@@ -1838,11 +1842,14 @@ fun AppContent(
                     verticalArrangement = Arrangement.Center
                 ) {
                     // 1. Vertical 3-tab pill
-                    BoxWithConstraints(
+                    val railDensity = androidx.compose.ui.platform.LocalDensity.current
+                    var railHeightPx by remember { mutableStateOf(0) }
+                    Box(
                         modifier = Modifier
                             .heightIn(max = 330.dp)
                             .weight(1f, fill = false)
                             .width(72.dp)
+                            .onSizeChanged { railHeightPx = it.height }
                             .border(
                                 width = 1.dp,
                                 brush = Brush.linearGradient(listOf(Color.White.copy(alpha = 0.25f), Color.White.copy(alpha = 0.05f))),
@@ -1851,10 +1858,10 @@ fun AppContent(
                             .liquidGlass(isDark, borderRadius = 32.dp, alpha = 0.90f)
                             .padding(vertical = 10.dp)
                     ) {
-                        val contentHeight = maxHeight
+                        val contentHeight = with(railDensity) { (railHeightPx - with(railDensity) { 20.dp.roundToPx() }).coerceAtLeast(0).toDp() }
                         val itemHeight = contentHeight / mainNavItems.size
                         var dragOffsetY by remember { mutableStateOf<Float?>(null) }
-                        val itemHeightPx = with(androidx.compose.ui.platform.LocalDensity.current) { itemHeight.toPx() }
+                        val itemHeightPx = with(railDensity) { itemHeight.toPx() }
 
                         val indicatorOffset by animateDpAsState(
                             targetValue = if (dragOffsetY != null) with(androidx.compose.ui.platform.LocalDensity.current) { (dragOffsetY!! - (itemHeightPx / 2)).toDp() } else itemHeight * selectedIndex,

@@ -104,7 +104,7 @@ class AppFirebaseMessagingService : FirebaseMessagingService() {
         val content = (data["content"] ?: data["body"] ?: remoteMessage.notification?.body ?: "").trim()
         val rawPubDate = (data["pubDate"] ?: "").trim()
         val pubDate = if (rawPubDate.isNotBlank()) rawPubDate else {
-            java.text.SimpleDateFormat("yyyy-MM-dd HH:mm:ss", java.util.Locale.US).format(java.util.Date())
+            System.currentTimeMillis().toString()
         }
 
         val isDevTest = title.contains("المطور") || title.contains("تجريبي") || link.startsWith("dev_") || data["is_test"] == "true"
@@ -118,6 +118,10 @@ class AppFirebaseMessagingService : FirebaseMessagingService() {
         // 2. Announcements & Admin updates ALWAYS fire immediately (never suppressed)
         if (isAnnouncement || isDevTest) {
             showMicroThumbnailNotification(title, content, link, imageUrl, isNews = false)
+            return
+        }
+
+        if (!isNewItem) {
             return
         }
 

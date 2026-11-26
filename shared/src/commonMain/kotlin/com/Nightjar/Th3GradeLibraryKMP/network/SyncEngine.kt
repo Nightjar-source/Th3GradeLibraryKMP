@@ -408,61 +408,91 @@ object SyncEngine {
             .trim()
     }
 
+    private fun daysFromCivil(yInput: Int, m: Int, d: Int): Long {
+        val y = if (m <= 2) yInput - 1 else yInput
+        val era = (if (y >= 0) y else y - 399) / 400
+        val yoe = y - era * 400
+        val doy = (153 * (m + (if (m > 2) -3 else 9)) + 2) / 5 + d - 1
+        val doe = yoe * 365 + yoe / 4 - yoe / 100 + doy
+        return era * 146097L + doe - 719468L
+    }
+
+    private fun civilFromDays(zInput: Long): Triple<Int, Int, Int> {
+        val z = zInput + 719468L
+        val era = (if (z >= 0) z else z - 146096L) / 146097L
+        val doe = (z - era * 146097L).toInt()
+        val yoe = (doe - doe / 1460 + doe / 36524 - doe / 146096) / 365
+        val y = yoe + era.toInt() * 400
+        val doy = doe - (365 * yoe + yoe / 4 - yoe / 100)
+        val mp = (5 * doy + 2) / 153
+        val d = doy - (153 * mp + 2) / 5 + 1
+        val m = mp + (if (mp < 10) 3 else -9)
+        val finalY = if (m <= 2) y + 1 else y
+        return Triple(finalY, m, d)
+    }
+
+    private fun formatEpochMillisAsIraqDate(epochMillis: Long): String {
+        val iraqSec = (epochMillis / 1000L) + 3L * 3600L
+        val days = if (iraqSec >= 0) iraqSec / 86400L else (iraqSec - 86399L) / 86400L
+        val timeInDay = ((iraqSec % 86400L) + 86400L) % 86400L
+        val (year, month, day) = civilFromDays(days)
+        var hour = (timeInDay / 3600L).toInt()
+        val min = ((timeInDay % 3600L) / 60L).toInt()
+        val amPm = if (hour >= 12) "م" else "ص"
+        if (hour > 12) hour -= 12
+        if (hour == 0) hour = 12
+        val minStr = if (min < 10) "0$min" else "$min"
+        return "$day-$month-$year  $hour:$minStr $amPm"
+    }
+
     fun formatNewsDate(pubDate: String): String = try {
-        val num = pubDate.toLongOrNull()
-        if (num != null) {
-            val sec = (num / 1000L)
-            val timeInDay = (sec % 86400L)
-            var hour = ((timeInDay / 3600L) + 3).toInt() % 24
-            val min = ((timeInDay % 3600L) / 60L).toInt()
-            val amPm = if (hour >= 12) "م" else "ص"
-            if (hour > 12) hour -= 12
-            if (hour == 0) hour = 12
-            val minStr = if (min < 10) "0$min" else "$min"
-            "الآن  $hour:$minStr $amPm"
-        } else {
-            val dParts = pubDate.split(" ")
-            if (dParts.size >= 5) {
-                val day = dParts[1]
-                val month = when (dParts[2].lowercase()) {
-                    "jan" -> "1"; "feb" -> "2"; "mar" -> "3"; "apr" -> "4"
-                    "may" -> "5"; "jun" -> "6"; "jul" -> "7"; "aug" -> "8"
-                    "sep" -> "9"; "oct" -> "10"; "nov" -> "11"; "dec" -> "12"
-                    else -> "1"
-                }
-                val year = dParts[3]
-                val timeParts = dParts[4].split(":")
-                var hour = timeParts[0].toIntOrNull() ?: 12
-                val min = timeParts[1]
-                
-                // تعديل التوقيت ليكون بتوقيت العراق (+3)
-                hour += 3
-                if (hour >= 24) hour -= 24
-                
-                val amPm = if (hour >= 12) "م" else "ص"
-                if (hour > 12) hour -= 12
-                if (hour == 0) hour = 12
-                "$day-$month-$year  $hour:$min $amPm"
-            } else if (pubDate.contains("-") && pubDate.contains(":")) {
-                val p = pubDate.split(" ")
-                val ymd = p[0]
-                val t = p.getOrNull(1)?.split(":") ?: listOf("12", "00")
-                var h = t[0].toIntOrNull() ?: 12
-                val m = t.getOrNull(1) ?: "00"
-                val amPm = if (h >= 12) "م" else "ص"
-                if (h > 12) h -= 12
-                if (h == 0) h = 12
-                "$ymd  $h:$m $amPm"
-            } else pubDate
+        val trimmed = pubDate.trim()
+        if (trimmed.isEmpty()) ""
+        else {
+            val parsedMs = parseNewsDateToMillis(trimmed)
+            if (parsedMs > 0L) {
+                formatEpochMillisAsIraqDate(parsedMs)
+            } else {
+                trimmed
+            }
         }
-    } catch (e: Exception) { pubDate }
+    } catch (_: Exception) { pubDate }
 
     fun parseNewsDateToMillis(pubDate: String): Long = try {
-        val num = pubDate.toLongOrNull()
+        val trimmed = pubDate.trim()
+        val num = trimmed.toLongOrNull()
         if (num != null) return num
 
-        if (pubDate.contains("-") && pubDate.contains(":")) {
-            val parts = pubDate.split(" ")
+        if (trimmed.contains("T") && trimmed.contains("-")) {
+            val datePart = trimmed.substringBefore("T").split("-")
+            val timeAndTz = trimmed.substringAfter("T")
+            val tzSignIdx = timeAndTz.indexOfFirst { it == 'Z' || it == '+' || it == '-' }
+            val timeStr = if (tzSignIdx >= 0) timeAndTz.substring(0, tzSignIdx) else timeAndTz
+            val tzStr = if (tzSignIdx >= 0) timeAndTz.substring(tzSignIdx) else "Z"
+            val tParts = timeStr.split(":")
+            val y = datePart.getOrNull(0)?.toIntOrNull() ?: 2026
+            val m = datePart.getOrNull(1)?.toIntOrNull() ?: 1
+            val d = datePart.getOrNull(2)?.toIntOrNull() ?: 1
+            val h = tParts.getOrNull(0)?.toIntOrNull() ?: 0
+            val min = tParts.getOrNull(1)?.toIntOrNull() ?: 0
+            val s = tParts.getOrNull(2)?.substringBefore(".")?.toIntOrNull() ?: 0
+            val offsetSec = when {
+                tzStr.startsWith("Z", ignoreCase = true) -> 0L
+                tzStr.startsWith("+") || tzStr.startsWith("-") -> {
+                    val sign = if (tzStr.startsWith("-")) -1L else 1L
+                    val tzParts = tzStr.drop(1).split(":")
+                    val tzH = tzParts.getOrNull(0)?.toLongOrNull() ?: 0L
+                    val tzM = tzParts.getOrNull(1)?.toLongOrNull() ?: 0L
+                    sign * (tzH * 3600L + tzM * 60L)
+                }
+                else -> 0L
+            }
+            val days = daysFromCivil(y, m, d)
+            return (days * 86400L + h * 3600L + min * 60L + s - offsetSec) * 1000L
+        }
+
+        if (trimmed.contains("-") && trimmed.contains(":")) {
+            val parts = trimmed.split(" ")
             val ymd = parts[0].split("-")
             val hms = parts.getOrNull(1)?.split(":") ?: listOf("0", "0", "0")
             val y = ymd.getOrNull(0)?.toIntOrNull() ?: 2026
@@ -471,11 +501,11 @@ object SyncEngine {
             val h = hms.getOrNull(0)?.toIntOrNull() ?: 0
             val min = hms.getOrNull(1)?.toIntOrNull() ?: 0
             val s = hms.getOrNull(2)?.toIntOrNull() ?: 0
-            val daysApprox = (y - 1970) * 365L + ((y - 1970) / 4) + (m - 1) * 30L + d
-            return (daysApprox * 86400L + h * 3600L + min * 60L + s) * 1000L
+            val days = daysFromCivil(y, m, d)
+            return (days * 86400L + h * 3600L + min * 60L + s - 3L * 3600L) * 1000L
         }
 
-        val dParts = pubDate.split(" ")
+        val dParts = trimmed.split(Regex("\\s+"))
         if (dParts.size >= 5) {
             val day = dParts[1].toIntOrNull() ?: 1
             val month = when (dParts[2].lowercase()) {
@@ -489,8 +519,15 @@ object SyncEngine {
             val hour = timeParts.getOrNull(0)?.toIntOrNull() ?: 0
             val min = timeParts.getOrNull(1)?.toIntOrNull() ?: 0
             val sec = timeParts.getOrNull(2)?.toIntOrNull() ?: 0
-            val daysApprox = (year - 1970) * 365L + ((year - 1970) / 4) + (month - 1) * 30L + day
-            (daysApprox * 86400L + hour * 3600L + min * 60L + sec) * 1000L
+            val tzToken = dParts.getOrNull(5) ?: "GMT"
+            val offsetSec = if ((tzToken.startsWith("+") || tzToken.startsWith("-")) && tzToken.length >= 5) {
+                val sign = if (tzToken.startsWith("-")) -1L else 1L
+                val tzH = tzToken.substring(1, 3).toLongOrNull() ?: 0L
+                val tzM = tzToken.substring(3, 5).toLongOrNull() ?: 0L
+                sign * (tzH * 3600L + tzM * 60L)
+            } else 0L
+            val days = daysFromCivil(year, month, day)
+            (days * 86400L + hour * 3600L + min * 60L + sec - offsetSec) * 1000L
         } else {
             0L
         }
@@ -602,6 +639,7 @@ object SyncEngine {
                         settings.putString("Bottom_Time", validItems.last().pubDate)
                     }
                 } else {
+                    val topTimeMs = parseNewsDateToMillis(topTime)
                     val collectedItems = mutableListOf<NewsItem>()
                     var matchedBoundary = false
                     for (item in fetchedItems) {
@@ -615,11 +653,20 @@ object SyncEngine {
                             matchedBoundary = true
                             break
                         }
+                        // Time boundary guard: never re-collect past articles older than Top_Time
+                        val itemMs = parseNewsDateToMillis(item.pubDate)
+                        if (topTimeMs > 0L && itemMs > 0L && itemMs <= topTimeMs) {
+                            matchedBoundary = true
+                            break
+                        }
 
                         collectedItems.add(item)
                     }
                     if (!matchedBoundary && collectedItems.isEmpty()) {
-                        collectedItems.addAll(fetchedItems)
+                        collectedItems.addAll(
+                            if (topTimeMs > 0L) fetchedItems.filter { parseNewsDateToMillis(it.pubDate) > topTimeMs }
+                            else fetchedItems
+                        )
                     }
 
                     // Filter to find TRULY new or updated items

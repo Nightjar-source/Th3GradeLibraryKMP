@@ -171,7 +171,7 @@ fun NewsScreen(
     val adaptiveConfig = LocalAppAdaptiveConfig.current
     val isMedium = adaptiveConfig.isWide
 
-    BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
+    Box(modifier = Modifier.fillMaxSize()) {
         val pullRefreshState = rememberPullToRefreshState()
         // Uses hoisted lazyListState
         val canScroll by remember {
