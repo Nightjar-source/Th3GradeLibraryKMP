@@ -1,3 +1,4 @@
+@file:OptIn(androidx.compose.material3.adaptive.ExperimentalMaterial3AdaptiveApi::class)
 package com.Nightjar.Th3GradeLibraryKMP.adaptation
 
 import androidx.compose.foundation.lazy.grid.GridCells
@@ -33,7 +34,7 @@ object AdaptiveLayout {
      * دعم وضع الطي المكتبي / فلكس مود (Foldables Flex / Tabletop Posture):
      * عندما يكون الجهاز مطوياً في وضع الطاولة (نصف شاشة للأعلى ونصف شاشة للأسفل).
      */
-    fun isTabletop(posture: androidx.compose.material3.adaptive.WindowPosture): Boolean = posture.isTabletop
+    fun isTabletop(posture: androidx.compose.material3.adaptive.Posture): Boolean = posture.isTabletop
 
     /**
      * التحقق من النوافذ المنبثقة والعائمة وسامسونج ديكس (Pop-up Window / Freeform / Samsung DeX Windowed):
