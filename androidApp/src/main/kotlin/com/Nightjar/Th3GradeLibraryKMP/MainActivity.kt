@@ -936,13 +936,7 @@ class MainActivity : ComponentActivity() {
             return
         }
 
-        val targetPage = intent.getStringExtra("page")
-        val uriPage = intent.data?.getQueryParameter("page")
-        if (targetPage == "news" || uriPage == "news") {
-            NotificationHelper.clearNewsNotifications(this)
-            pageState.value = "news"
-        }
-        if (targetPage == "news" || intent.hasExtra("link") || intent.data?.getQueryParameter("page") == "news") {
+        if (targetPage == "news" || intent.hasExtra("link") || uriPage == "news") {
             NotificationHelper.clearNewsNotifications(this)
         }
         
