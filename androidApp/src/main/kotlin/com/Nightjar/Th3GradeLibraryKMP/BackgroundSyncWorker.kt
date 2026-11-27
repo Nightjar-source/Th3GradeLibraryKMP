@@ -69,20 +69,22 @@ class BackgroundSyncWorker(
             val now = System.currentTimeMillis()
             val timeSinceFcm = now - lastFcm
 
-            // If cloud FCM was active within the last 24 hours, WorkManager stays completely idle!
+            // Deliver any accumulated silent FCM news that arrived since the last scheduled alert
+            val pendingTitles = AppFirebaseMessagingService.getAndClearUnnotifiedNews()
+            if (pendingTitles.isNotEmpty()) {
+                val withSound = SyncEngine.appSettings.value.notificationSound
+                NotificationHelper.showNotifications(appContext, pendingTitles, pendingTitles.size, withSound)
+            }
+
+            // If cloud FCM was active within the last 24 hours, skip redundant RSS network fetch
             if (lastFcm > 0L && timeSinceFcm < 24 * 60 * 60 * 1000L) {
+                HeartbeatScheduler.cancelHeartbeat(appContext)
+                HeartbeatScheduler.scheduleHeartbeat(appContext)
                 return Result.success()
             }
 
             // Safety Fallback: only triggers if cloud push has been silent for more than 24 hours
-            val fetchedCount = SyncEngine.fetchAndSync(forced = true)
-
-            // Deliver any accumulated silent FCM news that arrived in the quiet period
-            val pendingTitles = AppFirebaseMessagingService.getAndClearUnnotifiedNews()
-            if (fetchedCount <= 0 && pendingTitles.isNotEmpty()) {
-                val withSound = SyncEngine.appSettings.value.notificationSound
-                NotificationHelper.showNotifications(appContext, pendingTitles, pendingTitles.size, withSound)
-            }
+            SyncEngine.fetchAndSync(forced = true)
             
             // Dead Man's Switch: If the WorkManager succeeds in running, cancel the old alarm and schedule a new one!
             // This prevents the Alarm from ever waking the device as long as WorkManager is healthy.

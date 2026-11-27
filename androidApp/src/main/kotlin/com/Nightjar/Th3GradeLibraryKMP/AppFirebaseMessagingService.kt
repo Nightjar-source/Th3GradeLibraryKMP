@@ -137,11 +137,8 @@ class AppFirebaseMessagingService : FirebaseMessagingService() {
             return
         }
 
-        // 4. Deliver every cloud pushed news item immediately as an individual card
-        // Zero Lockout: do not suppress subsequent cloud messages with 30m artificial delays.
-        val now = System.currentTimeMillis()
-        AppDataStore.putLong("last_fcm_news_alert_time", now)
-        showMicroThumbnailNotification(title, content, link, imageUrl, isNews = true)
+        // 4. Queue silent RSS news for the user's scheduled sync interval (one grouped notification)
+        recordUnnotifiedNews(title)
     }
 
     private fun saveToCache(title: String, link: String, imageUrl: String, pubDate: String, content: String, isAnnouncement: Boolean = false): Boolean {
